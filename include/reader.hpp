@@ -6,32 +6,37 @@
 class Reader
 {
 public:
-    virtual char peek() = 0;
-    virtual char get() = 0;
+    virtual wchar_t peek() = 0;
+    virtual wchar_t get() = 0;
     virtual ~Reader() = default;
 };
 using ReaderPtr = std::unique_ptr<Reader>;
+
 class ConsoleReader : public Reader
 {
 public:
     ConsoleReader() = default;
-    char peek() override;
-    char get() override;
+    wchar_t peek() override;
+    wchar_t get() override;
 };
+
 class FileReader : public Reader
 {
-    std::ifstream driver;
+    std::wifstream driver;
 
 public:
     FileReader(const std::string &file_name) : driver(file_name) {}
+    wchar_t peek() override;
+    wchar_t get() override;
 };
+
 class StringReader : public Reader
 {
-    std::stringstream code;
+    std::wstringstream code;
 
 public:
-    StringReader(const std::string &code) : code(code) {}
-    char peek() override;
-    char get() override;
+    StringReader(const std::wstring &code) : code(code) {}
+    wchar_t peek() override;
+    wchar_t get() override;
 };
 #endif

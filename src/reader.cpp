@@ -1,22 +1,32 @@
 #include "reader.hpp"
 #include <iostream>
 
-char ConsoleReader::peek()
+wchar_t ConsoleReader::peek()
 {
     return std::cin.peek();
 }
 
-char ConsoleReader::get()
+wchar_t ConsoleReader::get()
 {
     return std::cin.get();
 }
 
-char StringReader::get()
+wchar_t StringReader::peek()
+{
+    return this->code.peek();
+}
+
+wchar_t StringReader::get()
 {
     return this->code.get();
 }
 
-char StringReader::peek()
+wchar_t FileReader::peek()
 {
-    return this->code.peek();
+    return this->driver.peek();
+}
+
+wchar_t FileReader::get()
+{
+    return this->driver.get();
 }

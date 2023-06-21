@@ -5,6 +5,7 @@
 enum class TokenType
 {
     IDENTIFIER,
+    I32,
     F32,
     F64,
     END,
