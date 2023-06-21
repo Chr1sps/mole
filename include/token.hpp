@@ -5,7 +5,7 @@
 enum class TokenType
 {
     IDENTIFIER,
-    I32,
+    INT,
     F32,
     F64,
     END,

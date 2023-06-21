@@ -37,5 +37,9 @@ TEST_CASE("Operators.", "[OPS][EOF]")
 }
 TEST_CASE("Numericals.", "[NUMS][EOF]")
 {
-    COMPARE(L"1", LIST(V(I32, 1), T(END)));
+    COMPARE(L"1", LIST(V(INT, 1), T(END)));
+    COMPARE(L"1.0", LIST(V(F32, 1.0), T(END)));
+    COMPARE(L".25", LIST(V(F32, 0.25), T(END)));
+    COMPARE(L"1.0f", LIST(V(F32, 1.0), T(END)));
+    COMPARE(L"1.0d", LIST(V(F64, 1.0), T(END)));
 }
