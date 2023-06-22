@@ -7,7 +7,13 @@
 #include <memory>
 #include <string>
 #include <locale>
+#include <vector>
 
+struct CharNode
+{
+    TokenType type;
+    std::map<wchar_t, CharNode> children;
+};
 class Lexer;
 using LexerPtr = std::unique_ptr<Lexer>;
 class Lexer
@@ -27,22 +33,25 @@ class Lexer
         {L"if", Token(TokenType::KW_IF)},
         {L"else", Token(TokenType::KW_ELSE)},
     };
-    std::map<wchar_t, Token> single_chars{
-        {L':', Token(TokenType::COLON)},
-        {L',', Token(TokenType::COMMA)},
-        {L';', Token(TokenType::SEMICOLON)},
-        {L'+', Token(TokenType::PLUS)},
-        {L'-', Token(TokenType::MINUS)},
-        {L'*', Token(TokenType::STAR)},
-        {L'/', Token(TokenType::SLASH)},
-        {L'%', Token(TokenType::PERCENT)},
-        {L'~', Token(TokenType::BIT_NEG)},
-        {L'{', Token(TokenType::L_BRACKET)},
-        {L'}', Token(TokenType::R_BRACKET)},
-        {L'(', Token(TokenType::L_PAREN)},
-        {L')', Token(TokenType::R_PAREN)},
-        {L'[', Token(TokenType::L_SQ_BRACKET)},
-        {L']', Token(TokenType::R_SQ_BRACKET)},
+    std::map<wchar_t, CharNode> char_nodes{
+        {L':', {TokenType::COLON, {}}},
+        {L',', {TokenType::COMMA, {}}},
+        {L';', {TokenType::SEMICOLON, {}}},
+        {L'+', {TokenType::PLUS, {
+                                     {L'+', {TokenType::INCREMENT, {}}},
+                                     {L'=', {TokenType::ASSIGN_PLUS, {}}},
+                                 }}},
+        {L'-', {TokenType::MINUS, {}}},
+        {L'*', {TokenType::STAR, {}}},
+        {L'/', {TokenType::SLASH, {}}},
+        {L'%', {TokenType::PERCENT, {}}},
+        {L'~', {TokenType::BIT_NEG, {}}},
+        {L'{', {TokenType::L_BRACKET, {}}},
+        {L'}', {TokenType::R_BRACKET, {}}},
+        {L'(', {TokenType::L_PAREN, {}}},
+        {L')', {TokenType::R_PAREN, {}}},
+        {L'[', {TokenType::L_SQ_BRACKET, {}}},
+        {L']', {TokenType::R_SQ_BRACKET, {}}},
     };
 
     wchar_t
@@ -50,6 +59,7 @@ class Lexer
     void get_nonempty_char();
     Token parse_alpha_token();
     Token parse_number_token();
+    Token parse_operator();
     // void skip_comment();
 
 public:

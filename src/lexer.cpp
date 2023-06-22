@@ -2,15 +2,6 @@
 #include "reader.hpp"
 #include <string>
 
-bool operator==(const Token &token, const Token &other)
-{
-    return token.type == other.type &&
-           token.value == other.value;
-}
-bool operator!=(const Token &token, const Token &other)
-{
-    return !(token == other);
-}
 wchar_t Lexer::get_new_char()
 {
     return this->last_char = this->reader->get();
@@ -73,6 +64,27 @@ Token Lexer::parse_number_token()
     }
 }
 
+Token Lexer::parse_operator()
+{
+    auto node = this->char_nodes[this->last_char];
+    TokenType return_type;
+    for (auto next_char = this->peek_char();;
+         this->get_new_char(), next_char = this->peek_char())
+    {
+        if (node.children.contains(next_char))
+        {
+            node = node.children[next_char];
+        }
+        else
+        {
+            return_type = node.type;
+            this->get_new_char();
+            break;
+        }
+    }
+    return Token(return_type);
+}
+
 LexerPtr Lexer::from_wstring(const std::wstring &source)
 {
     ReaderPtr reader = std::make_unique<StringReader>(source);
@@ -90,11 +102,9 @@ Token Lexer::get_token()
     {
         return this->parse_alpha_token();
     }
-    if (this->single_chars.contains(this->last_char))
+    if (this->char_nodes.contains(this->last_char))
     {
-        auto result = this->single_chars[this->last_char];
-        this->get_new_char();
-        return result;
+        return this->parse_operator();
     }
     return Token(TokenType::END);
 }

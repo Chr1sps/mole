@@ -41,6 +41,7 @@ set(HEADERS
 
     # "parser.hpp"
     "reader.hpp"
+    "token.hpp"
 )
 set(SOURCES
 
@@ -49,6 +50,7 @@ set(SOURCES
     "lexer.cpp"
 
     # "parser.cpp"
+    "token.cpp"
 )
 
 list(TRANSFORM HEADERS PREPEND "${INCLUDE}/")

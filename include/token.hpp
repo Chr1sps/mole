@@ -25,8 +25,11 @@ enum class TokenType
     STAR,        // '*'
     ASSIGN_STAR, // '*='
 
-    SLASH,        // '/'
-    ASSIGN_SLASH, // '/='
+    SLASH,          // '/'
+    ASSIGN_SLASH,   // '/='
+    LINE_COMMENT,   // '//'
+    COMMENT_START,  // '/*'
+    COMMENT_FINISH, // '*/'
 
     PERCENT,        // '%'
     ASSIGN_PERCENT, // '%='

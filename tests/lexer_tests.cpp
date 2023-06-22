@@ -1,4 +1,5 @@
 #include "lexer.hpp"
+#include "token.hpp"
 #include <catch2/catch_test_macros.hpp>
 
 using namespace std;
@@ -46,6 +47,11 @@ TEST_CASE("Single char tokens (with no branching alternatives).", "[OPS][EOF]")
     COMPARE(L")", LIST(T(R_PAREN), T(END)));
     COMPARE(L"[", LIST(T(L_SQ_BRACKET), T(END)));
     COMPARE(L"]", LIST(T(R_SQ_BRACKET), T(END)));
+}
+TEST_CASE("Multiple char tokens.", "[LONG][EOF]")
+{
+    COMPARE(L"++", LIST(T(INCREMENT), T(END)));
+    COMPARE(L"+=", LIST(T(ASSIGN_PLUS), T(END)));
 }
 TEST_CASE("Numericals.", "[NUMS][EOF]")
 {
