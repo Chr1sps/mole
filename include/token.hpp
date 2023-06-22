@@ -22,14 +22,14 @@ enum class TokenType
     DECREMENT,    // '--'
     ASSIGN_MINUS, // '-='
 
-    STAR,        // '*'
-    ASSIGN_STAR, // '*='
-
-    SLASH,          // '/'
-    ASSIGN_SLASH,   // '/='
-    LINE_COMMENT,   // '//'
-    COMMENT_START,  // '/*'
+    STAR,           // '*'
+    ASSIGN_STAR,    // '*='
     COMMENT_FINISH, // '*/'
+
+    SLASH,         // '/'
+    ASSIGN_SLASH,  // '/='
+    LINE_COMMENT,  // '//'
+    COMMENT_START, // '/*'
 
     PERCENT,        // '%'
     ASSIGN_PERCENT, // '%='

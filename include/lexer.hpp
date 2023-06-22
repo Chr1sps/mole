@@ -41,11 +41,33 @@ class Lexer
                                      {L'+', {TokenType::INCREMENT, {}}},
                                      {L'=', {TokenType::ASSIGN_PLUS, {}}},
                                  }}},
-        {L'-', {TokenType::MINUS, {}}},
-        {L'*', {TokenType::STAR, {}}},
-        {L'/', {TokenType::SLASH, {}}},
-        {L'%', {TokenType::PERCENT, {}}},
-        {L'~', {TokenType::BIT_NEG, {}}},
+        {L'-', {TokenType::MINUS, {
+                                      {L'-', {TokenType::DECREMENT, {}}},
+                                      {L'=', {TokenType::ASSIGN_MINUS, {}}},
+                                  }}},
+        {L'*', {TokenType::STAR, {
+                                     {L'=', {TokenType::ASSIGN_STAR, {}}},
+                                     {L'/', {TokenType::COMMENT_FINISH, {}}},
+                                 }}},
+        {L'/', {TokenType::SLASH, {
+                                      {L'=', {TokenType::ASSIGN_SLASH, {}}},
+                                      {L'/', {TokenType::LINE_COMMENT, {}}},
+                                      {L'*', {TokenType::COMMENT_START, {}}},
+                                  }}},
+        {L'%', {TokenType::PERCENT, {
+                                        {L'=', {TokenType::ASSIGN_PERCENT, {}}},
+                                    }}},
+        {L'~', {TokenType::BIT_NEG, {
+                                        {L'=', {TokenType::ASSIGN_BIT_NEG, {}}},
+                                    }}},
+        {L'=', {TokenType::ASSIGN, {}}},
+        {L'<', {TokenType::LESS, {}}},
+        {L'>', {TokenType::GREATER, {}}},
+        {L'!', {TokenType::NEG, {}}},
+        {L'^', {TokenType::BIT_XOR, {}}},
+        {L'&', {TokenType::AMPERSAND, {}}},
+        {L'|', {TokenType::BIT_OR, {}}},
+
         {L'{', {TokenType::L_BRACKET, {}}},
         {L'}', {TokenType::R_BRACKET, {}}},
         {L'(', {TokenType::L_PAREN, {}}},

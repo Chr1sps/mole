@@ -41,6 +41,14 @@ TEST_CASE("Single char tokens (with no branching alternatives).", "[OPS][EOF]")
     COMPARE(L"%", LIST(T(PERCENT), T(END)));
     COMPARE(L"~", LIST(T(BIT_NEG), T(END)));
 
+    COMPARE(L"=", LIST(T(ASSIGN), T(END)));
+    COMPARE(L"<", LIST(T(LESS), T(END)));
+    COMPARE(L">", LIST(T(GREATER), T(END)));
+    COMPARE(L"!", LIST(T(NEG), T(END)));
+    COMPARE(L"^", LIST(T(BIT_XOR), T(END)));
+    COMPARE(L"&", LIST(T(AMPERSAND), T(END)));
+    COMPARE(L"|", LIST(T(BIT_OR), T(END)));
+
     COMPARE(L"{", LIST(T(L_BRACKET), T(END)));
     COMPARE(L"}", LIST(T(R_BRACKET), T(END)));
     COMPARE(L"(", LIST(T(L_PAREN), T(END)));
