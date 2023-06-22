@@ -25,7 +25,7 @@ target_compile_options(compiler_flags
     "-Wpedantic"
     "-Wformat=2"
 
-    "-fno-exceptions"
+    # "-fno-exceptions"
 )
 
 target_link_options(compiler_flags INTERFACE "-fsanitize=undefined;-fsanitize=address")
@@ -49,7 +49,6 @@ set(SOURCES
     "lexer.cpp"
 
     # "parser.cpp"
-    "reader.cpp"
 )
 
 list(TRANSFORM HEADERS PREPEND "${INCLUDE}/")

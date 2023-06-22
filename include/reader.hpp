@@ -3,40 +3,58 @@
 #include <memory>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 class Reader
 {
 public:
     virtual wchar_t peek() = 0;
     virtual wchar_t get() = 0;
+    virtual bool eof() = 0;
     virtual ~Reader() = default;
 };
 using ReaderPtr = std::unique_ptr<Reader>;
 
+template <typename T>
+concept DerivedFromWistream = std::derived_from<T, std::wistream>;
+
+template <typename T>
+class IStreamReader : public Reader
+{
+    static_assert(DerivedFromWistream<T>,
+                  "T must be derived from the std::wistream class.");
+
+protected:
+    T driver;
+
+public:
+    wchar_t peek() override { return this->driver.peek(); }
+    wchar_t get() override { return this->driver.get(); }
+    bool eof() override { return this->driver.eof(); }
+};
+
 class ConsoleReader : public Reader
 {
 public:
-    ConsoleReader() = default;
-    wchar_t peek() override;
-    wchar_t get() override;
+    wchar_t peek() override { return std::wcin.peek(); }
+    wchar_t get() override { return std::wcin.get(); }
+    bool eof() override { return std::wcin.eof(); }
 };
 
-class FileReader : public Reader
+class FileReader : public IStreamReader<std::wifstream>
 {
-    std::wifstream driver;
-
 public:
-    FileReader(const std::string &file_name) : driver(file_name) {}
-    wchar_t peek() override;
-    wchar_t get() override;
+    FileReader(const std::string &file_name) : IStreamReader<std::wifstream>()
+    {
+        this->driver.open(file_name);
+    }
 };
 
-class StringReader : public Reader
+class StringReader : public IStreamReader<std::wistringstream>
 {
-    std::wstringstream code;
-
 public:
-    StringReader(const std::wstring &code) : code(code) {}
-    wchar_t peek() override;
-    wchar_t get() override;
+    StringReader(const std::wstring &code) : IStreamReader<std::wistringstream>()
+    {
+        this->driver.str(code);
+    }
 };
 #endif
