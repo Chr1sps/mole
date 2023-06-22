@@ -27,13 +27,25 @@ TEST_CASE("Empty code.", "[EOF]")
 {
     COMPARE(L"", LIST(T(END)));
 }
-TEST_CASE("Operators.", "[OPS][EOF]")
+TEST_CASE("Single char tokens (with no branching alternatives).", "[OPS][EOF]")
 {
+    COMPARE(L":", LIST(T(COLON), T(END)));
+    COMPARE(L",", LIST(T(COMMA), T(END)));
+    COMPARE(L";", LIST(T(SEMICOLON), T(END)));
+
     COMPARE(L"+", LIST(T(PLUS), T(END)));
     COMPARE(L"-", LIST(T(MINUS), T(END)));
     COMPARE(L"*", LIST(T(STAR), T(END)));
     COMPARE(L"/", LIST(T(SLASH), T(END)));
     COMPARE(L"%", LIST(T(PERCENT), T(END)));
+    COMPARE(L"~", LIST(T(BIT_NEG), T(END)));
+
+    COMPARE(L"{", LIST(T(L_BRACKET), T(END)));
+    COMPARE(L"}", LIST(T(R_BRACKET), T(END)));
+    COMPARE(L"(", LIST(T(L_PAREN), T(END)));
+    COMPARE(L")", LIST(T(R_PAREN), T(END)));
+    COMPARE(L"[", LIST(T(L_SQ_BRACKET), T(END)));
+    COMPARE(L"]", LIST(T(R_SQ_BRACKET), T(END)));
 }
 TEST_CASE("Numericals.", "[NUMS][EOF]")
 {

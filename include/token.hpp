@@ -10,28 +10,54 @@ enum class TokenType
     F64,
     END,
 
-    PLUS,    // '+'
-    MINUS,   // '-'
-    STAR,    // '*'
-    SLASH,   // '/'
-    PERCENT, // '%'
-    EXP,     // '^^'
+    COLON,     // ':'
+    COMMA,     // ','
+    SEMICOLON, // ';'
 
-    ASSIGN,        // '='
-    EQUAL,         // '=='
-    NOT_EQUAL,     // '!='
-    LESS,          // '<'
+    PLUS,        // '+'
+    INCREMENT,   // '++'
+    ASSIGN_PLUS, // '+='
+
+    MINUS,        // '-'
+    DECREMENT,    // '--'
+    ASSIGN_MINUS, // '-='
+
+    STAR,        // '*'
+    ASSIGN_STAR, // '*='
+
+    SLASH,        // '/'
+    ASSIGN_SLASH, // '/='
+
+    PERCENT,        // '%'
+    ASSIGN_PERCENT, // '%='
+
+    BIT_NEG,        // '~'
+    ASSIGN_BIT_NEG, // '~='
+
+    ASSIGN,       // '='
+    LAMBDA_ARROW, // '=>'
+    EQUAL,        // '=='
+
+    LESS,       // '<'
+    LESS_EQUAL, // '<='
+
     GREATER,       // '>'
-    LESS_EQUAL,    // '<='
     GREATER_EQUAL, // '>='
 
-    AMPERSAND, // '&'
-    BIT_OR,    // '|'
-    BIT_XOR,   // ^
-    BIT_NEG,   // '~'
-    OR,        // '||'
-    AND,       // '&&'
     NEG,       // '!'
+    NOT_EQUAL, // '!='
+
+    BIT_XOR,        // ^
+    ASSIGN_BIT_XOR, // ^=
+    EXP,            // '^^'
+
+    AMPERSAND,        // '&'
+    ASSIGN_AMPERSAND, // '&='
+    AND,              // '&&'
+
+    BIT_OR,        // '|'
+    ASSIGN_BIT_OR, // '|='
+    OR,            // '||'
 
     L_BRACKET,    // '{'
     R_BRACKET,    // '}'
@@ -39,13 +65,6 @@ enum class TokenType
     R_PAREN,      // ')'
     L_SQ_BRACKET, // '['
     R_SQ_BRACKET, // ']'
-
-    COLON,     // ':'
-    COMMA,     // ','
-    SEMICOLON, // ';'
-    PIPE,      // '|'
-
-    LAMBDA_ARROW, // '=>'
 
     KW_FN,     // "fn"
     KW_MAIN,   // "main"

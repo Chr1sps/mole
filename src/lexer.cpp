@@ -90,25 +90,11 @@ Token Lexer::get_token()
     {
         return this->parse_alpha_token();
     }
-    switch (this->last_char)
+    if (this->single_chars.contains(this->last_char))
     {
-    case L'+':
+        auto result = this->single_chars[this->last_char];
         this->get_new_char();
-        return Token(TokenType::PLUS);
-    case L'-':
-        this->get_new_char();
-        return Token(TokenType::MINUS);
-    case L'*':
-        this->get_new_char();
-        return Token(TokenType::STAR);
-    case L'/':
-        this->get_new_char();
-        return Token(TokenType::SLASH);
-    case L'%':
-        this->get_new_char();
-        return Token(TokenType::PERCENT);
-    default:
-        break;
+        return result;
     }
     return Token(TokenType::END);
 }
