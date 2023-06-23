@@ -134,7 +134,7 @@ TEST_CASE("Identifiers.", "[ID][EOF]")
     COMPARE(L"_snake_case", LIST(V(IDENTIFIER, L"_snake_case"), T(END)));
     COMPARE(L"_", LIST(V(IDENTIFIER, L"_"), T(END)));
 }
-TEST_CASE("Assignments.", "[KW][ID][OP][EOF]")
+TEST_CASE("Assignments.", "[ASGN][KW][ID][OP][EOF]")
 {
     COMPARE(L"let name = 0;", LIST(T(KW_LET),
                                    V(IDENTIFIER, L"name"),
@@ -151,4 +151,32 @@ TEST_CASE("Assignments.", "[KW][ID][OP][EOF]")
                                             V(INT, 0),
                                             T(SEMICOLON),
                                             T(END)));
+}
+TEST_CASE("Function definitions", "[FN][KW][ID][OP][EOF]")
+{
+    COMPARE(L"fn noop() => {}", LIST(T(KW_FN),
+                                     V(IDENTIFIER, L"noop"),
+                                     T(L_PAREN),
+                                     T(R_PAREN),
+                                     T(LAMBDA_ARROW),
+                                     T(L_BRACKET),
+                                     T(R_BRACKET),
+                                     T(END)));
+    COMPARE(L"fn foo(f: f32, i: i32) => i32 {i}", LIST(T(KW_FN),
+                                                       V(IDENTIFIER, L"foo"),
+                                                       T(L_PAREN),
+                                                       V(IDENTIFIER, L"f"),
+                                                       T(COLON),
+                                                       T(TYPE_F32),
+                                                       T(COMMA),
+                                                       V(IDENTIFIER, L"i"),
+                                                       T(COLON),
+                                                       T(TYPE_I32),
+                                                       T(R_PAREN),
+                                                       T(LAMBDA_ARROW),
+                                                       T(TYPE_I32),
+                                                       T(L_BRACKET),
+                                                       V(IDENTIFIER, L"i"),
+                                                       T(R_BRACKET),
+                                                       T(END)));
 }
