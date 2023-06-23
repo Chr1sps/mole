@@ -76,6 +76,10 @@ enum class TokenType
     KW_IF,     // "if"
     KW_ELSE,   // "else"
 
+    TYPE_F32, // "f32"
+    TYPE_F64, // "f64"
+    TYPE_I32, // "i32"
+
     OTHER,
     INVALID,
 };

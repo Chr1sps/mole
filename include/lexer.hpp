@@ -33,6 +33,10 @@ class Lexer
         {L"return", Token(TokenType::KW_RETURN)},
         {L"if", Token(TokenType::KW_IF)},
         {L"else", Token(TokenType::KW_ELSE)},
+
+        {L"f32", Token(TokenType::TYPE_F32)},
+        {L"f64", Token(TokenType::TYPE_F64)},
+        {L"i32", Token(TokenType::TYPE_I32)},
     };
     std::map<wchar_t, CharNode> char_nodes{
         {L':', {TokenType::COLON, {}}},

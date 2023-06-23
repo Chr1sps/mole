@@ -118,7 +118,13 @@ TEST_CASE("Keywords.", "[KW][EOF]")
     COMPARE(L"if", LIST(T(KW_IF), T(END)));
     COMPARE(L"else", LIST(T(KW_ELSE), T(END)));
 }
-TEST_CASE("Identifiers", "[ID][EOF]")
+TEST_CASE("Type names.", "[TYPE][EOF]")
+{
+    COMPARE(L"f32", LIST(T(TYPE_F32), T(END)));
+    COMPARE(L"f64", LIST(T(TYPE_F64), T(END)));
+    COMPARE(L"i32", LIST(T(TYPE_I32), T(END)));
+}
+TEST_CASE("Identifiers.", "[ID][EOF]")
 {
     COMPARE(L"name", LIST(V(IDENTIFIER, L"name"), T(END)));
     COMPARE(L"Name", LIST(V(IDENTIFIER, L"Name"), T(END)));
@@ -127,4 +133,22 @@ TEST_CASE("Identifiers", "[ID][EOF]")
     COMPARE(L"snake_case", LIST(V(IDENTIFIER, L"snake_case"), T(END)));
     COMPARE(L"_snake_case", LIST(V(IDENTIFIER, L"_snake_case"), T(END)));
     COMPARE(L"_", LIST(V(IDENTIFIER, L"_"), T(END)));
+}
+TEST_CASE("Assignments.", "[KW][ID][OP][EOF]")
+{
+    COMPARE(L"let name = 0;", LIST(T(KW_LET),
+                                   V(IDENTIFIER, L"name"),
+                                   T(ASSIGN),
+                                   V(INT, 0),
+                                   T(SEMICOLON),
+                                   T(END)));
+    COMPARE(L"let mut name: i32 = 0;", LIST(T(KW_LET),
+                                            T(KW_MUT),
+                                            V(IDENTIFIER, L"name"),
+                                            T(COLON),
+                                            T(TYPE_I32),
+                                            T(ASSIGN),
+                                            V(INT, 0),
+                                            T(SEMICOLON),
+                                            T(END)));
 }
