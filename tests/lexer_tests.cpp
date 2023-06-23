@@ -60,6 +60,30 @@ TEST_CASE("Multiple char tokens.", "[LONG][EOF]")
 {
     COMPARE(L"++", LIST(T(INCREMENT), T(END)));
     COMPARE(L"+=", LIST(T(ASSIGN_PLUS), T(END)));
+    COMPARE(L"--", LIST(T(DECREMENT), T(END)));
+    COMPARE(L"-=", LIST(T(ASSIGN_MINUS), T(END)));
+    COMPARE(L"*=", LIST(T(ASSIGN_STAR), T(END)));
+    COMPARE(L"/=", LIST(T(ASSIGN_SLASH), T(END)));
+    COMPARE(L"%=", LIST(T(ASSIGN_PERCENT), T(END)));
+    COMPARE(L"~=", LIST(T(ASSIGN_BIT_NEG), T(END)));
+    COMPARE(L"=>", LIST(T(LAMBDA_ARROW), T(END)));
+    COMPARE(L"==", LIST(T(EQUAL), T(END)));
+    COMPARE(L"<=", LIST(T(LESS_EQUAL), T(END)));
+    COMPARE(L">=", LIST(T(GREATER_EQUAL), T(END)));
+    COMPARE(L"!=", LIST(T(NOT_EQUAL), T(END)));
+    COMPARE(L"^=", LIST(T(ASSIGN_BIT_XOR), T(END)));
+    COMPARE(L"^^", LIST(T(EXP), T(END)));
+    COMPARE(L"&=", LIST(T(ASSIGN_AMPERSAND), T(END)));
+    COMPARE(L"&&", LIST(T(AND), T(END)));
+    COMPARE(L"|=", LIST(T(ASSIGN_BIT_OR), T(END)));
+    COMPARE(L"||", LIST(T(OR), T(END)));
+}
+TEST_CASE("Comments.", "[COMM][EOF]")
+{
+    COMPARE(L"//", LIST(T(END)));
+    COMPARE(L"// one 2 _three four\n", LIST(T(END)));
+    COMPARE(L"/* fn extern main */", LIST(T(END)));
+    COMPARE(L"/*\n*/", LIST(T(END)));
 }
 TEST_CASE("Numericals.", "[NUMS][EOF]")
 {
@@ -102,4 +126,5 @@ TEST_CASE("Identifiers", "[ID][EOF]")
     COMPARE(L"n4m3", LIST(V(IDENTIFIER, L"n4m3"), T(END)));
     COMPARE(L"snake_case", LIST(V(IDENTIFIER, L"snake_case"), T(END)));
     COMPARE(L"_snake_case", LIST(V(IDENTIFIER, L"_snake_case"), T(END)));
+    COMPARE(L"_", LIST(V(IDENTIFIER, L"_"), T(END)));
 }

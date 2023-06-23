@@ -22,14 +22,11 @@ enum class TokenType
     DECREMENT,    // '--'
     ASSIGN_MINUS, // '-='
 
-    STAR,           // '*'
-    ASSIGN_STAR,    // '*='
-    COMMENT_FINISH, // '*/'
+    STAR,        // '*'
+    ASSIGN_STAR, // '*='
 
-    SLASH,         // '/'
-    ASSIGN_SLASH,  // '/='
-    LINE_COMMENT,  // '//'
-    COMMENT_START, // '/*'
+    SLASH,        // '/'
+    ASSIGN_SLASH, // '/='
 
     PERCENT,        // '%'
     ASSIGN_PERCENT, // '%='
@@ -80,6 +77,7 @@ enum class TokenType
     KW_ELSE,   // "else"
 
     OTHER,
+    INVALID,
 };
 struct Token
 {

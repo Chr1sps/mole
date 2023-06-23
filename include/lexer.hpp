@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <locale>
+#include <optional>
 #include <vector>
 
 struct CharNode
@@ -47,27 +48,41 @@ class Lexer
                                   }}},
         {L'*', {TokenType::STAR, {
                                      {L'=', {TokenType::ASSIGN_STAR, {}}},
-                                     {L'/', {TokenType::COMMENT_FINISH, {}}},
                                  }}},
-        {L'/', {TokenType::SLASH, {
-                                      {L'=', {TokenType::ASSIGN_SLASH, {}}},
-                                      {L'/', {TokenType::LINE_COMMENT, {}}},
-                                      {L'*', {TokenType::COMMENT_START, {}}},
-                                  }}},
+        // {L'/', {TokenType::SLASH, {
+        //                               {L'=', {TokenType::ASSIGN_SLASH, {}}},
+        //                           }}},
         {L'%', {TokenType::PERCENT, {
                                         {L'=', {TokenType::ASSIGN_PERCENT, {}}},
                                     }}},
         {L'~', {TokenType::BIT_NEG, {
                                         {L'=', {TokenType::ASSIGN_BIT_NEG, {}}},
                                     }}},
-        {L'=', {TokenType::ASSIGN, {}}},
-        {L'<', {TokenType::LESS, {}}},
-        {L'>', {TokenType::GREATER, {}}},
-        {L'!', {TokenType::NEG, {}}},
-        {L'^', {TokenType::BIT_XOR, {}}},
-        {L'&', {TokenType::AMPERSAND, {}}},
-        {L'|', {TokenType::BIT_OR, {}}},
-
+        {L'=', {TokenType::ASSIGN, {
+                                       {L'>', {TokenType::LAMBDA_ARROW, {}}},
+                                       {L'=', {TokenType::EQUAL, {}}},
+                                   }}},
+        {L'<', {TokenType::LESS, {
+                                     {L'=', {TokenType::LESS_EQUAL, {}}},
+                                 }}},
+        {L'>', {TokenType::GREATER, {
+                                        {L'=', {TokenType::GREATER_EQUAL, {}}},
+                                    }}},
+        {L'!', {TokenType::NEG, {
+                                    {L'=', {TokenType::NOT_EQUAL, {}}},
+                                }}},
+        {L'^', {TokenType::BIT_XOR, {
+                                        {L'=', {TokenType::ASSIGN_BIT_XOR, {}}},
+                                        {L'^', {TokenType::EXP, {}}},
+                                    }}},
+        {L'&', {TokenType::AMPERSAND, {
+                                          {L'=', {TokenType::ASSIGN_AMPERSAND, {}}},
+                                          {L'&', {TokenType::AND, {}}},
+                                      }}},
+        {L'|', {TokenType::BIT_OR, {
+                                       {L'=', {TokenType::ASSIGN_BIT_OR, {}}},
+                                       {L'|', {TokenType::OR, {}}},
+                                   }}},
         {L'{', {TokenType::L_BRACKET, {}}},
         {L'}', {TokenType::R_BRACKET, {}}},
         {L'(', {TokenType::L_PAREN, {}}},
@@ -80,9 +95,12 @@ class Lexer
     get_new_char();
     void get_nonempty_char();
     Token parse_alpha_token();
+    std::string parse_digits();
     Token parse_number_token();
     Token parse_operator();
-    // void skip_comment();
+    std::optional<Token> parse_slash();
+    void skip_line_comment();
+    void skip_block_comment();
 
 public:
     Lexer(ReaderPtr &reader) : reader(std::move(reader)),

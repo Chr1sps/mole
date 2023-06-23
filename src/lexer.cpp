@@ -25,8 +25,7 @@ Token Lexer::parse_alpha_token()
         return this->keywords[name];
     return Token(TokenType::IDENTIFIER, name);
 }
-
-Token Lexer::parse_number_token()
+std::string Lexer::parse_digits()
 {
     std::string num_str;
     while (std::isdigit(this->last_char, this->locale))
@@ -34,15 +33,20 @@ Token Lexer::parse_number_token()
         num_str += this->last_char;
         this->get_new_char();
     }
+    return num_str;
+}
+
+Token Lexer::parse_number_token()
+{
+    std::string num_str;
+    num_str += this->parse_digits();
     if (this->last_char == L'.')
     {
-        do
-        {
-            num_str += this->last_char;
-            this->get_new_char();
-        } while (std::isdigit(this->last_char, this->locale));
-
+        num_str += '.';
+        this->get_new_char();
+        num_str += this->parse_digits();
         double value = std::strtod(num_str.c_str(), 0);
+
         if (this->last_char == 'd')
         {
             this->get_new_char();
@@ -85,6 +89,57 @@ Token Lexer::parse_operator()
     return Token(return_type);
 }
 
+std::optional<Token> Lexer::parse_slash()
+{
+    this->get_new_char();
+    if (this->last_char == L'/')
+    {
+        this->get_new_char();
+        this->skip_line_comment();
+    }
+    else if (this->last_char == L'*')
+    {
+        this->get_new_char();
+        this->skip_block_comment();
+    }
+    else if (this->last_char == L'=')
+    {
+        this->get_new_char();
+        return std::optional<Token>(Token(TokenType::ASSIGN_SLASH));
+    }
+    else
+        return std::optional<Token>(Token(TokenType::SLASH));
+    return std::optional<Token>();
+}
+
+void Lexer::skip_line_comment()
+{
+    while (!this->reader->eof() &&
+           this->last_char != L'\n' &&
+           this->last_char != L'\r')
+    {
+        this->get_new_char();
+    }
+}
+
+void Lexer::skip_block_comment()
+{
+    for (;;)
+    {
+        while (!this->reader->eof() && this->last_char != L'*')
+        {
+            this->get_new_char();
+        }
+        if (this->peek_char() == L'/')
+        {
+            this->get_new_char();
+            this->get_new_char();
+            return;
+        }
+        this->get_new_char();
+    }
+}
+
 LexerPtr Lexer::from_wstring(const std::wstring &source)
 {
     ReaderPtr reader = std::make_unique<StringReader>(source);
@@ -101,6 +156,12 @@ Token Lexer::get_token()
     if (std::isalpha(this->last_char) || this->last_char == L'_')
     {
         return this->parse_alpha_token();
+    }
+    if (this->last_char == L'/')
+    {
+        auto result = this->parse_slash();
+        if (result.has_value())
+            return result.value();
     }
     if (this->char_nodes.contains(this->last_char))
     {
