@@ -1,9 +1,9 @@
 #ifndef __LOCALE_HPP__
 #define __LOCALE_HPP__
 
-#include <unistd.h>
-#include <string>
 #include <locale>
+#include <string>
+#include <unistd.h>
 
 class Locale
 {
@@ -14,7 +14,7 @@ class Locale
         std::locale::global(cpp_locale);
     }
 
-public:
+  public:
     static Locale get()
     {
         static Locale loc{"en_US.UTF8"};

@@ -3,7 +3,7 @@
 #include "ast.hpp"
 class Visitor
 {
-public:
+  public:
     virtual void visit(const VariableExprNode &node) = 0;
     virtual void visit(const I32ConstNode &node) = 0;
     virtual void visit(const F32ConstNode &node) = 0;

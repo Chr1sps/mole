@@ -1,13 +1,13 @@
 #ifndef __LEXER_HPP__
 #define __LEXER_HPP__
+#include "locale.hpp"
 #include "reader.hpp"
 #include "token.hpp"
-#include "locale.hpp"
+#include <locale>
 #include <map>
 #include <memory>
-#include <string>
-#include <locale>
 #include <optional>
+#include <string>
 #include <vector>
 
 struct CharNode
@@ -55,51 +55,75 @@ class Lexer
         {L':', {TokenType::COLON, {}}},
         {L',', {TokenType::COMMA, {}}},
         {L';', {TokenType::SEMICOLON, {}}},
-        {L'+', {TokenType::PLUS, {
-                                     {L'+', {TokenType::INCREMENT, {}}},
-                                     {L'=', {TokenType::ASSIGN_PLUS, {}}},
-                                 }}},
-        {L'-', {TokenType::MINUS, {
-                                      {L'-', {TokenType::DECREMENT, {}}},
-                                      {L'=', {TokenType::ASSIGN_MINUS, {}}},
-                                  }}},
-        {L'*', {TokenType::STAR, {
-                                     {L'=', {TokenType::ASSIGN_STAR, {}}},
-                                 }}},
+        {L'+',
+         {TokenType::PLUS,
+          {
+              {L'+', {TokenType::INCREMENT, {}}},
+              {L'=', {TokenType::ASSIGN_PLUS, {}}},
+          }}},
+        {L'-',
+         {TokenType::MINUS,
+          {
+              {L'-', {TokenType::DECREMENT, {}}},
+              {L'=', {TokenType::ASSIGN_MINUS, {}}},
+          }}},
+        {L'*',
+         {TokenType::STAR,
+          {
+              {L'=', {TokenType::ASSIGN_STAR, {}}},
+          }}},
         // {L'/', {TokenType::SLASH, {
         //                               {L'=', {TokenType::ASSIGN_SLASH, {}}},
         //                           }}},
-        {L'%', {TokenType::PERCENT, {
-                                        {L'=', {TokenType::ASSIGN_PERCENT, {}}},
-                                    }}},
-        {L'~', {TokenType::BIT_NEG, {
-                                        {L'=', {TokenType::ASSIGN_BIT_NEG, {}}},
-                                    }}},
-        {L'=', {TokenType::ASSIGN, {
-                                       {L'>', {TokenType::LAMBDA_ARROW, {}}},
-                                       {L'=', {TokenType::EQUAL, {}}},
-                                   }}},
-        {L'<', {TokenType::LESS, {
-                                     {L'=', {TokenType::LESS_EQUAL, {}}},
-                                 }}},
-        {L'>', {TokenType::GREATER, {
-                                        {L'=', {TokenType::GREATER_EQUAL, {}}},
-                                    }}},
-        {L'!', {TokenType::NEG, {
-                                    {L'=', {TokenType::NOT_EQUAL, {}}},
-                                }}},
-        {L'^', {TokenType::BIT_XOR, {
-                                        {L'=', {TokenType::ASSIGN_BIT_XOR, {}}},
-                                        {L'^', {TokenType::EXP, {}}},
-                                    }}},
-        {L'&', {TokenType::AMPERSAND, {
-                                          {L'=', {TokenType::ASSIGN_AMPERSAND, {}}},
-                                          {L'&', {TokenType::AND, {}}},
-                                      }}},
-        {L'|', {TokenType::BIT_OR, {
-                                       {L'=', {TokenType::ASSIGN_BIT_OR, {}}},
-                                       {L'|', {TokenType::OR, {}}},
-                                   }}},
+        {L'%',
+         {TokenType::PERCENT,
+          {
+              {L'=', {TokenType::ASSIGN_PERCENT, {}}},
+          }}},
+        {L'~',
+         {TokenType::BIT_NEG,
+          {
+              {L'=', {TokenType::ASSIGN_BIT_NEG, {}}},
+          }}},
+        {L'=',
+         {TokenType::ASSIGN,
+          {
+              {L'>', {TokenType::LAMBDA_ARROW, {}}},
+              {L'=', {TokenType::EQUAL, {}}},
+          }}},
+        {L'<',
+         {TokenType::LESS,
+          {
+              {L'=', {TokenType::LESS_EQUAL, {}}},
+          }}},
+        {L'>',
+         {TokenType::GREATER,
+          {
+              {L'=', {TokenType::GREATER_EQUAL, {}}},
+          }}},
+        {L'!',
+         {TokenType::NEG,
+          {
+              {L'=', {TokenType::NOT_EQUAL, {}}},
+          }}},
+        {L'^',
+         {TokenType::BIT_XOR,
+          {
+              {L'=', {TokenType::ASSIGN_BIT_XOR, {}}},
+              {L'^', {TokenType::EXP, {}}},
+          }}},
+        {L'&',
+         {TokenType::AMPERSAND,
+          {
+              {L'=', {TokenType::ASSIGN_AMPERSAND, {}}},
+              {L'&', {TokenType::AND, {}}},
+          }}},
+        {L'|',
+         {TokenType::BIT_OR,
+          {
+              {L'=', {TokenType::ASSIGN_BIT_OR, {}}},
+              {L'|', {TokenType::OR, {}}},
+          }}},
         {L'{', {TokenType::L_BRACKET, {}}},
         {L'}', {TokenType::R_BRACKET, {}}},
         {L'(', {TokenType::L_PAREN, {}}},
@@ -108,8 +132,7 @@ class Lexer
         {L']', {TokenType::R_SQ_BRACKET, {}}},
     };
 
-    wchar_t
-    get_new_char();
+    wchar_t get_new_char();
     void get_nonempty_char();
     Token parse_alpha_token();
     std::string parse_digits();
@@ -119,11 +142,10 @@ class Lexer
     void skip_line_comment();
     void skip_block_comment();
 
-public:
-    Lexer(ReaderPtr &reader) : reader(std::move(reader)),
-                               last_char(L' '),
-                               error_msg(""),
-                               locale(Locale::get().locale()) {}
+  public:
+    Lexer(ReaderPtr &reader) : reader(std::move(reader)), last_char(L' '), error_msg(""), locale(Locale::get().locale())
+    {
+    }
 
     static LexerPtr from_wstring(const std::wstring &source);
 
@@ -135,9 +157,14 @@ class LexerException : public std::exception
 {
     const char *what_str;
 
-public:
+  public:
     LexerException() = default;
-    LexerException(const char *what_str) : what_str(what_str) {}
-    const char *what() const noexcept override { return this->what_str; }
+    LexerException(const char *what_str) : what_str(what_str)
+    {
+    }
+    const char *what() const noexcept override
+    {
+        return this->what_str;
+    }
 };
 #endif
