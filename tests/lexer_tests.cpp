@@ -4,7 +4,7 @@
 
 using namespace std;
 
-bool compare_tokens(const LexerPtr &lexer, const vector<Token> &tokens)
+bool compare_tokens(LexerPtr &&lexer, const vector<Token> &tokens)
 {
     for (auto &token : tokens)
     {
@@ -14,14 +14,23 @@ bool compare_tokens(const LexerPtr &lexer, const vector<Token> &tokens)
     }
     return true;
 }
+void consume_tokens(LexerPtr &&lexer)
+{
+    while (!lexer->eof())
+    {
+        lexer->get_token();
+    }
+}
 
 #define T(type) Token(TokenType::type)
 #define V(type, value) Token(TokenType::type, value)
 
 #define COMPARE(source, tokens) REQUIRE(compare_tokens(Lexer::from_wstring(source), tokens))
-#define LIST(...)   \
-    {               \
-        __VA_ARGS__ \
+#define COMPARE_THROWS(source, exception_type)                                                                         \
+    REQUIRE_THROWS_AS(consume_tokens(Lexer::from_wstring(source)), exception_type)
+#define LIST(...)                                                                                                      \
+    {                                                                                                                  \
+        __VA_ARGS__                                                                                                    \
     }
 
 TEST_CASE("Empty code.", "[EOF]")
@@ -120,9 +129,20 @@ TEST_CASE("Keywords.", "[KW][EOF]")
 }
 TEST_CASE("Type names.", "[TYPE][EOF]")
 {
+    COMPARE(L"u8", LIST(T(TYPE_U8), T(END)));
+    COMPARE(L"u16", LIST(T(TYPE_U16), T(END)));
+    COMPARE(L"u32", LIST(T(TYPE_U32), T(END)));
+    COMPARE(L"u64", LIST(T(TYPE_U64), T(END)));
+
+    COMPARE(L"i8", LIST(T(TYPE_I8), T(END)));
+    COMPARE(L"i16", LIST(T(TYPE_I16), T(END)));
+    COMPARE(L"i32", LIST(T(TYPE_I32), T(END)));
+    COMPARE(L"i64", LIST(T(TYPE_I64), T(END)));
+
     COMPARE(L"f32", LIST(T(TYPE_F32), T(END)));
     COMPARE(L"f64", LIST(T(TYPE_F64), T(END)));
-    COMPARE(L"i32", LIST(T(TYPE_I32), T(END)));
+
+    COMPARE(L"char", LIST(T(TYPE_CHAR), T(END)));
 }
 TEST_CASE("Identifiers.", "[ID][EOF]")
 {
@@ -134,49 +154,24 @@ TEST_CASE("Identifiers.", "[ID][EOF]")
     COMPARE(L"_snake_case", LIST(V(IDENTIFIER, L"_snake_case"), T(END)));
     COMPARE(L"_", LIST(V(IDENTIFIER, L"_"), T(END)));
 }
+TEST_CASE("Invalid signs.", "[ERR]")
+{
+    COMPARE_THROWS(L".", LexerException);
+    COMPARE_THROWS(L"$", LexerException);
+    COMPARE_THROWS(L"#", LexerException);
+}
 TEST_CASE("Assignments.", "[ASGN][KW][ID][OP][EOF]")
 {
-    COMPARE(L"let name = 0;", LIST(T(KW_LET),
-                                   V(IDENTIFIER, L"name"),
-                                   T(ASSIGN),
-                                   V(INT, 0),
-                                   T(SEMICOLON),
-                                   T(END)));
-    COMPARE(L"let mut name: i32 = 0;", LIST(T(KW_LET),
-                                            T(KW_MUT),
-                                            V(IDENTIFIER, L"name"),
-                                            T(COLON),
-                                            T(TYPE_I32),
-                                            T(ASSIGN),
-                                            V(INT, 0),
-                                            T(SEMICOLON),
-                                            T(END)));
+    COMPARE(L"let name = 0;", LIST(T(KW_LET), V(IDENTIFIER, L"name"), T(ASSIGN), V(INT, 0), T(SEMICOLON), T(END)));
+    COMPARE(L"let mut name: i32 = 0;", LIST(T(KW_LET), T(KW_MUT), V(IDENTIFIER, L"name"), T(COLON), T(TYPE_I32),
+                                            T(ASSIGN), V(INT, 0), T(SEMICOLON), T(END)));
 }
 TEST_CASE("Function definitions", "[FN][KW][ID][OP][EOF]")
 {
-    COMPARE(L"fn noop() => {}", LIST(T(KW_FN),
-                                     V(IDENTIFIER, L"noop"),
-                                     T(L_PAREN),
-                                     T(R_PAREN),
-                                     T(LAMBDA_ARROW),
-                                     T(L_BRACKET),
-                                     T(R_BRACKET),
-                                     T(END)));
-    COMPARE(L"fn foo(f: f32, i: i32) => i32 {i}", LIST(T(KW_FN),
-                                                       V(IDENTIFIER, L"foo"),
-                                                       T(L_PAREN),
-                                                       V(IDENTIFIER, L"f"),
-                                                       T(COLON),
-                                                       T(TYPE_F32),
-                                                       T(COMMA),
-                                                       V(IDENTIFIER, L"i"),
-                                                       T(COLON),
-                                                       T(TYPE_I32),
-                                                       T(R_PAREN),
-                                                       T(LAMBDA_ARROW),
-                                                       T(TYPE_I32),
-                                                       T(L_BRACKET),
-                                                       V(IDENTIFIER, L"i"),
-                                                       T(R_BRACKET),
-                                                       T(END)));
+    COMPARE(L"fn noop() => {}", LIST(T(KW_FN), V(IDENTIFIER, L"noop"), T(L_PAREN), T(R_PAREN), T(LAMBDA_ARROW),
+                                     T(L_BRACKET), T(R_BRACKET), T(END)));
+    COMPARE(L"fn foo(f: f32, i: i32) => i32 {i}",
+            LIST(T(KW_FN), V(IDENTIFIER, L"foo"), T(L_PAREN), V(IDENTIFIER, L"f"), T(COLON), T(TYPE_F32), T(COMMA),
+                 V(IDENTIFIER, L"i"), T(COLON), T(TYPE_I32), T(R_PAREN), T(LAMBDA_ARROW), T(TYPE_I32), T(L_BRACKET),
+                 V(IDENTIFIER, L"i"), T(R_BRACKET), T(END)));
 }

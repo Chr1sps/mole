@@ -40,9 +40,11 @@ enum class TokenType
 
     LESS,       // '<'
     LESS_EQUAL, // '<='
+    SHIFT_LEFT, // "<<"
 
     GREATER,       // '>'
     GREATER_EQUAL, // '>='
+    SHIFT_RIGHT,   // ">>"
 
     NEG,       // '!'
     NOT_EQUAL, // '!='
@@ -76,9 +78,22 @@ enum class TokenType
     KW_IF,     // "if"
     KW_ELSE,   // "else"
 
+    TYPE_BOOL, // "bool"
+
+    TYPE_U8,  // "u8"
+    TYPE_U16, // "u16"
+    TYPE_U32, // "u32"
+    TYPE_U64, // "u64"
+
+    TYPE_I8,  // "i8"
+    TYPE_I16, // "i16"
+    TYPE_I32, // "i32"
+    TYPE_I64, // "i64"
+
     TYPE_F32, // "f32"
     TYPE_F64, // "f64"
-    TYPE_I32, // "i32"
+
+    TYPE_CHAR, // "char"
 
     OTHER,
     INVALID,

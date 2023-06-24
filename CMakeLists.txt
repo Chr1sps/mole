@@ -34,7 +34,8 @@ set(INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 set(HEADERS
 
-    # "ast.hpp"
+    "ast.hpp"
+
     # "codebuilder.hpp"
     "lexer.hpp"
     "locale.hpp"
@@ -42,6 +43,7 @@ set(HEADERS
     # "parser.hpp"
     "reader.hpp"
     "token.hpp"
+    "visitor.hpp"
 )
 set(SOURCES
 

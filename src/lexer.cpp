@@ -72,8 +72,7 @@ Token Lexer::parse_operator()
 {
     auto node = this->char_nodes[this->last_char];
     TokenType return_type;
-    for (auto next_char = this->peek_char();;
-         this->get_new_char(), next_char = this->peek_char())
+    for (auto next_char = this->peek_char();; this->get_new_char(), next_char = this->peek_char())
     {
         if (node.children.contains(next_char))
         {
@@ -114,9 +113,7 @@ std::optional<Token> Lexer::parse_slash()
 
 void Lexer::skip_line_comment()
 {
-    while (!this->reader->eof() &&
-           this->last_char != L'\n' &&
-           this->last_char != L'\r')
+    while (!this->reader->eof() && this->last_char != L'\n' && this->last_char != L'\r')
     {
         this->get_new_char();
     }
@@ -149,25 +146,33 @@ LexerPtr Lexer::from_wstring(const std::wstring &source)
 Token Lexer::get_token()
 {
     this->get_nonempty_char();
-    if (std::isdigit(this->last_char) || this->last_char == L'.')
+    if (std::isdigit(this->last_char, this->locale) ||
+        (this->last_char == L'.' && std::isdigit(this->peek_char(), this->locale)))
     {
         return this->parse_number_token();
     }
-    if (std::isalpha(this->last_char) || this->last_char == L'_')
+    else if (std::isalpha(this->last_char) || this->last_char == L'_')
     {
         return this->parse_alpha_token();
     }
-    if (this->last_char == L'/')
+    else if (this->last_char == L'/')
     {
         auto result = this->parse_slash();
         if (result.has_value())
             return result.value();
+        else
+            return this->get_token();
     }
-    if (this->char_nodes.contains(this->last_char))
+    else if (this->char_nodes.contains(this->last_char))
     {
         return this->parse_operator();
     }
-    return Token(TokenType::END);
+    else if (static_cast<wint_t>(this->last_char) == WEOF)
+    {
+        return Token(TokenType::END);
+    }
+    else // throw LexerException(std::string("Invalid char: ").append(this->last_char));
+        throw LexerException("Invalid char.");
 }
 
 wchar_t Lexer::peek_char()

@@ -34,9 +34,22 @@ class Lexer
         {L"if", Token(TokenType::KW_IF)},
         {L"else", Token(TokenType::KW_ELSE)},
 
+        // type names
         {L"f32", Token(TokenType::TYPE_F32)},
         {L"f64", Token(TokenType::TYPE_F64)},
+
+        {L"u8", Token(TokenType::TYPE_U8)},
+        {L"u16", Token(TokenType::TYPE_U16)},
+        {L"u32", Token(TokenType::TYPE_U32)},
+        {L"u64", Token(TokenType::TYPE_U64)},
+
+        {L"i8", Token(TokenType::TYPE_I8)},
+        {L"i16", Token(TokenType::TYPE_I16)},
         {L"i32", Token(TokenType::TYPE_I32)},
+        {L"i64", Token(TokenType::TYPE_I64)},
+
+        {L"char", Token(TokenType::TYPE_CHAR)},
+
     };
     std::map<wchar_t, CharNode> char_nodes{
         {L':', {TokenType::COLON, {}}},
@@ -117,5 +130,14 @@ public:
     Token get_token();
     wchar_t peek_char();
     bool eof();
+};
+class LexerException : public std::exception
+{
+    const char *what_str;
+
+public:
+    LexerException() = default;
+    LexerException(const char *what_str) : what_str(what_str) {}
+    const char *what() const noexcept override { return this->what_str; }
 };
 #endif
