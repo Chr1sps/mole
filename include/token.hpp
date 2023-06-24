@@ -112,7 +112,8 @@ struct Token
     Token(const TokenType &type, const double &num) : type(type), value(num)
     {
     }
-    Token(const TokenType &type, const std::wstring &str) : type(type), value(str)
+    Token(const TokenType &type, const std::wstring &str)
+        : type(type), value(str)
     {
     }
     friend bool operator==(const Token &token, const Token &other);

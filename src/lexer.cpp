@@ -20,7 +20,8 @@ Token Lexer::parse_alpha_token()
     {
         name += this->last_char;
         this->get_new_char();
-    } while (std::isalnum(this->last_char, this->locale) || this->last_char == L'_');
+    } while (std::isalnum(this->last_char, this->locale) ||
+             this->last_char == L'_');
     if (this->keywords.contains(name))
         return this->keywords[name];
     return Token(TokenType::IDENTIFIER, name);
@@ -72,7 +73,8 @@ Token Lexer::parse_operator()
 {
     auto node = this->char_nodes[this->last_char];
     TokenType return_type;
-    for (auto next_char = this->peek_char();; this->get_new_char(), next_char = this->peek_char())
+    for (auto next_char = this->peek_char();;
+         this->get_new_char(), next_char = this->peek_char())
     {
         if (node.children.contains(next_char))
         {
@@ -113,7 +115,8 @@ std::optional<Token> Lexer::parse_slash()
 
 void Lexer::skip_line_comment()
 {
-    while (!this->reader->eof() && this->last_char != L'\n' && this->last_char != L'\r')
+    while (!this->reader->eof() && this->last_char != L'\n' &&
+           this->last_char != L'\r')
     {
         this->get_new_char();
     }
@@ -147,7 +150,8 @@ Token Lexer::get_token()
 {
     this->get_nonempty_char();
     if (std::isdigit(this->last_char, this->locale) ||
-        (this->last_char == L'.' && std::isdigit(this->peek_char(), this->locale)))
+        (this->last_char == L'.' &&
+         std::isdigit(this->peek_char(), this->locale)))
     {
         return this->parse_number_token();
     }
@@ -171,7 +175,8 @@ Token Lexer::get_token()
     {
         return Token(TokenType::END);
     }
-    else // throw LexerException(std::string("Invalid char: ").append(this->last_char));
+    else // throw LexerException(std::string("Invalid char:
+         // ").append(this->last_char));
         throw LexerException("Invalid char.");
 }
 

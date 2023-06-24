@@ -19,7 +19,8 @@ concept DerivedFromWistream = std::derived_from<T, std::wistream>;
 
 template <typename T> class IStreamReader : public Reader
 {
-    static_assert(DerivedFromWistream<T>, "T must be derived from the std::wistream class.");
+    static_assert(DerivedFromWistream<T>,
+                  "T must be derived from the std::wistream class.");
 
   protected:
     T driver;
@@ -68,7 +69,8 @@ class FileReader : public IStreamReader<std::wifstream>
 class StringReader : public IStreamReader<std::wistringstream>
 {
   public:
-    StringReader(const std::wstring &code) : IStreamReader<std::wistringstream>()
+    StringReader(const std::wstring &code)
+        : IStreamReader<std::wistringstream>()
     {
         this->driver.str(code);
     }

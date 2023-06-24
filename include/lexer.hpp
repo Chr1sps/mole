@@ -143,7 +143,9 @@ class Lexer
     void skip_block_comment();
 
   public:
-    Lexer(ReaderPtr &reader) : reader(std::move(reader)), last_char(L' '), error_msg(""), locale(Locale::get().locale())
+    Lexer(ReaderPtr &reader)
+        : reader(std::move(reader)), last_char(L' '), error_msg(""),
+          locale(Locale::get().locale())
     {
     }
 
