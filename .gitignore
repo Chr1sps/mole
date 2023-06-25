@@ -2,3 +2,5 @@
 .idea
 build/
 lang.txt
+html/
+output.info

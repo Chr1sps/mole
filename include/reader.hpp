@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+
 class Reader
 {
   public:
@@ -12,6 +13,7 @@ class Reader
     virtual bool eof() = 0;
     virtual ~Reader() = default;
 };
+
 using ReaderPtr = std::unique_ptr<Reader>;
 
 template <typename T>
@@ -30,10 +32,12 @@ template <typename T> class IStreamReader : public Reader
     {
         return this->driver.peek();
     }
+
     wchar_t get() override
     {
         return this->driver.get();
     }
+
     bool eof() override
     {
         return this->driver.eof();
@@ -47,10 +51,12 @@ class ConsoleReader : public Reader
     {
         return std::wcin.peek();
     }
+
     wchar_t get() override
     {
         return std::wcin.get();
     }
+
     bool eof() override
     {
         return std::wcin.eof();

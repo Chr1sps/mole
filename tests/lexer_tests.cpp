@@ -14,6 +14,7 @@ bool compare_tokens(LexerPtr &&lexer, const vector<Token> &tokens)
     }
     return true;
 }
+
 void consume_tokens(LexerPtr &&lexer)
 {
     while (!lexer->eof())
@@ -39,6 +40,7 @@ TEST_CASE("Empty code.", "[EOF]")
 {
     COMPARE(L"", LIST(T(END)));
 }
+
 TEST_CASE("Single char tokens (with no branching alternatives).", "[OPS][EOF]")
 {
     COMPARE(L":", LIST(T(COLON), T(END)));
@@ -67,6 +69,7 @@ TEST_CASE("Single char tokens (with no branching alternatives).", "[OPS][EOF]")
     COMPARE(L"[", LIST(T(L_SQ_BRACKET), T(END)));
     COMPARE(L"]", LIST(T(R_SQ_BRACKET), T(END)));
 }
+
 TEST_CASE("Multiple char tokens.", "[LONG][EOF]")
 {
     COMPARE(L"++", LIST(T(INCREMENT), T(END)));
@@ -89,13 +92,16 @@ TEST_CASE("Multiple char tokens.", "[LONG][EOF]")
     COMPARE(L"|=", LIST(T(ASSIGN_BIT_OR), T(END)));
     COMPARE(L"||", LIST(T(OR), T(END)));
 }
+
 TEST_CASE("Comments.", "[COMM][EOF]")
 {
     COMPARE(L"//", LIST(T(END)));
     COMPARE(L"// one 2 _three four\n", LIST(T(END)));
     COMPARE(L"/* fn extern main */", LIST(T(END)));
     COMPARE(L"/*\n*/", LIST(T(END)));
+    COMPARE(L"/***/", LIST(T(END)));
 }
+
 TEST_CASE("Numericals.", "[NUMS][EOF]")
 {
     COMPARE(L"1", LIST(V(INT, 1), T(END)));
@@ -109,6 +115,7 @@ TEST_CASE("Numericals.", "[NUMS][EOF]")
     COMPARE(L"1.0d", LIST(V(F64, 1.0), T(END)));
     COMPARE(L"1.d", LIST(V(F64, 1.0), T(END)));
 }
+
 TEST_CASE("Expressions.", "[NUMS][OPS][EOF]")
 {
     COMPARE(L"1+1", LIST(V(INT, 1), T(PLUS), V(INT, 1), T(END)));
@@ -117,6 +124,7 @@ TEST_CASE("Expressions.", "[NUMS][OPS][EOF]")
     COMPARE(L"1.f+1.f", LIST(V(F32, 1.0), T(PLUS), V(F32, 1.0), T(END)));
     COMPARE(L"1.d+1.d", LIST(V(F64, 1.0), T(PLUS), V(F64, 1.0), T(END)));
 }
+
 TEST_CASE("Keywords.", "[KW][EOF]")
 {
     COMPARE(L"fn", LIST(T(KW_FN), T(END)));
@@ -129,6 +137,7 @@ TEST_CASE("Keywords.", "[KW][EOF]")
     COMPARE(L"if", LIST(T(KW_IF), T(END)));
     COMPARE(L"else", LIST(T(KW_ELSE), T(END)));
 }
+
 TEST_CASE("Type names.", "[TYPE][EOF]")
 {
     COMPARE(L"u8", LIST(T(TYPE_U8), T(END)));
@@ -146,6 +155,7 @@ TEST_CASE("Type names.", "[TYPE][EOF]")
 
     COMPARE(L"char", LIST(T(TYPE_CHAR), T(END)));
 }
+
 TEST_CASE("Identifiers.", "[ID][EOF]")
 {
     COMPARE(L"name", LIST(V(IDENTIFIER, L"name"), T(END)));
@@ -156,12 +166,14 @@ TEST_CASE("Identifiers.", "[ID][EOF]")
     COMPARE(L"_snake_case", LIST(V(IDENTIFIER, L"_snake_case"), T(END)));
     COMPARE(L"_", LIST(V(IDENTIFIER, L"_"), T(END)));
 }
+
 TEST_CASE("Invalid signs.", "[ERR]")
 {
     COMPARE_THROWS(L".", LexerException);
     COMPARE_THROWS(L"$", LexerException);
     COMPARE_THROWS(L"#", LexerException);
 }
+
 TEST_CASE("Assignments.", "[ASGN][KW][ID][OP][EOF]")
 {
     COMPARE(L"let name = 0;",
@@ -171,6 +183,7 @@ TEST_CASE("Assignments.", "[ASGN][KW][ID][OP][EOF]")
             LIST(T(KW_LET), T(KW_MUT), V(IDENTIFIER, L"name"), T(COLON),
                  T(TYPE_I32), T(ASSIGN), V(INT, 0), T(SEMICOLON), T(END)));
 }
+
 TEST_CASE("Function definitions", "[FN][KW][ID][OP][EOF]")
 {
     COMPARE(L"fn noop() => {}",

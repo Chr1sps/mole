@@ -17,6 +17,7 @@ struct CharNode
 };
 class Lexer;
 using LexerPtr = std::unique_ptr<Lexer>;
+
 class Lexer
 {
     ReaderPtr reader;
@@ -155,15 +156,18 @@ class Lexer
     wchar_t peek_char();
     bool eof();
 };
+
 class LexerException : public std::exception
 {
     const char *what_str;
 
   public:
     LexerException() = default;
+
     LexerException(const char *what_str) : what_str(what_str)
     {
     }
+
     const char *what() const noexcept override
     {
         return this->what_str;

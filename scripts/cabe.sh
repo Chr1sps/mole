@@ -13,6 +13,7 @@ red='\033[0;31m' # ANSI escape sequence for red color
 yellow='\033[38;5;214m'
 reset='\033[0m' # ANSI escape sequence to reset color
 
+cd "$(dirname "${BASH_SOURCE[0]}")/.." &>/dev/null || return
 output=$(pmccabe src/*.cpp)
 
 color_column() {

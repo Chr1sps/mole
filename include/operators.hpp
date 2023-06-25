@@ -26,6 +26,7 @@ enum class BinaryOperator
     SHL,
     SHR,
 };
+
 enum class UnaryOperator
 {
     INC,

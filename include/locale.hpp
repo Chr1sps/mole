@@ -9,6 +9,7 @@ class Locale
 {
     std::string cpp_name;
     std::locale cpp_locale;
+
     Locale(std::string name) : cpp_name(name), cpp_locale(name)
     {
         std::locale::global(cpp_locale);
@@ -25,6 +26,7 @@ class Locale
     {
         return cpp_name;
     }
+
     std::locale locale() const noexcept
     {
         return cpp_locale;

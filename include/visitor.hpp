@@ -1,6 +1,7 @@
 #ifndef __VISITOR_HPP__
 #define __VISITOR_HPP__
 #include "ast.hpp"
+
 class Visitor
 {
   public:

@@ -6,6 +6,7 @@ wchar_t Lexer::get_new_char()
 {
     return this->last_char = this->reader->get();
 }
+
 void Lexer::get_nonempty_char()
 {
     while (std::isspace(this->last_char, this->locale))
@@ -13,6 +14,7 @@ void Lexer::get_nonempty_char()
         this->get_new_char();
     }
 }
+
 Token Lexer::parse_alpha_token()
 {
     std::wstring name;
@@ -26,6 +28,7 @@ Token Lexer::parse_alpha_token()
         return this->keywords[name];
     return Token(TokenType::IDENTIFIER, name);
 }
+
 std::string Lexer::parse_digits()
 {
     std::string num_str;
@@ -47,7 +50,6 @@ Token Lexer::parse_number_token()
         this->get_new_char();
         num_str += this->parse_digits();
         double value = std::strtod(num_str.c_str(), 0);
-
         if (this->last_char == 'd')
         {
             this->get_new_char();

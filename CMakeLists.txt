@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16.3)
-project(llvm)
+project(mole)
 
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
@@ -58,24 +58,42 @@ set(SOURCES
 list(TRANSFORM HEADERS PREPEND "${INCLUDE}/")
 list(TRANSFORM SOURCES PREPEND "${SRC}/")
 
-add_library(llvm_tutorial ${HEADERS} ${SOURCES})
-target_include_directories(llvm_tutorial PUBLIC "${INCLUDE}")
-target_include_directories(llvm_tutorial PUBLIC "${LLVM_INCLUDE_DIRS}")
-target_link_libraries(llvm_tutorial PUBLIC LLVM)
-target_link_libraries(llvm_tutorial PUBLIC compiler_flags)
+add_library(mole ${HEADERS} ${SOURCES})
+target_include_directories(mole PUBLIC "${INCLUDE}")
+target_include_directories(mole PUBLIC "${LLVM_INCLUDE_DIRS}")
+target_link_libraries(mole PUBLIC LLVM)
+target_link_libraries(mole PUBLIC compiler_flags)
 
 add_executable(out main.cpp)
-target_link_libraries(out PRIVATE llvm_tutorial)
+target_link_libraries(out PRIVATE mole)
 
-include(FetchContent)
-FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG origin/devel)
-FetchContent_MakeAvailable(Catch2)
-list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR/extras})
-include(CTest)
-include(Catch)
-add_executable(lexer_tests tests/lexer_tests.cpp)
-target_link_libraries(lexer_tests PRIVATE llvm_tutorial Catch2::Catch2WithMain)
-catch_discover_tests(lexer_tests)
+option(COVERAGE "Compile tests with coverage flags." TRUE)
+option(TESTS "Compile the tests executables." TRUE)
+
+if(TESTS)
+    message(STATUS "Compiling tests.")
+    enable_testing()
+    include(FetchContent)
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG origin/devel)
+    FetchContent_MakeAvailable(Catch2)
+    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR/extras})
+    include(CTest)
+    include(Catch)
+    add_executable(lexer_tests tests/lexer_tests.cpp)
+    target_link_libraries(lexer_tests PRIVATE mole Catch2::Catch2WithMain)
+
+    if(COVERAGE)
+        message(STATUS "Compiling with coverage info.")
+        add_library(coverage_flags INTERFACE)
+        target_compile_options(coverage_flags INTERFACE "--coverage")
+        target_link_options(coverage_flags INTERFACE "--coverage")
+
+        target_link_libraries(lexer_tests PRIVATE coverage_flags)
+        target_link_libraries(mole PRIVATE coverage_flags)
+    endif()
+
+    catch_discover_tests(lexer_tests)
+endif()

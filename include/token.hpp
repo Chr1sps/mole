@@ -98,24 +98,30 @@ enum class TokenType
     OTHER,
     INVALID,
 };
+
 struct Token
 {
     TokenType type;
     std::variant<std::wstring, double, int> value;
     Token() = default;
+
     Token(const TokenType &type) : type(type), value(0)
     {
     }
+
     Token(const TokenType &type, const int &num) : type(type), value(num)
     {
     }
+
     Token(const TokenType &type, const double &num) : type(type), value(num)
     {
     }
+
     Token(const TokenType &type, const std::wstring &str)
         : type(type), value(str)
     {
     }
+
     friend bool operator==(const Token &token, const Token &other);
     friend bool operator!=(const Token &token, const Token &other);
 };
