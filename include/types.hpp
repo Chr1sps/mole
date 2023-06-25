@@ -1,6 +1,6 @@
 #ifndef __TYPES_HPP__
 #define __TYPES_HPP__
-enum class Type
+enum class TypeEnum
 {
     BOOL,
 
@@ -18,5 +18,22 @@ enum class Type
     F64,
 
     CHAR,
+};
+
+struct Type
+{
+};
+
+struct SimpleType : public Type
+{
+    TypeEnum type;
+};
+
+using TypePtr = std::unique_ptr<Type>;
+
+struct FunctionType
+{
+    std::vector<TypeEnum> arg_types;
+    TypePtr return_type;
 };
 #endif

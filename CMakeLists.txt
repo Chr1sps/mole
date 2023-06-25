@@ -40,7 +40,7 @@ set(HEADERS
     "lexer.hpp"
     "locale.hpp"
 
-    # "parser.hpp"
+    "parser.hpp"
     "reader.hpp"
     "token.hpp"
     "visitor.hpp"
@@ -51,7 +51,7 @@ set(SOURCES
     # "codebuilder.cpp"
     "lexer.cpp"
 
-    # "parser.cpp"
+    "parser.cpp"
     "token.cpp"
 )
 
