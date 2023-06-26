@@ -35,7 +35,10 @@ class PrintVisitor : public Visitor
     };
     std::wstring repr_operator(const BuiltInBinOp &op);
     std::wstring repr_operator(const BuiltInUnaryOp &op);
-    // unsigned tab_level = 0;
+    void print_indent();
+    void increment_indent();
+    void decrement_indent();
+    unsigned indent_level = 0;
 
   public:
     PrintVisitor(std::wostream &out) : out(out)

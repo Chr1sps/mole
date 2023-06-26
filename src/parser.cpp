@@ -221,25 +221,28 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_statement()
     return std::make_unique<ReturnStmt>(expr);
 }
 
+std::unique_ptr<Statement> Parser::parse_block_statement()
+{
+    if (this->current_token == TokenType::KW_LET)
+        return (this->parse_variable_declaration());
+    else if (this->current_token == TokenType::KW_RETURN)
+        return (this->parse_return_statement());
+    else if (this->current_token == TokenType::KW_EXTERN)
+        return (this->parse_extern());
+    else if (this->current_token == TokenType::KW_FN)
+        return (this->parse_function());
+    else
+        throw ParserException("Invalid token found in a block.");
+}
+
 // Block = {Statement}
 std::unique_ptr<Block> Parser::parse_block()
 {
     std::vector<std::unique_ptr<Statement>> statements;
     this->get_new_token();
-    for (;;)
+    for (; this->current_token != TokenType::R_BRACKET;)
     {
-        if (this->current_token == TokenType::KW_LET)
-            statements.push_back(this->parse_variable_declaration());
-        else if (this->current_token == TokenType::KW_RETURN)
-            statements.push_back(this->parse_return_statement());
-        else if (this->current_token == TokenType::KW_EXTERN)
-            statements.push_back(this->parse_extern());
-        else if (this->current_token == TokenType::KW_FN)
-            statements.push_back(this->parse_function());
-        else if (this->current_token == TokenType::R_BRACKET)
-            break;
-        else
-            throw ParserException("Invalid token found in a block.");
+        statements.push_back(this->parse_block_statement());
     }
     this->get_new_token();
     return std::make_unique<Block>(statements);
@@ -277,17 +280,32 @@ std::unique_ptr<ExprNode> Parser::parse_const_expression()
     }
 }
 
-std::unique_ptr<ExprNode> Parser::parse_variable_expression()
+std::unique_ptr<ExprNode> Parser::parse_identifier_expression()
 {
-    auto value = std::get<std::wstring>(this->current_token.value);
+    auto name = std::get<std::wstring>(this->current_token.value);
     this->get_new_token();
-    return std::make_unique<VariableExpr>(value);
+    if (this->current_token != TokenType::L_PAREN)
+        return std::make_unique<VariableExpr>(name);
+    std::vector<std::unique_ptr<ExprNode>> args;
+    if (this->get_new_token() != TokenType::R_PAREN)
+    {
+        for (;; this->get_new_token())
+        {
+            args.push_back(this->parse_expression());
+            if (this->current_token == TokenType::R_PAREN)
+                break;
+            this->assert_current_token(
+                TokenType::COMMA, "Expected ')' or ',' in argument list.");
+        }
+    }
+    this->get_new_token();
+    return std::make_unique<CallExpr>(name, args);
 }
 
 std::unique_ptr<ExprNode> Parser::parse_lhs()
 {
     if (this->current_token == TokenType::IDENTIFIER)
-        return this->parse_variable_expression();
+        return this->parse_identifier_expression();
     else if (this->current_token == TokenType::L_PAREN)
         return this->parse_paren_expression();
     else if (this->type_value_map.contains(this->current_token.type))
@@ -310,10 +328,13 @@ std::unique_ptr<ExprNode> Parser::parse_op_and_rhs(
             return std::move(lhs);
         this->get_new_token();
         auto rhs = parse_lhs();
-        auto new_op = this->binary_map.at(this->current_token.type);
-        if (op->precedence < new_op->precedence)
+        if (this->binary_map.contains(this->current_token.type))
         {
-            rhs = this->parse_op_and_rhs(op->precedence + 1, rhs);
+            auto new_op = this->binary_map.at(this->current_token.type);
+            if (op->precedence < new_op->precedence)
+            {
+                rhs = this->parse_op_and_rhs(op->precedence + 1, rhs);
+            }
         }
         lhs = std::make_unique<BinaryExpr>(lhs, rhs, op);
     }

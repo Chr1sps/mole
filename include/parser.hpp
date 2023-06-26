@@ -90,6 +90,7 @@ class Parser
     std::unique_ptr<ExternStmt> parse_extern();
     std::unique_ptr<VarDeclStmt> parse_variable_declaration();
     std::unique_ptr<ReturnStmt> parse_return_statement();
+    std::unique_ptr<Statement> parse_block_statement();
     std::unique_ptr<Block> parse_block();
 
     // expressions
@@ -97,7 +98,7 @@ class Parser
     std::unique_ptr<F64Expr> parse_f64();
     std::unique_ptr<ExprNode> parse_paren_expression();
     std::unique_ptr<ExprNode> parse_unary_expression();
-    std::unique_ptr<ExprNode> parse_variable_expression();
+    std::unique_ptr<ExprNode> parse_identifier_expression();
     std::unique_ptr<ExprNode> parse_const_expression();
     std::unique_ptr<ExprNode> parse_lhs();
     std::unique_ptr<ExprNode> parse_op_and_rhs(const unsigned &precedence,
