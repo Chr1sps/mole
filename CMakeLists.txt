@@ -35,23 +35,21 @@ set(INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(HEADERS
 
     "ast.hpp"
-
-    # "codebuilder.hpp"
     "lexer.hpp"
     "locale.hpp"
-
+    "operators.hpp"
     "parser.hpp"
+    "print_visitor.hpp"
     "reader.hpp"
     "token.hpp"
+    "types.hpp"
     "visitor.hpp"
 )
 set(SOURCES
 
-    # "ast.cpp"
-    # "codebuilder.cpp"
     "lexer.cpp"
-
     "parser.cpp"
+    "print_visitor.cpp"
     "token.cpp"
 )
 
@@ -67,7 +65,7 @@ target_link_libraries(mole PUBLIC compiler_flags)
 add_executable(out main.cpp)
 target_link_libraries(out PRIVATE mole)
 
-option(COVERAGE "Compile tests with coverage flags." TRUE)
+option(COVERAGE "Compile tests with coverage flags." FALSE)
 option(TESTS "Compile the tests executables." TRUE)
 
 if(TESTS)

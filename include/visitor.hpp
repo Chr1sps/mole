@@ -1,6 +1,27 @@
 #ifndef __VISITOR_HPP__
 #define __VISITOR_HPP__
-#include "ast.hpp"
+
+struct VariableExpr;
+struct I32Expr;
+struct F32Expr;
+struct F64Expr;
+struct BinaryExpr;
+struct UnaryExpr;
+struct CallExpr;
+struct Block;
+struct ReturnStmt;
+struct FuncDefStmt;
+struct AssignStmt;
+struct VarDeclStmt;
+struct ExternStmt;
+struct Program;
+
+struct NeverType;
+struct SimpleType;
+struct FunctionType;
+
+struct BuiltInBinOp;
+struct BuiltInUnaryOp;
 
 class Visitor
 {
@@ -19,5 +40,12 @@ class Visitor
     virtual void visit(const VarDeclStmt &node) = 0;
     virtual void visit(const ExternStmt &node) = 0;
     virtual void visit(const Program &node) = 0;
+
+    virtual void visit(const NeverType &type) = 0;
+    virtual void visit(const SimpleType &type) = 0;
+    virtual void visit(const FunctionType &type) = 0;
+
+    virtual void visit(const BuiltInBinOp &op) = 0;
+    virtual void visit(const BuiltInUnaryOp &op) = 0;
 };
 #endif

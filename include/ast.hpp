@@ -19,7 +19,7 @@ struct AstNode
     virtual void accept(Visitor &visitor) const = 0;
 };
 
-using AstNodePtr = std::unique_ptr<AstNodePtr>;
+using AstNodePtr = std::unique_ptr<AstNode>;
 
 struct ExprNode : public AstNode
 {
@@ -29,9 +29,9 @@ using ExprNodePtr = std::unique_ptr<ExprNode>;
 
 struct VariableExpr : public ExprNode
 {
-    std::string name;
+    std::wstring name;
 
-    VariableExpr(const std::string &name) : name(name)
+    VariableExpr(const std::wstring &name) : name(name)
     {
     }
 
@@ -44,9 +44,9 @@ struct VariableExpr : public ExprNode
 struct BinaryExpr : public ExprNode
 {
     ExprNodePtr lhs, rhs;
-    BinaryOperator op;
+    BinaryPtr op;
 
-    BinaryExpr(ExprNodePtr &lhs, ExprNodePtr &rhs, const BinaryOperator &op)
+    BinaryExpr(ExprNodePtr &lhs, ExprNodePtr &rhs, const BinaryPtr &op)
         : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
     {
     }
@@ -60,10 +60,9 @@ struct BinaryExpr : public ExprNode
 struct UnaryExpr : public ExprNode
 {
     ExprNodePtr expr;
-    UnaryOperator op;
+    UnaryPtr op;
 
-    UnaryExpr(ExprNodePtr &expr, UnaryOperator op)
-        : expr(std::move(expr)), op(op)
+    UnaryExpr(ExprNodePtr &expr, UnaryPtr op) : expr(std::move(expr)), op(op)
     {
     }
 
@@ -145,6 +144,10 @@ struct Block : public AstNode
 {
     std::vector<StmtPtr> statements;
 
+    Block(std::vector<StmtPtr> &statements) : statements(std::move(statements))
+    {
+    }
+
     void accept(Visitor &visitor) const override
     {
         visitor.visit(*this);
@@ -170,22 +173,28 @@ struct ReturnStmt : public Statement
 
 struct VarDeclStmt : public Statement
 {
-    std::string name;
-    std::optional<Type> type;
+    std::wstring name;
+    std::optional<TypePtr> type;
     std::optional<ExprNodePtr> initial_value;
 
-    VarDeclStmt(Type &type, ExprNodePtr &value)
-        : type(std::move(type)), initial_value(std::move(value))
+    VarDeclStmt(const std::wstring &name, std::optional<TypePtr> &type,
+                std::optional<ExprNodePtr> &value)
+        : name(name), type(std::move(type)), initial_value(std::move(value))
     {
     }
 
-    VarDeclStmt(Type &type)
-        : type(std::move(type)), initial_value(std::nullopt)
+    VarDeclStmt(const std::wstring &name, TypePtr &type, ExprNodePtr &value)
+        : name(name), type(std::move(type)), initial_value(std::move(value))
     {
     }
 
-    VarDeclStmt(ExprNodePtr &value)
-        : type(std::nullopt), initial_value(std::move(value))
+    VarDeclStmt(const std::wstring &name, TypePtr &type)
+        : name(name), type(std::move(type)), initial_value({})
+    {
+    }
+
+    VarDeclStmt(const std::wstring &name, ExprNodePtr &value)
+        : name(name), type({}), initial_value(std::move(value))
     {
     }
 
@@ -213,18 +222,30 @@ struct AssignStmt : public Statement
 
 struct Parameter
 {
-    std::string name;
+    std::wstring name;
     TypePtr type;
+
+    Parameter(const std::wstring name, TypePtr &&type)
+        : name(name), type(std::move(type))
+    {
+    }
 };
 
 using ParamPtr = std::unique_ptr<Parameter>;
 
 struct FuncDefStmt : public Statement
 {
-    std::string name;
+    std::wstring name;
     std::vector<ParamPtr> params;
     TypePtr return_type;
     BlockPtr block;
+
+    FuncDefStmt(const std::wstring &name, std::vector<ParamPtr> &params,
+                TypePtr &return_type, BlockPtr &block)
+        : name(name), params(std::move(params)),
+          return_type(std::move(return_type)), block(std::move(block))
+    {
+    }
 
     void accept(Visitor &visitor) const override
     {
@@ -234,9 +255,16 @@ struct FuncDefStmt : public Statement
 
 struct ExternStmt : public Statement
 {
-    std::string name;
+    std::wstring name;
     std::vector<ParamPtr> params;
     TypePtr return_type;
+
+    ExternStmt(const std::wstring &name, std::vector<ParamPtr> &params,
+               TypePtr &return_type)
+        : name(name), params(std::move(params)),
+          return_type(std::move(return_type))
+    {
+    }
 
     void accept(Visitor &visitor) const override
     {
@@ -246,13 +274,13 @@ struct ExternStmt : public Statement
 
 struct Program : public AstNode
 {
-    std::vector<VarDeclStmt> globals;
-    std::vector<FuncDefStmt> functions;
-    std::vector<ExternStmt> externs;
+    std::vector<std::unique_ptr<VarDeclStmt>> globals;
+    std::vector<std::unique_ptr<FuncDefStmt>> functions;
+    std::vector<std::unique_ptr<ExternStmt>> externs;
 
-    Program(std::vector<VarDeclStmt> globals,
-            std::vector<FuncDefStmt> functions,
-            std::vector<ExternStmt> externs)
+    Program(std::vector<std::unique_ptr<VarDeclStmt>> &globals,
+            std::vector<std::unique_ptr<FuncDefStmt>> &functions,
+            std::vector<std::unique_ptr<ExternStmt>> &externs)
         : globals(std::move(globals)), functions(std::move(functions)),
           externs(std::move(externs))
     {
