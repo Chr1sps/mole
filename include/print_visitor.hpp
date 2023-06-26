@@ -29,10 +29,13 @@ class PrintVisitor : public Visitor
         {UnaryOpEnum::NEG, L"!"},
     };
     std::map<TypeEnum, std::wstring> type_string_map = {
-
+        {TypeEnum::I32, L"i32"},
+        {TypeEnum::F32, L"f32"},
+        {TypeEnum::F64, L"f64"},
     };
     std::wstring repr_operator(const BuiltInBinOp &op);
     std::wstring repr_operator(const BuiltInUnaryOp &op);
+    // unsigned tab_level = 0;
 
   public:
     PrintVisitor(std::wostream &out) : out(out)

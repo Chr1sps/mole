@@ -43,18 +43,51 @@ void PrintVisitor::visit(const UnaryExpr &node)
 
 void PrintVisitor::visit(const CallExpr &node)
 {
+    this->out << node.func_name << "(";
+    for (unsigned long i = 0; i < node.args.size(); ++i)
+    {
+        node.args[i]->accept(*this);
+        if (i < node.args.size() - 1)
+        {
+            this->out << ", ";
+        }
+    }
+    this->out << ")" << std::endl;
 }
 
 void PrintVisitor::visit(const Block &node)
 {
+    this->out << "{" << std::endl;
+    for (auto &stmt : node.statements)
+    {
+        stmt->accept(*this);
+    }
+    this->out << "}" << std::endl;
 }
 
 void PrintVisitor::visit(const ReturnStmt &node)
 {
+    this->out << "return ";
+    node.expr->accept(*this);
+    this->out << ";" << std::endl;
 }
 
 void PrintVisitor::visit(const FuncDefStmt &node)
 {
+    this->out << "fn " << node.name << "(";
+    for (unsigned long i = 0; i < node.params.size(); ++i)
+    {
+        this->out << node.params[i]->name << ": ";
+        node.params[i]->type->accept(*this);
+        if (i < node.params.size() - 1)
+        {
+            this->out << ", ";
+        }
+    }
+    this->out << ") => ";
+    node.return_type->accept(*this);
+    this->out << " ";
+    node.block->accept(*this);
 }
 
 void PrintVisitor::visit(const AssignStmt &node)
@@ -63,20 +96,35 @@ void PrintVisitor::visit(const AssignStmt &node)
 
 void PrintVisitor::visit(const VarDeclStmt &node)
 {
+    this->out << "let " << node.name;
+    if (node.type.has_value())
+    {
+        this->out << " : ";
+        node.type.value()->accept(*this);
+    }
+    if (node.initial_value.has_value())
+    {
+        this->out << " = ";
+        node.initial_value.value()->accept(*this);
+    }
+    this->out << ";" << std::endl;
 }
 
 void PrintVisitor::visit(const ExternStmt &node)
 {
-    // this->out << "extern " << node.name << "(";
-    // for (int i = 0; i < node.params.size(); ++i)
-    // {
-    //     auto name = node.params[i]->name;
-    //     auto type = node.params[i]->type;
-    //     if (i < node.params.size() - 1)
-    //     {
-    //         this->out << ", ";
-    //     }
-    // }
+    this->out << "extern " << node.name << "(";
+    for (unsigned long i = 0; i < node.params.size(); ++i)
+    {
+        this->out << node.params[i]->name << ": ";
+        node.params[i]->type->accept(*this);
+        if (i < node.params.size() - 1)
+        {
+            this->out << ", ";
+        }
+    }
+    this->out << ") => ";
+    node.return_type->accept(*this);
+    this->out << ";" << std::endl;
 }
 
 void PrintVisitor::visit(const Program &node)
@@ -120,8 +168,10 @@ void PrintVisitor::visit(const FunctionType &type)
 
 void PrintVisitor::visit(const BuiltInBinOp &op)
 {
+    this->out << this->bin_op_strings.at(op.op);
 }
 
 void PrintVisitor::visit(const BuiltInUnaryOp &op)
 {
+    this->out << this->unary_op_strings.at(op.op);
 }

@@ -5,6 +5,12 @@ Token Parser::get_new_token()
     return this->current_token = this->lexer->get_token();
 }
 
+void Parser::assert_current_token(TokenType type, const char *error_msg)
+{
+    if (this->current_token != type)
+        throw ParserException(error_msg);
+}
+
 void Parser::assert_next_token(TokenType type, const char *error_msg)
 {
     auto new_token = this->get_new_token();
@@ -36,6 +42,7 @@ ParamPtr Parser::parse_param()
     auto name = std::get<std::wstring>(this->current_token.value);
     this->assert_next_token(TokenType::COLON,
                             "Not a colon in a parameter expression!");
+    this->get_new_token();
     auto param_type = this->parse_type();
     return std::make_unique<Parameter>(name, std::move(param_type));
 }
@@ -66,8 +73,11 @@ TypePtr Parser::parse_type()
     }
     else if (this->type_map.contains(this->current_token.type))
     {
-        return std::make_unique<SimpleType>(
+
+        auto result = std::make_unique<SimpleType>(
             this->type_map[this->current_token.type]);
+        this->get_new_token();
+        return result;
     }
     else
         throw ParserException("Invalid type syntax.");
@@ -77,7 +87,7 @@ TypePtr Parser::parse_type()
 std::vector<TypePtr> Parser::parse_types()
 {
     std::vector<TypePtr> types;
-    for (this->get_new_token();;)
+    for (this->get_new_token();; this->get_new_token())
     {
         auto type = this->parse_type();
         types.push_back(std::move(type));
@@ -112,9 +122,11 @@ std::unique_ptr<FunctionType> Parser::parse_function_type()
         "No left parenthesis in the function type definition.");
 
     auto types = this->parse_types();
-    if (this->current_token != TokenType::L_PAREN)
+    if (this->current_token != TokenType::R_PAREN)
         throw ParserException(
             "No right parenthesis in the function type definition.");
+
+    this->get_new_token();
 
     TypePtr return_type = this->parse_return_type();
     return std::make_unique<FunctionType>(types, return_type);
@@ -139,12 +151,14 @@ std::unique_ptr<ExternStmt> Parser::parse_extern()
         throw ParserException(
             "Not a right parenthesis in an extern declaration.");
     }
+    this->get_new_token();
 
     auto return_type = this->parse_return_type();
 
-    this->assert_next_token(TokenType::SEMICOLON,
-                            "Not a semicolon in an extern declaration.");
+    this->assert_current_token(TokenType::SEMICOLON,
+                               "Not a semicolon in an extern declaration.");
 
+    this->get_new_token();
     return std::make_unique<ExternStmt>(name, params, return_type);
 }
 
@@ -186,11 +200,13 @@ std::unique_ptr<VarDeclStmt> Parser::parse_variable_declaration()
     std::optional<ExprNodePtr> initial_value = {};
     if (this->current_token == TokenType::ASSIGN)
     {
+        this->get_new_token();
         initial_value = this->parse_expression();
     }
 
-    this->assert_next_token(TokenType::SEMICOLON,
-                            "No semicolon found in a variable declaration.");
+    this->assert_current_token(
+        TokenType::SEMICOLON, "No semicolon found in a variable declaration.");
+    this->get_new_token();
 
     return std::make_unique<VarDeclStmt>(name, type, initial_value);
 }
@@ -199,8 +215,9 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_statement()
 {
     this->get_new_token();
     auto expr = this->parse_expression();
-    this->assert_next_token(TokenType::SEMICOLON,
-                            "No semicolon found in a return statement.");
+    if (this->current_token != TokenType::SEMICOLON)
+        throw ParserException("No semicolon found in a return statement.");
+    this->get_new_token();
     return std::make_unique<ReturnStmt>(expr);
 }
 
@@ -251,9 +268,9 @@ std::unique_ptr<ExprNode> Parser::parse_const_expression()
 {
     switch (this->current_token.type)
     {
-    case TokenType::TYPE_I32:
+    case TokenType::INT:
         return this->parse_i32();
-    case TokenType::TYPE_F64:
+    case TokenType::DOUBLE:
         return this->parse_f64();
     default:
         throw ParserException("Type token expected.");
@@ -273,7 +290,7 @@ std::unique_ptr<ExprNode> Parser::parse_lhs()
         return this->parse_variable_expression();
     else if (this->current_token == TokenType::L_PAREN)
         return this->parse_paren_expression();
-    else if (this->type_map.contains(this->current_token.type))
+    else if (this->type_value_map.contains(this->current_token.type))
     {
         return this->parse_const_expression();
     }

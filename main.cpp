@@ -1,9 +1,13 @@
 #include "parser.hpp"
+#include "print_visitor.hpp"
 
 int main()
 {
-    auto lexer = Lexer::from_wstring(L"fn penis() {}");
+    ReaderPtr reader =
+        std::make_unique<FileReader>(FileReader("../example.mole"));
+    auto lexer = std::make_unique<Lexer>(Lexer(reader));
     auto parser = Parser(lexer);
-    parser.parse();
+    auto visitor = PrintVisitor(std::wcout);
+    visitor.visit(*(parser.parse()));
     return 0;
 }

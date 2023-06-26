@@ -64,10 +64,15 @@ class Parser
         {TokenType::TYPE_I32, TypeEnum::I32},
         {TokenType::TYPE_F64, TypeEnum::F64},
     };
+    std::map<TokenType, TypeEnum> type_value_map = {
+        {TokenType::INT, TypeEnum::I32},
+        {TokenType::DOUBLE, TypeEnum::F64},
+    };
 
     Token get_new_token();
     // Token peek_token();
 
+    void assert_current_token(TokenType type, const char *error_msg);
     void assert_next_token(TokenType type, const char *error_msg);
 
     // type names

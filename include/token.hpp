@@ -6,8 +6,9 @@ enum class TokenType
 {
     IDENTIFIER,
     INT,
-    F32,
-    F64,
+    UINT,
+    FLOAT,
+    DOUBLE,
     END,
 
     COLON,            // ':'

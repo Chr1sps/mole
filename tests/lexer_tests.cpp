@@ -108,21 +108,21 @@ TEST_CASE("Numericals.", "[NUMS][EOF]")
     COMPARE(L"1000", LIST(V(INT, 1000), T(END)));
     COMPARE(L"0", LIST(V(INT, 0), T(END)));
     COMPARE(L"00001", LIST(V(INT, 1), T(END)));
-    COMPARE(L"1.0", LIST(V(F32, 1.0), T(END)));
-    COMPARE(L".25", LIST(V(F32, 0.25), T(END)));
-    COMPARE(L"1.0f", LIST(V(F32, 1.0), T(END)));
-    COMPARE(L"1.f", LIST(V(F32, 1.0), T(END)));
-    COMPARE(L"1.0d", LIST(V(F64, 1.0), T(END)));
-    COMPARE(L"1.d", LIST(V(F64, 1.0), T(END)));
+    COMPARE(L"1.0", LIST(V(FLOAT, 1.0), T(END)));
+    COMPARE(L".25", LIST(V(FLOAT, 0.25), T(END)));
+    COMPARE(L"1.0f", LIST(V(FLOAT, 1.0), T(END)));
+    COMPARE(L"1.f", LIST(V(FLOAT, 1.0), T(END)));
+    COMPARE(L"1.0d", LIST(V(DOUBLE, 1.0), T(END)));
+    COMPARE(L"1.d", LIST(V(DOUBLE, 1.0), T(END)));
 }
 
 TEST_CASE("Expressions.", "[NUMS][OPS][EOF]")
 {
     COMPARE(L"1+1", LIST(V(INT, 1), T(PLUS), V(INT, 1), T(END)));
-    COMPARE(L"1.0+1.0", LIST(V(F32, 1.0), T(PLUS), V(F32, 1.0), T(END)));
-    COMPARE(L"1.+1.", LIST(V(F32, 1.0), T(PLUS), V(F32, 1.0), T(END)));
-    COMPARE(L"1.f+1.f", LIST(V(F32, 1.0), T(PLUS), V(F32, 1.0), T(END)));
-    COMPARE(L"1.d+1.d", LIST(V(F64, 1.0), T(PLUS), V(F64, 1.0), T(END)));
+    COMPARE(L"1.0+1.0", LIST(V(FLOAT, 1.0), T(PLUS), V(FLOAT, 1.0), T(END)));
+    COMPARE(L"1.+1.", LIST(V(FLOAT, 1.0), T(PLUS), V(FLOAT, 1.0), T(END)));
+    COMPARE(L"1.f+1.f", LIST(V(FLOAT, 1.0), T(PLUS), V(FLOAT, 1.0), T(END)));
+    COMPARE(L"1.d+1.d", LIST(V(DOUBLE, 1.0), T(PLUS), V(DOUBLE, 1.0), T(END)));
 }
 
 TEST_CASE("Keywords.", "[KW][EOF]")

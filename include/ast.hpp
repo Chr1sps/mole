@@ -74,10 +74,10 @@ struct UnaryExpr : public ExprNode
 
 struct CallExpr : public ExprNode
 {
-    std::string func_name;
+    std::wstring func_name;
     std::vector<ExprNodePtr> args;
 
-    CallExpr(const std::string &func_name, std::vector<ExprNodePtr> &args)
+    CallExpr(const std::wstring &func_name, std::vector<ExprNodePtr> &args)
         : func_name(func_name), args(std::move(args))
     {
     }

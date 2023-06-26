@@ -53,7 +53,7 @@ Token Lexer::parse_number_token()
         if (this->last_char == 'd')
         {
             this->get_new_char();
-            return Token(TokenType::F64, value);
+            return Token(TokenType::DOUBLE, value);
         }
         else
         {
@@ -61,7 +61,7 @@ Token Lexer::parse_number_token()
             {
                 this->get_new_char();
             }
-            return Token(TokenType::F32, value);
+            return Token(TokenType::FLOAT, value);
         }
     }
     else
