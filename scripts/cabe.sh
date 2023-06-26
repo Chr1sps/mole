@@ -9,7 +9,7 @@ stmt_margin=3
 result=0
 printed=0
 
-red='\033[0;31m' # ANSI escape sequence for red color
+red='\033[38;5;160m' # ANSI escape sequence for red color
 yellow='\033[38;5;214m'
 reset='\033[0m' # ANSI escape sequence to reset color
 

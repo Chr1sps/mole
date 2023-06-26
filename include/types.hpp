@@ -29,11 +29,15 @@ struct SimpleType : public Type
     TypeEnum type;
 };
 
+struct NeverType : public Type
+{
+};
+
 using TypePtr = std::unique_ptr<Type>;
 
-struct FunctionType
+struct FunctionType : public Type
 {
-    std::vector<TypeEnum> arg_types;
+    std::vector<TypePtr> arg_types;
     TypePtr return_type;
 };
 #endif

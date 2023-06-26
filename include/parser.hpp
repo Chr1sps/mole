@@ -37,12 +37,22 @@ class Parser
         {TokenType::NEG, UnaryOperator::NEG},
         {TokenType::BIT_NEG, UnaryOperator::BIT_NEG},
     };
+    std::map<TokenType, TypeEnum> type_map = {
+        {TokenType::TYPE_I32, TypeEnum::I32},
+        {TokenType::TYPE_F64, TypeEnum::F64},
+    };
 
     Token get_new_token();
+    Token peek_token();
+
+    void assert_next_token(TokenType type, const char *error_msg);
 
     std::unique_ptr<I32Expr> parse_i32();
     std::unique_ptr<F64Expr> parse_f64();
 
+    ParamPtr parse_param();
+    TypePtr parse_type();
+    std::unique_ptr<FunctionType> parse_function_type();
     std::unique_ptr<FuncDefStmt> parse_function();
     std::unique_ptr<ExternStmt> parse_extern();
     std::unique_ptr<VarDeclStmt> parse_variable_declaration();
