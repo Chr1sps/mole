@@ -27,6 +27,14 @@ std::unique_ptr<I32Expr> Parser::parse_i32()
     return result;
 }
 
+std::unique_ptr<F32Expr> Parser::parse_f32()
+{
+    auto result =
+        std::make_unique<F32Expr>(std::get<double>(this->current_token.value));
+    this->get_new_token();
+    return result;
+}
+
 // F64 = TYPE_F64
 std::unique_ptr<F64Expr> Parser::parse_f64()
 {
@@ -87,7 +95,7 @@ TypePtr Parser::parse_type()
 std::vector<TypePtr> Parser::parse_types()
 {
     std::vector<TypePtr> types;
-    for (this->get_new_token();; this->get_new_token())
+    for (; this->current_token != TokenType::R_PAREN; this->get_new_token())
     {
         auto type = this->parse_type();
         types.push_back(std::move(type));
@@ -120,8 +128,10 @@ std::unique_ptr<FunctionType> Parser::parse_function_type()
     this->assert_next_token(
         TokenType::L_PAREN,
         "No left parenthesis in the function type definition.");
+    this->get_new_token();
 
     auto types = this->parse_types();
+
     if (this->current_token != TokenType::R_PAREN)
         throw ParserException(
             "No right parenthesis in the function type definition.");
@@ -273,6 +283,8 @@ std::unique_ptr<ExprNode> Parser::parse_const_expression()
     {
     case TokenType::INT:
         return this->parse_i32();
+    case TokenType::FLOAT:
+        return this->parse_f32();
     case TokenType::DOUBLE:
         return this->parse_f64();
     default:

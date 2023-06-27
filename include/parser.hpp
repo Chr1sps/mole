@@ -66,6 +66,7 @@ class Parser
     };
     std::map<TokenType, TypeEnum> type_value_map = {
         {TokenType::INT, TypeEnum::I32},
+        {TokenType::FLOAT, TypeEnum::F32},
         {TokenType::DOUBLE, TypeEnum::F64},
     };
 
@@ -95,6 +96,7 @@ class Parser
 
     // expressions
     std::unique_ptr<I32Expr> parse_i32();
+    std::unique_ptr<F32Expr> parse_f32();
     std::unique_ptr<F64Expr> parse_f64();
     std::unique_ptr<ExprNode> parse_paren_expression();
     std::unique_ptr<ExprNode> parse_unary_expression();
@@ -107,6 +109,10 @@ class Parser
 
   public:
     Parser(LexerPtr &lexer) : lexer(std::move(lexer))
+    {
+    }
+
+    Parser(LexerPtr &&lexer) : lexer(std::move(lexer))
     {
     }
 

@@ -50,18 +50,18 @@ Token Lexer::parse_number_token()
         this->get_new_char();
         num_str += this->parse_digits();
         double value = std::strtod(num_str.c_str(), 0);
-        if (this->last_char == 'd')
+        if (this->last_char == 'f')
         {
             this->get_new_char();
-            return Token(TokenType::DOUBLE, value);
+            return Token(TokenType::FLOAT, value);
         }
         else
         {
-            if (this->last_char == 'f')
+            if (this->last_char == 'd')
             {
                 this->get_new_char();
             }
-            return Token(TokenType::FLOAT, value);
+            return Token(TokenType::DOUBLE, value);
         }
     }
     else

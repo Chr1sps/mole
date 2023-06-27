@@ -1,15 +1,5 @@
 #include "print_visitor.hpp"
 
-std::wstring PrintVisitor::repr_operator(const BuiltInBinOp &op)
-{
-    return this->bin_op_strings.at(op.op);
-}
-
-std::wstring PrintVisitor::repr_operator(const BuiltInUnaryOp &op)
-{
-    return this->unary_op_strings.at(op.op);
-}
-
 void PrintVisitor::print_indent()
 {
     for (unsigned i = 0; i < this->indent_level * 4; ++i)

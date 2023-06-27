@@ -35,6 +35,7 @@ set(INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(HEADERS
 
     "ast.hpp"
+    "debug_visitor.hpp"
     "lexer.hpp"
     "locale.hpp"
     "operators.hpp"
@@ -47,6 +48,7 @@ set(HEADERS
 )
 set(SOURCES
 
+    "debug_visitor.cpp"
     "lexer.cpp"
     "parser.cpp"
     "print_visitor.cpp"
@@ -70,6 +72,7 @@ option(TESTS "Compile the tests executables." TRUE)
 
 if(TESTS)
     message(STATUS "Compiling tests.")
+
     enable_testing()
     include(FetchContent)
     FetchContent_Declare(
@@ -80,8 +83,12 @@ if(TESTS)
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR/extras})
     include(CTest)
     include(Catch)
+
     add_executable(lexer_tests tests/lexer_tests.cpp)
     target_link_libraries(lexer_tests PRIVATE mole Catch2::Catch2WithMain)
+
+    add_executable(parser_tests tests/parser_tests.cpp)
+    target_link_libraries(parser_tests PRIVATE mole Catch2::Catch2WithMain)
 
     if(COVERAGE)
         message(STATUS "Compiling with coverage info.")

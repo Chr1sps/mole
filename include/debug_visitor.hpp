@@ -1,12 +1,12 @@
-#ifndef __PRINT_VISITOR_HPP__
-#define __PRINT_VISITOR_HPP__
+#ifndef __DEBUG_VISITOR_HPP__
+#define __DEBUG_VISITOR_HPP__
 #include "ast.hpp"
 #include "operators.hpp"
 #include "visitor.hpp"
 #include <map>
 #include <ostream>
 
-class PrintVisitor : public Visitor
+class DebugVisitor : public Visitor
 {
     std::wostream &out;
     std::map<BinOpEnum, std::wstring> bin_op_strings = {
@@ -33,13 +33,9 @@ class PrintVisitor : public Visitor
         {TypeEnum::F32, L"f32"},
         {TypeEnum::F64, L"f64"},
     };
-    void print_indent();
-    void increment_indent();
-    void decrement_indent();
-    unsigned indent_level = 0;
 
   public:
-    PrintVisitor(std::wostream &out) : out(out)
+    DebugVisitor(std::wostream &out) : out(out)
     {
     }
 
