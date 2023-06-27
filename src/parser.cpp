@@ -241,6 +241,8 @@ std::unique_ptr<Statement> Parser::parse_block_statement()
         return (this->parse_extern());
     else if (this->current_token == TokenType::KW_FN)
         return (this->parse_function());
+    else if (this->current_token == TokenType::L_BRACKET)
+        return (this->parse_block());
     else
         throw ParserException("Invalid token found in a block.");
 }

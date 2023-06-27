@@ -67,6 +67,10 @@ void PrintVisitor::visit(const CallExpr &node)
 
 void PrintVisitor::visit(const Block &node)
 {
+    if (this->function_block_indent)
+        this->function_block_indent = false;
+    else
+        this->print_indent();
     this->out << "{" << std::endl;
     this->increment_indent();
     for (auto &stmt : node.statements)
@@ -102,6 +106,7 @@ void PrintVisitor::visit(const FuncDefStmt &node)
     this->out << ") => ";
     node.return_type->accept(*this);
     this->out << " ";
+    this->function_block_indent = true;
     node.block->accept(*this);
 }
 
@@ -177,7 +182,7 @@ void PrintVisitor::visit(const FunctionType &type)
     {
         type.arg_types[i]->accept(*this);
         if (i < type.arg_types.size() - 1)
-            this->out << ", ";
+            this->out << ",";
     }
     this->out << ") => ";
     type.return_type->accept(*this);

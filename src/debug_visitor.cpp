@@ -22,9 +22,11 @@ void DebugVisitor::visit(const F64Expr &node)
 
 void DebugVisitor::visit(const BinaryExpr &node)
 {
+    this->out << "(";
     node.lhs->accept(*this);
     node.op->accept(*this);
     node.rhs->accept(*this);
+    this->out << ")";
 }
 
 void DebugVisitor::visit(const UnaryExpr &node)

@@ -90,6 +90,9 @@ if(TESTS)
     add_executable(parser_tests tests/parser_tests.cpp)
     target_link_libraries(parser_tests PRIVATE mole Catch2::Catch2WithMain)
 
+    catch_discover_tests(lexer_tests)
+    catch_discover_tests(parser_tests)
+
     if(COVERAGE)
         message(STATUS "Compiling with coverage info.")
         add_library(coverage_flags INTERFACE)
@@ -99,6 +102,4 @@ if(TESTS)
         target_link_libraries(lexer_tests PRIVATE coverage_flags)
         target_link_libraries(mole PRIVATE coverage_flags)
     endif()
-
-    catch_discover_tests(lexer_tests)
 endif()

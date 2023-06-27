@@ -37,6 +37,7 @@ class PrintVisitor : public Visitor
     void increment_indent();
     void decrement_indent();
     unsigned indent_level = 0;
+    bool function_block_indent = false;
 
   public:
     PrintVisitor(std::wostream &out) : out(out)

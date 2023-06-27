@@ -96,11 +96,21 @@ class Lexer
          {TokenType::LESS,
           {
               {L'=', {TokenType::LESS_EQUAL, {}}},
+              {L'<',
+               {TokenType::SHIFT_LEFT,
+                {
+                    {L'=', {TokenType::ASSIGN_SHIFT_LEFT, {}}},
+                }}},
           }}},
         {L'>',
          {TokenType::GREATER,
           {
               {L'=', {TokenType::GREATER_EQUAL, {}}},
+              {L'>',
+               {TokenType::SHIFT_RIGHT,
+                {
+                    {L'=', {TokenType::ASSIGN_SHIFT_RIGHT, {}}},
+                }}},
           }}},
         {L'!',
          {TokenType::NEG,
@@ -111,7 +121,11 @@ class Lexer
          {TokenType::BIT_XOR,
           {
               {L'=', {TokenType::ASSIGN_BIT_XOR, {}}},
-              {L'^', {TokenType::EXP, {}}},
+              {L'^',
+               {TokenType::EXP,
+                {
+                    {L'=', {TokenType::ASSIGN_EXP, {}}},
+                }}},
           }}},
         {L'&',
          {TokenType::AMPERSAND,

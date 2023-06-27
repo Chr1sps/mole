@@ -1,4 +1,3 @@
-#include "debug_visitor.hpp"
 #include "parser.hpp"
 #include "print_visitor.hpp"
 
@@ -8,7 +7,7 @@ int main()
         std::make_unique<FileReader>(FileReader("../example.mole"));
     auto lexer = std::make_unique<Lexer>(Lexer(reader));
     auto parser = Parser(lexer);
-    auto visitor = DebugVisitor(std::wcout);
+    auto visitor = PrintVisitor(std::wcout);
     visitor.visit(*(parser.parse()));
     return 0;
 }

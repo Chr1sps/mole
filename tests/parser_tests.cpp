@@ -44,14 +44,17 @@ TEST_CASE("Variables.", "[VARS]")
         REPR_CHECK(L"let var=5.25d;");
         REPR_CHECK(L"let var=5.25f;");
     }
-    SECTION("Value - binary expressions.")
-    {
-        REPR_CHECK(L"let var=5+5;");
-        REPR_CHECK(L"let var=5.5d+5;");
-    }
 }
 
-TEST_CASE("Function definition.", "[FUNC]")
+TEST_CASE("Binary expressions.", "[VARS], [BINOP]")
+{
+    COMPARE(L"let var=5+5;", L"let var=(5+5);");
+    COMPARE(L"let var=5.5d+5;", L"let var=(5.5d+5);");
+    COMPARE(L"let var=5.5f+5;", L"let var=(5.5f+5);");
+    COMPARE(L"let var=5.5f>>5;", L"let var=(5.5f>>5);");
+}
+
+TEST_CASE("Function definitions.", "[FUNC]")
 {
     SECTION("No args, no return type.")
     {
@@ -70,4 +73,14 @@ TEST_CASE("Function definition.", "[FUNC]")
     {
         REPR_CHECK(L"fn foo(x:i32,y:f64)=>i32{}");
     }
+}
+
+TEST_CASE("Scopes in functions.", "[SCOPE]")
+{
+    COMPARE(L"fn foo(){{}}", L"fn foo()=>!{{}}");
+}
+
+TEST_CASE("Externs.", "[EXT]")
+{
+    COMPARE(L"extern foo();", L"ext foo()=>!;");
 }

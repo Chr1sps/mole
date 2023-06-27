@@ -87,10 +87,15 @@ TEST_CASE("Multiple char tokens.", "[LONG][EOF]")
     COMPARE(L"!=", LIST(T(NOT_EQUAL), T(END)));
     COMPARE(L"^=", LIST(T(ASSIGN_BIT_XOR), T(END)));
     COMPARE(L"^^", LIST(T(EXP), T(END)));
+    COMPARE(L"^^=", LIST(T(ASSIGN_EXP), T(END)));
     COMPARE(L"&=", LIST(T(ASSIGN_AMPERSAND), T(END)));
     COMPARE(L"&&", LIST(T(AND), T(END)));
     COMPARE(L"|=", LIST(T(ASSIGN_BIT_OR), T(END)));
     COMPARE(L"||", LIST(T(OR), T(END)));
+    COMPARE(L"<<", LIST(T(SHIFT_LEFT), T(END)));
+    COMPARE(L">>", LIST(T(SHIFT_RIGHT), T(END)));
+    COMPARE(L"<<=", LIST(T(ASSIGN_SHIFT_LEFT), T(END)));
+    COMPARE(L">>=", LIST(T(ASSIGN_SHIFT_RIGHT), T(END)));
 }
 
 TEST_CASE("Comments.", "[COMM][EOF]")

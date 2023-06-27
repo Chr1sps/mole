@@ -140,7 +140,7 @@ struct Statement : public AstNode
 
 using StmtPtr = std::unique_ptr<Statement>;
 
-struct Block : public AstNode
+struct Block : public Statement
 {
     std::vector<StmtPtr> statements;
 
