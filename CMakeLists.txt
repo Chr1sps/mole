@@ -64,11 +64,13 @@ target_include_directories(mole PUBLIC "${LLVM_INCLUDE_DIRS}")
 target_link_libraries(mole PUBLIC LLVM)
 target_link_libraries(mole PUBLIC compiler_flags)
 
-add_executable(out main.cpp)
-target_link_libraries(out PRIVATE mole)
-
 option(COVERAGE "Compile tests with coverage flags." FALSE)
 option(TESTS "Compile the tests executables." TRUE)
+
+if(NOT COVERAGE)
+    add_executable(out main.cpp)
+    target_link_libraries(out PRIVATE mole)
+endif()
 
 if(TESTS)
     message(STATUS "Compiling tests.")
@@ -100,6 +102,7 @@ if(TESTS)
         target_link_options(coverage_flags INTERFACE "--coverage")
 
         target_link_libraries(lexer_tests PRIVATE coverage_flags)
+        target_link_libraries(parser_tests PRIVATE coverage_flags)
         target_link_libraries(mole PRIVATE coverage_flags)
     endif()
 endif()

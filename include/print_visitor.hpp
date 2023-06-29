@@ -53,6 +53,7 @@ class PrintVisitor : public Visitor
     void visit(const CallExpr &node) override;
     void visit(const Block &node) override;
     void visit(const ReturnStmt &node) override;
+    void print_params(const std::vector<ParamPtr> &params);
     void visit(const FuncDefStmt &node) override;
     void visit(const AssignStmt &node) override;
     void visit(const VarDeclStmt &node) override;

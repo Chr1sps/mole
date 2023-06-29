@@ -170,6 +170,7 @@ TEST_CASE("Identifiers.", "[ID][EOF]")
     COMPARE(L"snake_case", LIST(V(IDENTIFIER, L"snake_case"), T(END)));
     COMPARE(L"_snake_case", LIST(V(IDENTIFIER, L"_snake_case"), T(END)));
     COMPARE(L"_", LIST(V(IDENTIFIER, L"_"), T(END)));
+    COMPARE(L"ęóąśłżźćń", LIST(V(IDENTIFIER, L"ęóąśłżźćń"), T(END)));
 }
 
 TEST_CASE("Invalid signs.", "[ERR]")
@@ -187,6 +188,11 @@ TEST_CASE("Assignments.", "[ASGN][KW][ID][OP][EOF]")
     COMPARE(L"let mut name: i32 = 0;",
             LIST(T(KW_LET), T(KW_MUT), V(IDENTIFIER, L"name"), T(COLON),
                  T(TYPE_I32), T(ASSIGN), V(INT, 0), T(SEMICOLON), T(END)));
+    COMPARE(L"let prąd = 1 * 2 + 3 * 4 - 5 >> 6;",
+            LIST(T(KW_LET), V(IDENTIFIER, L"prąd"), T(ASSIGN), V(INT, 1),
+                 T(STAR), V(INT, 2), T(PLUS), V(INT, 3), T(STAR), V(INT, 4),
+                 T(MINUS), V(INT, 5), T(SHIFT_RIGHT), V(INT, 6), T(SEMICOLON),
+                 T(END)));
 }
 
 TEST_CASE("Function definitions", "[FN][KW][ID][OP][EOF]")

@@ -151,6 +151,8 @@ class Lexer
     void get_nonempty_char();
     Token parse_alpha_token();
     std::string parse_digits();
+    Token parse_floating_suffix(const double &value);
+    Token parse_floating_remainder(std::string &num_str);
     Token parse_number_token();
     Token parse_operator();
     std::optional<Token> parse_slash();
@@ -167,6 +169,9 @@ class Lexer
     static LexerPtr from_wstring(const std::wstring &source);
 
     Token get_token();
+    bool is_a_number_char();
+    bool is_identifier_char();
+    bool is_an_operator_char();
     wchar_t peek_char();
     bool eof();
 };

@@ -1,10 +1,13 @@
 #!/bin/bash
 
-cc_limit=10
-cc_margin=2
+cc_error=10
+cc_warning=8
 
-stmt_limit=15
-stmt_margin=3
+stmt_error=15
+stmt_warning=12
+
+line_error=35
+line_warning=25
 
 result=0
 printed=0
@@ -20,12 +23,12 @@ clear_lines=""
 
 color_column() {
     col="$1"
-    limit="$2"
-    margin="$3"
+    error="$2"
+    warning="$3"
 
-    if [ "$col" -gt "$limit" ]; then
+    if [ "$col" -gt "$error" ]; then
         col="${red}${col}${reset}"
-    elif [ "$col" -gt "$((limit - margin))" ]; then
+    elif [ "$col" -gt "$warning" ]; then
         col="${yellow}${col}${reset}"
     fi
 
@@ -42,29 +45,32 @@ print_header() {
 while IFS= read -r line; do
     IFS=$'\t' read -r col1 col2 col3 col4 col5 col6 <<<"$line"
 
-    if [[ $col1 -gt $cc_limit || $col2 -gt $cc_limit || $col3 -gt $stmt_limit ]]; then
+    if [[ $col1 -gt $cc_error || $col2 -gt $cc_error || $col3 -gt $stmt_error || $col5 -gt $line_error ]]; then
         if [ $result -eq 0 ]; then
             result=1
         fi
 
     fi
     if
-        [[ "$col1" -gt $((cc_limit - cc_margin)) ||
-            "$col2" -gt $((cc_limit - cc_margin)) ||
-            "$col3" -gt $((stmt_limit - stmt_margin)) ]]
+        [[ "$col1" -gt $cc_warning ||
+            "$col2" -gt $cc_warning ||
+            "$col3" -gt $stmt_warning ||
+            "$col5" -gt $line_warning ]]
     then
-        ncol1=$(color_column "$col1" "$cc_limit" "$cc_margin")
-        ncol2=$(color_column "$col2" "$cc_limit" "$cc_margin")
-        ncol3=$(color_column "$col3" "$stmt_limit" "$stmt_margin")
+        ncol1=$(color_column "$col1" "$cc_error" "$cc_warning")
+        ncol2=$(color_column "$col2" "$cc_error" "$cc_warning")
+        ncol3=$(color_column "$col3" "$stmt_error" "$stmt_warning")
+        ncol5=$(color_column "$col5" "$line_error" "$line_warning")
         if
-            [[ "$col1" -gt cc_limit ||
-                "$col2" -gt cc_limit ||
-                "$col3" -gt stmt_limit ]]
+            [[ "$col1" -gt cc_error ||
+                "$col2" -gt cc_error ||
+                "$col3" -gt stmt_error ||
+                "$col5" -gt line_error ]]
         then
             print_header
-            echo -e "${ncol1}\t${ncol2}\t${ncol3}\t${col4}\t${col5}\t${col6}"
+            echo -e "${ncol1}\t${ncol2}\t${ncol3}\t${col4}\t${ncol5}\t${col6}"
         else
-            warning_lines+="${ncol1}\t${ncol2}\t${ncol3}\t${col4}\t${col5}\t${col6}\n"
+            warning_lines+="${ncol1}\t${ncol2}\t${ncol3}\t${col4}\t${ncol5}\t${col6}\n"
         fi
 
     else

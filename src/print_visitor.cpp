@@ -90,19 +90,24 @@ void PrintVisitor::visit(const ReturnStmt &node)
     this->out << ";" << std::endl;
 }
 
-void PrintVisitor::visit(const FuncDefStmt &node)
+void PrintVisitor::print_params(const std::vector<ParamPtr> &params)
 {
-    this->print_indent();
-    this->out << "fn " << node.name << "(";
-    for (unsigned long i = 0; i < node.params.size(); ++i)
+    for (unsigned long i = 0; i < params.size(); ++i)
     {
-        this->out << node.params[i]->name << ": ";
-        node.params[i]->type->accept(*this);
-        if (i < node.params.size() - 1)
+        this->out << params[i]->name << ": ";
+        params[i]->type->accept(*this);
+        if (i < params.size() - 1)
         {
             this->out << ", ";
         }
     }
+}
+
+void PrintVisitor::visit(const FuncDefStmt &node)
+{
+    this->print_indent();
+    this->out << "fn " << node.name << "(";
+    this->print_params(node.params);
     this->out << ") => ";
     node.return_type->accept(*this);
     this->out << " ";
@@ -135,15 +140,7 @@ void PrintVisitor::visit(const ExternStmt &node)
 {
     this->print_indent();
     this->out << "extern " << node.name << "(";
-    for (unsigned long i = 0; i < node.params.size(); ++i)
-    {
-        this->out << node.params[i]->name << ": ";
-        node.params[i]->type->accept(*this);
-        if (i < node.params.size() - 1)
-        {
-            this->out << ", ";
-        }
-    }
+    this->print_params(node.params);
     this->out << ") => ";
     node.return_type->accept(*this);
     this->out << ";" << std::endl;

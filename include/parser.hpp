@@ -73,7 +73,7 @@ class Parser
     Token get_new_token();
     // Token peek_token();
 
-    void assert_current_token(TokenType type, const char *error_msg);
+    void assert_current_and_eat(TokenType type, const char *error_msg);
     void assert_next_token(TokenType type, const char *error_msg);
 
     // type names
@@ -88,6 +88,8 @@ class Parser
 
     // statements
     std::unique_ptr<FuncDefStmt> parse_function();
+    std::optional<TypePtr> parse_var_type();
+    std::optional<ExprNodePtr> parse_var_value();
     std::unique_ptr<ExternStmt> parse_extern();
     std::unique_ptr<VarDeclStmt> parse_variable_declaration();
     std::unique_ptr<ReturnStmt> parse_return_statement();
@@ -102,7 +104,11 @@ class Parser
     std::unique_ptr<ExprNode> parse_unary_expression();
     std::unique_ptr<ExprNode> parse_identifier_expression();
     std::unique_ptr<ExprNode> parse_const_expression();
+    std::vector<std::unique_ptr<ExprNode>> parse_call_args();
     std::unique_ptr<ExprNode> parse_lhs();
+    void check_next_op_and_parse(std::unique_ptr<ExprNode> &lhs,
+                                 std::unique_ptr<ExprNode> &rhs,
+                                 const std::shared_ptr<BuiltInBinOp> &op);
     std::unique_ptr<ExprNode> parse_op_and_rhs(const unsigned &precedence,
                                                std::unique_ptr<ExprNode> &lhs);
     std::unique_ptr<ExprNode> parse_expression();

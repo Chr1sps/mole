@@ -40,29 +40,39 @@ std::string Lexer::parse_digits()
     return num_str;
 }
 
+Token Lexer::parse_floating_suffix(const double &value)
+{
+    if (this->last_char == 'f')
+    {
+        this->get_new_char();
+        return Token(TokenType::FLOAT, value);
+    }
+    else
+    {
+        if (this->last_char == 'd')
+        {
+            this->get_new_char();
+        }
+        return Token(TokenType::DOUBLE, value);
+    }
+}
+
+Token Lexer::parse_floating_remainder(std::string &num_str)
+{
+    num_str += '.';
+    this->get_new_char();
+    num_str += this->parse_digits();
+    double value = std::strtod(num_str.c_str(), 0);
+    return this->parse_floating_suffix(value);
+}
+
 Token Lexer::parse_number_token()
 {
     std::string num_str;
     num_str += this->parse_digits();
     if (this->last_char == L'.')
     {
-        num_str += '.';
-        this->get_new_char();
-        num_str += this->parse_digits();
-        double value = std::strtod(num_str.c_str(), 0);
-        if (this->last_char == 'f')
-        {
-            this->get_new_char();
-            return Token(TokenType::FLOAT, value);
-        }
-        else
-        {
-            if (this->last_char == 'd')
-            {
-                this->get_new_char();
-            }
-            return Token(TokenType::DOUBLE, value);
-        }
+        return this->parse_floating_remainder(num_str);
     }
     else
     {
@@ -151,13 +161,11 @@ LexerPtr Lexer::from_wstring(const std::wstring &source)
 Token Lexer::get_token()
 {
     this->get_nonempty_char();
-    if (std::isdigit(this->last_char, this->locale) ||
-        (this->last_char == L'.' &&
-         std::isdigit(this->peek_char(), this->locale)))
+    if (this->is_a_number_char())
     {
         return this->parse_number_token();
     }
-    else if (std::isalpha(this->last_char) || this->last_char == L'_')
+    else if (this->is_identifier_char())
     {
         return this->parse_alpha_token();
     }
@@ -169,7 +177,7 @@ Token Lexer::get_token()
         else
             return this->get_token();
     }
-    else if (this->char_nodes.contains(this->last_char))
+    else if (this->is_an_operator_char())
     {
         return this->parse_operator();
     }
@@ -180,6 +188,24 @@ Token Lexer::get_token()
     else // throw LexerException(std::string("Invalid char:
          // ").append(this->last_char));
         throw LexerException("Invalid char.");
+}
+
+bool Lexer::is_a_number_char()
+{
+    return std::isdigit(this->last_char, this->locale) ||
+           (this->last_char == L'.' &&
+            std::isdigit(this->peek_char(), this->locale));
+}
+
+bool Lexer::is_identifier_char()
+{
+    return std::isalpha(this->last_char, this->locale) ||
+           this->last_char == L'_';
+}
+
+bool Lexer::is_an_operator_char()
+{
+    return this->char_nodes.contains(this->last_char);
 }
 
 wchar_t Lexer::peek_char()
