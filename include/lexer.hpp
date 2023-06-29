@@ -24,6 +24,7 @@ class Lexer
     wchar_t last_char;
     std::string error_msg;
     std::locale locale;
+    Position token_position;
     std::map<std::wstring, Token> keywords{
         {L"fn", Token(TokenType::KW_FN)},
         {L"main", Token(TokenType::KW_MAIN)},
@@ -162,7 +163,7 @@ class Lexer
   public:
     Lexer(ReaderPtr &reader)
         : reader(std::move(reader)), last_char(L' '), error_msg(""),
-          locale(Locale::get().locale())
+          locale(Locale::get().locale()), token_position()
     {
     }
 
@@ -174,20 +175,29 @@ class Lexer
     bool is_an_operator_char();
     wchar_t peek_char();
     bool eof();
+    void report_error(const std::wstring &msg);
+
+    const Position &get_position();
 };
 
-class LexerException : public std::exception
+class LexerException : public std::runtime_error
 {
-    const char *what_str;
+    std::wstring what_str;
+    std::string ascii_what_str;
 
   public:
-    LexerException() = default;
-
-    LexerException(const char *what_str) : what_str(what_str)
+    LexerException(const std::wstring &what_str)
+        : std::runtime_error("Lexer error"), what_str(what_str),
+          ascii_what_str(std::string(what_str.begin(), what_str.end()))
     {
     }
 
     const char *what() const noexcept override
+    {
+        return this->ascii_what_str.c_str();
+    }
+
+    const std::wstring &wwhat() const noexcept
     {
         return this->what_str;
     }

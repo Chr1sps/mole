@@ -1,5 +1,6 @@
 #include "lexer.hpp"
 #include "reader.hpp"
+#include "string_builder.hpp"
 #include <string>
 
 wchar_t Lexer::get_new_char()
@@ -160,6 +161,7 @@ LexerPtr Lexer::from_wstring(const std::wstring &source)
 
 Token Lexer::get_token()
 {
+    this->token_position = this->reader->get_position();
     this->get_nonempty_char();
     if (this->is_a_number_char())
     {
@@ -185,9 +187,11 @@ Token Lexer::get_token()
     {
         return Token(TokenType::END);
     }
-    else // throw LexerException(std::string("Invalid char:
-         // ").append(this->last_char));
-        throw LexerException("Invalid char.");
+    else
+    {
+        this->report_error(L"invalid char");
+        return Token(TokenType::INVALID);
+    }
 }
 
 bool Lexer::is_a_number_char()
@@ -216,4 +220,17 @@ wchar_t Lexer::peek_char()
 bool Lexer::eof()
 {
     return this->reader->eof();
+}
+
+void Lexer::report_error(const std::wstring &msg)
+{
+    auto error_msg = build_wstring(
+        L"[ERROR] Lexer error at [", this->reader->get_position().line, ",",
+        this->reader->get_position().column, "]: ", msg, ".");
+    throw LexerException(error_msg);
+}
+
+const Position &Lexer::get_position()
+{
+    return this->token_position;
 }

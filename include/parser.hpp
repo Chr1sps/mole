@@ -73,8 +73,8 @@ class Parser
     Token get_new_token();
     // Token peek_token();
 
-    void assert_current_and_eat(TokenType type, const char *error_msg);
-    void assert_next_token(TokenType type, const char *error_msg);
+    void assert_current_and_eat(TokenType type, const std::wstring &error_msg);
+    void assert_next_token(TokenType type, const std::wstring &error_msg);
 
     // type names
     TypePtr parse_type();
@@ -113,6 +113,8 @@ class Parser
                                                std::unique_ptr<ExprNode> &lhs);
     std::unique_ptr<ExprNode> parse_expression();
 
+    std::nullptr_t report_error(const std::wstring &error_msg);
+
   public:
     Parser(LexerPtr &lexer) : lexer(std::move(lexer))
     {
@@ -125,18 +127,24 @@ class Parser
     ProgramPtr parse();
 };
 
-class ParserException : public std::exception
+class ParserException : public std::runtime_error
 {
-    const char *what_str;
+    std::wstring what_str;
+    std::string ascii_what_str;
 
   public:
-    ParserException() = default;
-
-    ParserException(const char *what_str) : what_str(what_str)
+    ParserException(const std::wstring &what_str)
+        : std::runtime_error("Parser error"), what_str(what_str),
+          ascii_what_str(std::string(what_str.begin(), what_str.end()))
     {
     }
 
     const char *what() const noexcept override
+    {
+        return this->ascii_what_str.c_str();
+    }
+
+    const std::wstring &wwhat() const noexcept
     {
         return this->what_str;
     }

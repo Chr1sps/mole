@@ -1,22 +1,24 @@
 #include "parser.hpp"
+#include "string_builder.hpp"
 
 Token Parser::get_new_token()
 {
     return this->current_token = this->lexer->get_token();
 }
 
-void Parser::assert_current_and_eat(TokenType type, const char *error_msg)
+void Parser::assert_current_and_eat(TokenType type,
+                                    const std::wstring &error_msg)
 {
     if (this->current_token != type)
-        throw ParserException(error_msg);
+        this->report_error(error_msg);
     this->get_new_token();
 }
 
-void Parser::assert_next_token(TokenType type, const char *error_msg)
+void Parser::assert_next_token(TokenType type, const std::wstring &error_msg)
 {
     auto new_token = this->get_new_token();
     if (new_token != type)
-        throw ParserException(error_msg);
+        this->report_error(error_msg);
 }
 
 // I32 = TYPE_I32
@@ -50,7 +52,7 @@ ParamPtr Parser::parse_param()
 {
     auto name = std::get<std::wstring>(this->current_token.value);
     this->assert_next_token(TokenType::COLON,
-                            "Not a colon in a parameter expression!");
+                            L"not a colon in a parameter expression");
     this->get_new_token();
     auto param_type = this->parse_type();
     return std::make_unique<Parameter>(name, std::move(param_type));
@@ -89,7 +91,7 @@ TypePtr Parser::parse_type()
         return result;
     }
     else
-        throw ParserException("Invalid type syntax.");
+        return this->report_error(L"invalid type syntax");
 }
 
 // Types = [Type, {",", Type}]
@@ -128,14 +130,14 @@ std::unique_ptr<FunctionType> Parser::parse_function_type()
 {
     this->assert_next_token(
         TokenType::L_PAREN,
-        "No left parenthesis in the function type definition.");
+        L"no left parenthesis in the function type definition");
     this->get_new_token();
 
     auto types = this->parse_types();
 
     this->assert_current_and_eat(
         TokenType::R_PAREN,
-        "No right parenthesis in the function type definition.");
+        L"no right parenthesis in the function type definition");
 
     TypePtr return_type = this->parse_return_type();
     return std::make_unique<FunctionType>(types, return_type);
@@ -147,22 +149,22 @@ std::unique_ptr<FunctionType> Parser::parse_function_type()
 std::unique_ptr<ExternStmt> Parser::parse_extern()
 {
     this->assert_next_token(TokenType::IDENTIFIER,
-                            "Not an identifier in an extern declaration.");
+                            L"not an identifier in an extern declaration");
     auto name = std::get<std::wstring>(this->current_token.value);
     this->assert_next_token(
         TokenType::L_PAREN,
-        "Not a left parenthesis in an extern declaration.");
+        L"not a left parenthesis in an extern declaration");
 
     auto params = this->parse_params();
 
     this->assert_current_and_eat(
         TokenType::R_PAREN,
-        "Not a right parenthesis in an extern declaration.");
+        L"not a right parenthesis in an extern declaration");
 
     auto return_type = this->parse_return_type();
 
     this->assert_current_and_eat(TokenType::SEMICOLON,
-                                 "Not a semicolon in an extern declaration.");
+                                 L"not a semicolon in an extern declaration");
 
     return std::make_unique<ExternStmt>(name, params, return_type);
 }
@@ -172,16 +174,16 @@ std::unique_ptr<ExternStmt> Parser::parse_extern()
 std::unique_ptr<FuncDefStmt> Parser::parse_function()
 {
     this->assert_next_token(TokenType::IDENTIFIER,
-                            "Not a function identifier.");
+                            L"not a function identifier");
     auto name = std::get<std::wstring>(this->current_token.value);
     this->assert_next_token(
         TokenType::L_PAREN,
-        "Left parenthesis missing in a function definition.");
+        L"left parenthesis missing in a function definition");
     auto params = this->parse_params();
     this->assert_current_and_eat(TokenType::R_PAREN,
-                                 "Right parenthesis missing "
+                                 L"right parenthesis missing "
                                  "in a function "
-                                 "definition.");
+                                 "definition");
     auto return_type = this->parse_return_type();
     auto block = this->parse_block();
     return std::make_unique<FuncDefStmt>(name, params, return_type, block);
@@ -214,14 +216,14 @@ std::unique_ptr<VarDeclStmt> Parser::parse_variable_declaration()
 {
     this->assert_next_token(
         TokenType::IDENTIFIER,
-        "Expected an identifier in a variable declaration.");
+        L"expected an identifier in a variable declaration");
 
     auto name = std::get<std::wstring>(this->current_token.value);
     auto type = this->parse_var_type();
     auto initial_value = this->parse_var_value();
 
     this->assert_current_and_eat(
-        TokenType::SEMICOLON, "No semicolon found in a variable declaration.");
+        TokenType::SEMICOLON, L"no semicolon found in a variable declaration");
 
     return std::make_unique<VarDeclStmt>(name, type, initial_value);
 }
@@ -231,7 +233,7 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_statement()
     this->get_new_token();
     auto expr = this->parse_expression();
     this->assert_current_and_eat(TokenType::SEMICOLON,
-                                 "No semicolon found in a return statement.");
+                                 L"no semicolon found in a return statement");
     return std::make_unique<ReturnStmt>(expr);
 }
 
@@ -248,7 +250,7 @@ std::unique_ptr<Statement> Parser::parse_block_statement()
     else if (this->current_token == TokenType::L_BRACKET)
         return (this->parse_block());
     else
-        throw ParserException("Invalid token found in a block.");
+        return this->report_error(L"invalid token found in a block");
 }
 
 // Block = {Statement}
@@ -269,7 +271,7 @@ std::unique_ptr<ExprNode> Parser::parse_paren_expression()
     this->get_new_token();
     auto expr = this->parse_expression();
     this->assert_current_and_eat(
-        TokenType::R_PAREN, "Expected a right parenthesis in the expression.");
+        TokenType::R_PAREN, L"expected a right parenthesis in the expression");
     return expr;
 }
 
@@ -292,7 +294,7 @@ std::unique_ptr<ExprNode> Parser::parse_const_expression()
     case TokenType::DOUBLE:
         return this->parse_f64();
     default:
-        throw ParserException("Type token expected.");
+        return this->report_error(L"type token expected");
     }
 }
 
@@ -312,7 +314,7 @@ std::vector<std::unique_ptr<ExprNode>> Parser::parse_call_args()
                 break;
             }
             this->assert_current_and_eat(
-                TokenType::COMMA, "Expected ')' or ',' in argument list.");
+                TokenType::COMMA, L"expected ')' or ',' in argument list");
         }
     }
 
@@ -342,7 +344,8 @@ std::unique_ptr<ExprNode> Parser::parse_lhs()
         return this->parse_const_expression();
     }
     else
-        throw ParserException("Unknown token when expecting an expression.");
+        return this->report_error(
+            L"unknown token when expecting an expression");
 }
 
 void Parser::check_next_op_and_parse(std::unique_ptr<ExprNode> &lhs,
@@ -386,6 +389,15 @@ std::unique_ptr<ExprNode> Parser::parse_expression()
     return lhs;
 }
 
+std::nullptr_t Parser::report_error(const std::wstring &msg)
+{
+    auto error_msg = build_wstring(
+        L"[ERROR] Parser error at [", this->lexer->get_position().line, ",",
+        this->lexer->get_position().column, "]: ", msg, ".");
+    throw ParserException(error_msg);
+    return nullptr;
+}
+
 // Program = VarDeclStmt | FuncDefStmt | ExternStmt,
 // {VarDeclStmt | FuncDefStmt | ExternStmt}
 ProgramPtr Parser::parse()
@@ -408,7 +420,7 @@ ProgramPtr Parser::parse()
             globals.push_back(this->parse_variable_declaration());
             break;
         default:
-            throw ParserException("Unrecognised token");
+            this->report_error(L"unrecognized token");
         }
     }
     return std::make_unique<Program>(globals, functions, externs);

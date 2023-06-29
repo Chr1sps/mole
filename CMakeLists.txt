@@ -42,6 +42,7 @@ set(HEADERS
     "parser.hpp"
     "print_visitor.hpp"
     "reader.hpp"
+    "string_builder.hpp"
     "token.hpp"
     "types.hpp"
     "visitor.hpp"

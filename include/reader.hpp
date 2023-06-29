@@ -5,9 +5,36 @@
 #include <memory>
 #include <sstream>
 
+struct Position
+{
+    unsigned line, column;
+
+    Position() : line(1), column(1)
+    {
+    }
+};
+
 class Reader
 {
+    Position current_position;
+
+  protected:
+    void update_position(wchar_t ch)
+    {
+        if (ch == L'\n')
+        {
+            ++this->current_position.line;
+            this->current_position.column = 0;
+        }
+        ++this->current_position.column;
+    }
+
   public:
+    const Position &get_position() const noexcept
+    {
+        return this->current_position;
+    };
+
     virtual wchar_t peek() = 0;
     virtual wchar_t get() = 0;
     virtual bool eof() = 0;
@@ -19,10 +46,8 @@ using ReaderPtr = std::unique_ptr<Reader>;
 template <typename T>
 concept DerivedFromWistream = std::derived_from<T, std::wistream>;
 
-template <typename T> class IStreamReader : public Reader
+template <DerivedFromWistream T> class IStreamReader : public Reader
 {
-    static_assert(DerivedFromWistream<T>,
-                  "T must be derived from the std::wistream class.");
 
   protected:
     T driver;
@@ -35,7 +60,9 @@ template <typename T> class IStreamReader : public Reader
 
     wchar_t get() override
     {
-        return this->driver.get();
+        auto result = this->driver.get();
+        this->update_position(result);
+        return result;
     }
 
     bool eof() override
@@ -54,7 +81,9 @@ class ConsoleReader : public Reader
 
     wchar_t get() override
     {
-        return std::wcin.get();
+        auto result = std::wcin.get();
+        this->update_position(result);
+        return result;
     }
 
     bool eof() override
