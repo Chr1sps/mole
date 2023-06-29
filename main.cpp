@@ -1,3 +1,4 @@
+#include "exceptions.hpp"
 #include "parser.hpp"
 #include "print_visitor.hpp"
 
@@ -12,12 +13,7 @@ int main()
     {
         visitor.visit(*(parser.parse()));
     }
-    catch (const LexerException &e)
-    {
-        std::wcerr << e.wwhat() << std::endl;
-        return 1;
-    }
-    catch (const ParserException &e)
+    catch (const CompilerException &e)
     {
         std::wcerr << e.wwhat() << std::endl;
         return 1;

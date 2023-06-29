@@ -1,4 +1,5 @@
 #include "debug_visitor.hpp"
+#include "exceptions.hpp"
 #include "parser.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <memory>

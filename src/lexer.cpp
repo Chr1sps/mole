@@ -1,4 +1,5 @@
 #include "lexer.hpp"
+#include "exceptions.hpp"
 #include "reader.hpp"
 #include "string_builder.hpp"
 #include <string>
@@ -103,7 +104,7 @@ Token Lexer::parse_operator()
     return Token(return_type);
 }
 
-std::optional<Token> Lexer::parse_slash()
+std::optional<Token> Lexer::parse_possible_slash_token()
 {
     this->get_new_char();
     if (this->last_char == L'/')
@@ -124,6 +125,15 @@ std::optional<Token> Lexer::parse_slash()
     else
         return std::optional<Token>(Token(TokenType::SLASH));
     return std::optional<Token>();
+}
+
+Token Lexer::parse_slash()
+{
+    auto result = this->parse_possible_slash_token();
+    if (result.has_value())
+        return result.value();
+    else
+        return this->get_token();
 }
 
 void Lexer::skip_line_comment()
@@ -173,11 +183,7 @@ Token Lexer::get_token()
     }
     else if (this->last_char == L'/')
     {
-        auto result = this->parse_slash();
-        if (result.has_value())
-            return result.value();
-        else
-            return this->get_token();
+        return this->parse_slash();
     }
     else if (this->is_an_operator_char())
     {
@@ -188,10 +194,7 @@ Token Lexer::get_token()
         return Token(TokenType::END);
     }
     else
-    {
-        this->report_error(L"invalid char");
-        return Token(TokenType::INVALID);
-    }
+        return this->report_error(L"invalid char");
 }
 
 bool Lexer::is_a_number_char()
@@ -222,12 +225,13 @@ bool Lexer::eof()
     return this->reader->eof();
 }
 
-void Lexer::report_error(const std::wstring &msg)
+Token Lexer::report_error(const std::wstring &msg)
 {
     auto error_msg = build_wstring(
         L"[ERROR] Lexer error at [", this->reader->get_position().line, ",",
         this->reader->get_position().column, "]: ", msg, ".");
     throw LexerException(error_msg);
+    return Token(TokenType::INVALID);
 }
 
 const Position &Lexer::get_position()

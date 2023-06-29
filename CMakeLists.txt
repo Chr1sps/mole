@@ -31,11 +31,13 @@ target_compile_options(compiler_flags
 target_link_options(compiler_flags INTERFACE "-fsanitize=undefined;-fsanitize=address")
 set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests")
 
 set(HEADERS
 
     "ast.hpp"
     "debug_visitor.hpp"
+    "exceptions.hpp"
     "lexer.hpp"
     "locale.hpp"
     "operators.hpp"
@@ -55,15 +57,19 @@ set(SOURCES
     "print_visitor.cpp"
     "token.cpp"
 )
+set(TEST_SOURCES
+    "reader_tests.cpp"
+    "lexer_tests.cpp"
+    "parser_tests.cpp"
+)
 
 list(TRANSFORM HEADERS PREPEND "${INCLUDE}/")
 list(TRANSFORM SOURCES PREPEND "${SRC}/")
 
+# list(TRANSFORM TEST_SOURCES PREPEND "${TEST_DIR}/")
 add_library(mole ${HEADERS} ${SOURCES})
-target_include_directories(mole PUBLIC "${INCLUDE}")
-target_include_directories(mole PUBLIC "${LLVM_INCLUDE_DIRS}")
-target_link_libraries(mole PUBLIC LLVM)
-target_link_libraries(mole PUBLIC compiler_flags)
+target_include_directories(mole PUBLIC "${INCLUDE}" "${LLVM_INCLUDE_DIRS}")
+target_link_libraries(mole PUBLIC LLVM compiler_flags)
 
 option(COVERAGE "Compile tests with coverage flags." FALSE)
 option(TESTS "Compile the tests executables." TRUE)
@@ -87,23 +93,19 @@ if(TESTS)
     include(CTest)
     include(Catch)
 
-    add_executable(lexer_tests tests/lexer_tests.cpp)
-    target_link_libraries(lexer_tests PRIVATE mole Catch2::Catch2WithMain)
-
-    add_executable(parser_tests tests/parser_tests.cpp)
-    target_link_libraries(parser_tests PRIVATE mole Catch2::Catch2WithMain)
-
-    catch_discover_tests(lexer_tests)
-    catch_discover_tests(parser_tests)
+    add_library(coverage_flags INTERFACE)
 
     if(COVERAGE)
         message(STATUS "Compiling with coverage info.")
-        add_library(coverage_flags INTERFACE)
         target_compile_options(coverage_flags INTERFACE "--coverage")
         target_link_options(coverage_flags INTERFACE "--coverage")
-
-        target_link_libraries(lexer_tests PRIVATE coverage_flags)
-        target_link_libraries(parser_tests PRIVATE coverage_flags)
         target_link_libraries(mole PRIVATE coverage_flags)
     endif()
+
+    foreach(TEST_SRC IN LISTS TEST_SOURCES)
+        get_filename_component(TEST_EXE "${TEST_SRC}" NAME_WE)
+        add_executable("${TEST_EXE}" "${TEST_DIR}/${TEST_SRC}")
+        target_link_libraries("${TEST_EXE}" PRIVATE mole Catch2::Catch2WithMain coverage_flags)
+        catch_discover_tests("${TEST_EXE}")
+    endforeach()
 endif()

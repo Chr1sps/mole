@@ -37,13 +37,13 @@ color_column() {
 print_header() {
 
     if [ $printed -eq 0 ]; then
-        echo -e "ModCC\tTradCC\tStmts\tLine\tCount"
+        echo -e "ModCC\tTradCC\tStmts\tLines"
         printed=1
     fi
 }
 
 while IFS= read -r line; do
-    IFS=$'\t' read -r col1 col2 col3 col4 col5 col6 <<<"$line"
+    IFS=$'\t' read -r col1 col2 col3 _ col5 col6 <<<"$line"
 
     if [[ $col1 -gt $cc_error || $col2 -gt $cc_error || $col3 -gt $stmt_error || $col5 -gt $line_error ]]; then
         if [ $result -eq 0 ]; then
@@ -68,9 +68,9 @@ while IFS= read -r line; do
                 "$col5" -gt line_error ]]
         then
             print_header
-            echo -e "${ncol1}\t${ncol2}\t${ncol3}\t${col4}\t${ncol5}\t${col6}"
+            echo -e "${ncol1}\t${ncol2}\t${ncol3}\t${ncol5}\t${col6}"
         else
-            warning_lines+="${ncol1}\t${ncol2}\t${ncol3}\t${col4}\t${ncol5}\t${col6}\n"
+            warning_lines+="${ncol1}\t${ncol2}\t${ncol3}\t${ncol5}\t${col6}\n"
         fi
 
     else
@@ -78,7 +78,11 @@ while IFS= read -r line; do
     fi
 
 done <<<"$output"
-print_header
+if [ -n "$warning_lines" ]; then
+    print_header
+else
+    echo "No problems found."
+fi
 echo -en "$warning_lines"
 if [ "$1" = "all" ]; then
     echo -en "$clear_lines"

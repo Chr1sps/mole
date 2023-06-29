@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "exceptions.hpp"
 #include "string_builder.hpp"
 
 Token Parser::get_new_token()

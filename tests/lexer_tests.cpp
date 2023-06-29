@@ -1,3 +1,4 @@
+#include "exceptions.hpp"
 #include "lexer.hpp"
 #include "token.hpp"
 #include <catch2/catch_test_macros.hpp>

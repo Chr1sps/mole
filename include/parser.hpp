@@ -127,26 +127,4 @@ class Parser
     ProgramPtr parse();
 };
 
-class ParserException : public std::runtime_error
-{
-    std::wstring what_str;
-    std::string ascii_what_str;
-
-  public:
-    ParserException(const std::wstring &what_str)
-        : std::runtime_error("Parser error"), what_str(what_str),
-          ascii_what_str(std::string(what_str.begin(), what_str.end()))
-    {
-    }
-
-    const char *what() const noexcept override
-    {
-        return this->ascii_what_str.c_str();
-    }
-
-    const std::wstring &wwhat() const noexcept
-    {
-        return this->what_str;
-    }
-};
 #endif
