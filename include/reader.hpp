@@ -1,33 +1,40 @@
 #ifndef __READER_HPP__
 #define __READER_HPP__
+#include <concepts>
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <sstream>
 
 struct Position
 {
     unsigned line, column;
 
-    Position() : line(1), column(1)
+    Position(const unsigned &line, const unsigned &column)
+        : line(line), column(column)
     {
     }
+
+    Position() : Position(1, 1)
+    {
+    }
+
+    friend bool operator==(const Position &first, const Position &other);
 };
+
+// for debugging purposes
+
+std::ostream &operator<<(std::ostream &os, const Position &pos);
 
 class Reader
 {
     Position current_position;
 
   protected:
-    void update_position(wchar_t ch)
-    {
-        if (ch == L'\n')
-        {
-            ++this->current_position.line;
-            this->current_position.column = 0;
-        }
-        ++this->current_position.column;
-    }
+    void update_position(const wchar_t &ch);
+    virtual wchar_t get_raw() = 0;
+    virtual wchar_t peek_raw() = 0;
 
   public:
     const Position &get_position() const noexcept
@@ -35,8 +42,26 @@ class Reader
         return this->current_position;
     };
 
-    virtual wchar_t peek() = 0;
-    virtual wchar_t get() = 0;
+    std::optional<wchar_t> peek()
+    {
+        auto result = this->peek_raw();
+        if (static_cast<std::wint_t>(result) == WEOF)
+            return std::nullopt;
+        return result;
+    }
+
+    std::optional<wchar_t> get()
+    {
+        auto result = this->get_raw();
+        if (this->eof())
+            return std::nullopt;
+        else
+        {
+            this->update_position(result);
+            return result;
+        }
+    }
+
     virtual bool eof() = 0;
     virtual ~Reader() = default;
 };
@@ -52,19 +77,17 @@ template <DerivedFromWistream T> class IStreamReader : public Reader
   protected:
     T driver;
 
-  public:
-    wchar_t peek() override
+    wchar_t get_raw() override
+    {
+        return this->driver.get();
+    }
+
+    wchar_t peek_raw() override
     {
         return this->driver.peek();
     }
 
-    wchar_t get() override
-    {
-        auto result = this->driver.get();
-        this->update_position(result);
-        return result;
-    }
-
+  public:
     bool eof() override
     {
         return this->driver.eof();
@@ -73,19 +96,18 @@ template <DerivedFromWistream T> class IStreamReader : public Reader
 
 class ConsoleReader : public Reader
 {
-  public:
-    wchar_t peek() override
+  protected:
+    wchar_t get_raw() override
+    {
+        return std::wcin.get();
+    }
+
+    wchar_t peek_raw() override
     {
         return std::wcin.peek();
     }
 
-    wchar_t get() override
-    {
-        auto result = std::wcin.get();
-        this->update_position(result);
-        return result;
-    }
-
+  public:
     bool eof() override
     {
         return std::wcin.eof();

@@ -170,13 +170,19 @@ TEST_CASE("Identifiers.", "[ID][EOF]")
     COMPARE(L"n4m3", LIST(V(IDENTIFIER, L"n4m3"), T(END)));
     COMPARE(L"snake_case", LIST(V(IDENTIFIER, L"snake_case"), T(END)));
     COMPARE(L"_snake_case", LIST(V(IDENTIFIER, L"_snake_case"), T(END)));
-    COMPARE(L"_", LIST(V(IDENTIFIER, L"_"), T(END)));
     COMPARE(L"ęóąśłżźćń", LIST(V(IDENTIFIER, L"ęóąśłżźćń"), T(END)));
+}
+
+TEST_CASE("Other special tokens.", "[OTHER]")
+{
+    COMPARE(L"...", LIST(T(ELLIPSIS), T(END)));
+    COMPARE(L"_", LIST(T(PLACEHOLDER), T(END)));
 }
 
 TEST_CASE("Invalid signs.", "[ERR]")
 {
     COMPARE_THROWS(L".", LexerException);
+    COMPARE_THROWS(L"..", LexerException);
     COMPARE_THROWS(L"$", LexerException);
     COMPARE_THROWS(L"#", LexerException);
 }

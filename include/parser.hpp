@@ -10,65 +10,10 @@ class Parser
 {
     LexerPtr lexer;
     Token current_token;
-    std::map<TokenType, std::shared_ptr<BuiltInBinOp>> binary_map = {
-        {TokenType::PLUS,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(45, BinOpEnum::ADD))},
-        {TokenType::MINUS,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(45, BinOpEnum::SUB))},
-        {TokenType::STAR,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(50, BinOpEnum::MUL))},
-        {TokenType::SLASH,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(50, BinOpEnum::DIV))},
-        {TokenType::PERCENT,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(50, BinOpEnum::MOD))},
-        {TokenType::EXP,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(55, BinOpEnum::EXP))},
-        {TokenType::EQUAL,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::EQ))},
-        {TokenType::NOT_EQUAL,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::NEQ))},
-        {TokenType::GREATER,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::GT))},
-        {TokenType::GREATER_EQUAL,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::GE))},
-        {TokenType::LESS,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::LT))},
-        {TokenType::LESS_EQUAL,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::LE))},
-        {TokenType::AND,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(15, BinOpEnum::AND))},
-        {TokenType::OR,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(10, BinOpEnum::OR))},
-        {TokenType::AMPERSAND,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(35, BinOpEnum::BIT_AND))},
-        {TokenType::BIT_OR,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(25, BinOpEnum::BIT_OR))},
-        {TokenType::BIT_XOR,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(30, BinOpEnum::BIT_XOR))},
-        {TokenType::SHIFT_LEFT,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(40, BinOpEnum::SHL))},
-        {TokenType::SHIFT_RIGHT,
-         std::make_shared<BuiltInBinOp>(BuiltInBinOp(40, BinOpEnum::SHR))},
-    };
-    std::map<TokenType, std::shared_ptr<BuiltInUnaryOp>> unary_map = {
-        {TokenType::INCREMENT, std::make_shared<BuiltInUnaryOp>(
-                                   BuiltInUnaryOp(60, UnaryOpEnum::INC))},
-        {TokenType::DECREMENT, std::make_shared<BuiltInUnaryOp>(
-                                   BuiltInUnaryOp(60, UnaryOpEnum::DEC))},
-        {TokenType::NEG, std::make_shared<BuiltInUnaryOp>(
-                             BuiltInUnaryOp(60, UnaryOpEnum::NEG))},
-        {TokenType::BIT_NEG, std::make_shared<BuiltInUnaryOp>(
-                                 BuiltInUnaryOp(60, UnaryOpEnum::BIT_NEG))},
-    };
-    std::map<TokenType, TypeEnum> type_map = {
-        {TokenType::TYPE_I32, TypeEnum::I32},
-        {TokenType::TYPE_F64, TypeEnum::F64},
-    };
-    std::map<TokenType, TypeEnum> type_value_map = {
-        {TokenType::INT, TypeEnum::I32},
-        {TokenType::FLOAT, TypeEnum::F32},
-        {TokenType::DOUBLE, TypeEnum::F64},
-    };
+    static std::map<TokenType, std::shared_ptr<BuiltInBinOp>> binary_map;
+    static std::map<TokenType, std::shared_ptr<BuiltInUnaryOp>> unary_map;
+    static std::map<TokenType, TypeEnum> type_map;
+    static std::map<TokenType, TypeEnum> type_value_map;
 
     Token get_new_token();
     // Token peek_token();

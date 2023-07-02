@@ -55,6 +55,7 @@ set(SOURCES
     "lexer.cpp"
     "parser.cpp"
     "print_visitor.cpp"
+    "reader.cpp"
     "token.cpp"
 )
 set(TEST_SOURCES
