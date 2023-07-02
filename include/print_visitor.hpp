@@ -51,6 +51,12 @@ class PrintVisitor : public Visitor
     void visit(const BinaryExpr &node) override;
     void visit(const UnaryExpr &node) override;
     void visit(const CallExpr &node) override;
+    void print_optional_args(
+        const std::vector<std::optional<ExprNodePtr>> &args,
+        bool &print_ellipsis);
+    void print_ellipsis_and_commas(const LambdaCallExpr &node,
+                                   const bool &print_ellipsis);
+    void visit(const LambdaCallExpr &node) override;
     void visit(const Block &node) override;
     void visit(const ReturnStmt &node) override;
     void print_params(const std::vector<ParamPtr> &params);

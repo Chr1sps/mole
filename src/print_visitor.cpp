@@ -65,6 +65,55 @@ void PrintVisitor::visit(const CallExpr &node)
     this->out << ")";
 }
 
+void PrintVisitor::print_optional_args(
+    const std::vector<std::optional<ExprNodePtr>> &args, bool &print_ellipsis)
+{
+    for (unsigned i = 0; i < args.size(); ++i)
+    {
+        auto &arg = args[i];
+        if (arg.has_value())
+        {
+            arg.value()->accept(*this);
+        }
+        else
+        {
+            print_ellipsis = false;
+            this->out << "_";
+        }
+        if (i < args.size() - 1)
+        {
+            this->out << ", ";
+        }
+    }
+}
+
+void PrintVisitor::print_ellipsis_and_commas(const LambdaCallExpr &node,
+                                             const bool &print_ellipsis)
+{
+    if (node.args.size() && (print_ellipsis || node.post_ellipsis_args.size()))
+    {
+        this->out << ", ";
+    }
+    if ((node.args.size() && print_ellipsis) || node.post_ellipsis_args.size())
+    {
+        this->out << "...";
+    }
+    if (node.post_ellipsis_args.size())
+    {
+        this->out << ", ";
+    }
+}
+
+void PrintVisitor::visit(const LambdaCallExpr &node)
+{
+    bool print_ellipsis = true;
+    this->out << node.func_name << "(";
+    this->print_optional_args(node.args, print_ellipsis);
+    this->print_ellipsis_and_commas(node, print_ellipsis);
+    this->print_optional_args(node.post_ellipsis_args, print_ellipsis);
+    this->out << ")";
+}
+
 void PrintVisitor::visit(const Block &node)
 {
     if (this->function_block_indent)

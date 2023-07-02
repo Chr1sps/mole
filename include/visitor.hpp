@@ -8,6 +8,7 @@ struct F64Expr;
 struct BinaryExpr;
 struct UnaryExpr;
 struct CallExpr;
+struct LambdaCallExpr;
 struct Block;
 struct ReturnStmt;
 struct FuncDefStmt;
@@ -33,6 +34,7 @@ class Visitor
     virtual void visit(const BinaryExpr &node) = 0;
     virtual void visit(const UnaryExpr &node) = 0;
     virtual void visit(const CallExpr &node) = 0;
+    virtual void visit(const LambdaCallExpr &node) = 0;
     virtual void visit(const Block &node) = 0;
     virtual void visit(const ReturnStmt &node) = 0;
     virtual void visit(const FuncDefStmt &node) = 0;
