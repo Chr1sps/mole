@@ -45,6 +45,15 @@ TEST_CASE("Variables.", "[VARS]")
         REPR_CHECK(L"let var=5.25d;");
         REPR_CHECK(L"let var=5.25f;");
     }
+    SECTION("In-place lambdas.")
+    {
+        REPR_CHECK(L"let foo=boo(1,2,3,4);");
+        REPR_CHECK(L"let foo=boo(1,_,3,_);");
+        REPR_CHECK(L"let foo=boo(1,2,...);");
+        REPR_CHECK(L"let foo=boo(...,3,4);");
+        REPR_CHECK(L"let foo=boo(1,...,4);");
+        REPR_CHECK(L"let foo=boo(_,...,_);");
+    }
 }
 
 TEST_CASE("Binary expressions.", "[VARS], [BINOP]")

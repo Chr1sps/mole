@@ -47,6 +47,7 @@ class Parser
     std::unique_ptr<F64Expr> parse_f64();
     std::unique_ptr<ExprNode> parse_paren_expression();
     std::unique_ptr<ExprNode> parse_unary_expression();
+    std::unique_ptr<ExprNode> parse_call_or_lambda(const std::wstring &name);
     std::unique_ptr<ExprNode> parse_identifier_expression();
     std::unique_ptr<ExprNode> parse_const_expression();
     std::vector<std::unique_ptr<ExprNode>> parse_call_args();
