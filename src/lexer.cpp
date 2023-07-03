@@ -286,9 +286,7 @@ void Lexer::skip_block_comment()
     for (;;)
     {
         while (!this->reader->eof() && this->last_char.value() != L'*')
-        {
             this->get_new_char();
-        }
         if (this->peek_char() == L'/')
         {
             this->get_new_char();
@@ -324,29 +322,17 @@ Token Lexer::get_token()
     this->token_position = this->reader->get_position();
     this->get_nonempty_char();
     if (this->last_char == std::nullopt)
-    {
         return Token(TokenType::END);
-    }
     else if (this->is_a_number_char())
-    {
         return this->parse_number_token();
-    }
     else if (this->last_char == std::make_optional<wchar_t>(L'_'))
-    {
         return this->parse_underscore();
-    }
     else if (this->is_identifier_char())
-    {
         return this->parse_alpha_token();
-    }
     else if (this->last_char.value() == L'/')
-    {
         return this->parse_slash();
-    }
     else if (this->is_an_operator_char())
-    {
         return this->parse_operator();
-    }
     else
         return this->report_error(L"invalid char");
 }

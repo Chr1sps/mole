@@ -40,9 +40,7 @@ void DebugVisitor::visit(const CallExpr &node)
     {
         node.args[i]->accept(*this);
         if (i < node.args.size() - 1)
-        {
             this->out << ",";
-        }
     }
     this->out << ")";
 }
@@ -63,9 +61,7 @@ void DebugVisitor::print_optional_args(
             this->out << "_";
         }
         if (i < args.size() - 1)
-        {
             this->out << ",";
-        }
     }
 }
 
@@ -73,17 +69,11 @@ void DebugVisitor::print_ellipsis_and_commas(const LambdaCallExpr &node,
                                              const bool &print_ellipsis)
 {
     if (node.args.size() && (print_ellipsis || node.post_ellipsis_args.size()))
-    {
         this->out << ",";
-    }
     if ((node.args.size() && print_ellipsis) || node.post_ellipsis_args.size())
-    {
         this->out << "...";
-    }
     if (node.post_ellipsis_args.size())
-    {
         this->out << ",";
-    }
 }
 
 void DebugVisitor::visit(const LambdaCallExpr &node)
@@ -100,9 +90,7 @@ void DebugVisitor::visit(const Block &node)
 {
     this->out << "{";
     for (auto &stmt : node.statements)
-    {
         stmt->accept(*this);
-    }
     this->out << "}";
 }
 
@@ -121,9 +109,7 @@ void DebugVisitor::visit(const FuncDefStmt &node)
         this->out << node.params[i]->name << ":";
         node.params[i]->type->accept(*this);
         if (i < node.params.size() - 1)
-        {
             this->out << ",";
-        }
     }
     this->out << ")=>";
     node.return_type->accept(*this);
@@ -158,9 +144,7 @@ void DebugVisitor::visit(const ExternStmt &node)
         this->out << node.params[i]->name << ":";
         node.params[i]->type->accept(*this);
         if (i < node.params.size() - 1)
-        {
             this->out << ",";
-        }
     }
     this->out << ")=>";
     node.return_type->accept(*this);
@@ -170,17 +154,11 @@ void DebugVisitor::visit(const ExternStmt &node)
 void DebugVisitor::visit(const Program &node)
 {
     for (auto &ext : node.externs)
-    {
         ext->accept(*this);
-    }
     for (auto &var : node.globals)
-    {
         var->accept(*this);
-    }
     for (auto &function : node.functions)
-    {
         function->accept(*this);
-    }
 }
 
 void DebugVisitor::visit(const NeverType &type)

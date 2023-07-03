@@ -19,9 +19,7 @@ bool compare_tokens(LexerPtr &&lexer, const vector<Token> &tokens)
 void consume_tokens(LexerPtr &&lexer)
 {
     while (!lexer->eof())
-    {
         lexer->get_token();
-    }
 }
 
 #define T(type) Token(TokenType::type)

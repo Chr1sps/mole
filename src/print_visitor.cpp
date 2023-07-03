@@ -3,9 +3,7 @@
 void PrintVisitor::print_indent()
 {
     for (unsigned i = 0; i < this->indent_level * 4; ++i)
-    {
         this->out << " ";
-    }
 }
 
 void PrintVisitor::increment_indent()
@@ -58,9 +56,7 @@ void PrintVisitor::visit(const CallExpr &node)
     {
         node.args[i]->accept(*this);
         if (i < node.args.size() - 1)
-        {
             this->out << ", ";
-        }
     }
     this->out << ")";
 }
@@ -81,9 +77,7 @@ void PrintVisitor::print_optional_args(
             this->out << "_";
         }
         if (i < args.size() - 1)
-        {
             this->out << ", ";
-        }
     }
 }
 
@@ -91,17 +85,11 @@ void PrintVisitor::print_ellipsis_and_commas(const LambdaCallExpr &node,
                                              const bool &print_ellipsis)
 {
     if (node.args.size() && (print_ellipsis || node.post_ellipsis_args.size()))
-    {
         this->out << ", ";
-    }
     if ((node.args.size() && print_ellipsis) || node.post_ellipsis_args.size())
-    {
         this->out << "...";
-    }
     if (node.post_ellipsis_args.size())
-    {
         this->out << ", ";
-    }
 }
 
 void PrintVisitor::visit(const LambdaCallExpr &node)
@@ -123,9 +111,7 @@ void PrintVisitor::visit(const Block &node)
     this->out << "{" << std::endl;
     this->increment_indent();
     for (auto &stmt : node.statements)
-    {
         stmt->accept(*this);
-    }
     this->decrement_indent();
     this->print_indent();
     this->out << "}" << std::endl;
@@ -146,9 +132,7 @@ void PrintVisitor::print_params(const std::vector<ParamPtr> &params)
         this->out << params[i]->name << ": ";
         params[i]->type->accept(*this);
         if (i < params.size() - 1)
-        {
             this->out << ", ";
-        }
     }
 }
 
@@ -198,17 +182,11 @@ void PrintVisitor::visit(const ExternStmt &node)
 void PrintVisitor::visit(const Program &node)
 {
     for (auto &ext : node.externs)
-    {
         ext->accept(*this);
-    }
     for (auto &var : node.globals)
-    {
         var->accept(*this);
-    }
     for (auto &function : node.functions)
-    {
         function->accept(*this);
-    }
 }
 
 void PrintVisitor::visit(const NeverType &type)

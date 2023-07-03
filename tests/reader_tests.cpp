@@ -10,9 +10,7 @@ std::vector<unsigned> line_lengths(const std::wstring &input)
     std::wstring line;
 
     while (std::getline(istream, line))
-    {
         result.push_back(line.size() + 1);
-    }
 
     return result;
 }

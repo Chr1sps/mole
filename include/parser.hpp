@@ -16,7 +16,6 @@ class Parser
     static std::map<TokenType, TypeEnum> type_value_map;
 
     Token get_new_token();
-    // Token peek_token();
 
     void assert_current_and_eat(TokenType type, const std::wstring &error_msg);
     void assert_next_token(TokenType type, const std::wstring &error_msg);
@@ -47,6 +46,36 @@ class Parser
     std::unique_ptr<F64Expr> parse_f64();
     std::unique_ptr<ExprNode> parse_paren_expression();
     std::unique_ptr<ExprNode> parse_unary_expression();
+    bool process_comma_or_rparen();
+    void process_ellipsis(
+        bool &is_lambda, bool &post_ellipsis,
+        const std::tuple<std::vector<ExprNodePtr> &,
+                         std::vector<std::optional<ExprNodePtr>> &,
+                         std::vector<std::optional<ExprNodePtr>> &>
+            &args_tuple);
+    void process_placeholder(
+        bool &is_lambda, bool &post_ellipsis,
+        const std::tuple<std::vector<ExprNodePtr> &,
+                         std::vector<std::optional<ExprNodePtr>> &,
+                         std::vector<std::optional<ExprNodePtr>> &>
+            &args_tuple);
+    void push_lambda_arg(
+        const bool &post_ellipsis,
+        std::vector<std::optional<ExprNodePtr>> &lambda_args,
+        std::vector<std::optional<ExprNodePtr>> &lambda_post_args,
+        std::optional<ExprNodePtr> &&arg);
+    std::unique_ptr<ExprNode> return_call_or_lambda(
+        const bool &is_lambda, const std::wstring &name,
+        const std::tuple<std::vector<ExprNodePtr> &,
+                         std::vector<std::optional<ExprNodePtr>> &,
+                         std::vector<std::optional<ExprNodePtr>> &>
+            &args_tuple);
+    void process_argument(
+        const bool &is_lambda, const bool &post_ellipsis,
+        const std::tuple<std::vector<ExprNodePtr> &,
+                         std::vector<std::optional<ExprNodePtr>> &,
+                         std::vector<std::optional<ExprNodePtr>> &>
+            &args_tuple);
     std::unique_ptr<ExprNode> parse_call_or_lambda(const std::wstring &name);
     std::unique_ptr<ExprNode> parse_identifier_expression();
     std::unique_ptr<ExprNode> parse_const_expression();

@@ -3,6 +3,7 @@
 #include "operators.hpp"
 #include "string_builder.hpp"
 #include <algorithm>
+#include <tuple>
 
 std::map<TokenType, std::shared_ptr<BuiltInBinOp>> Parser::binary_map{
     {TokenType::PLUS,
@@ -133,9 +134,7 @@ std::vector<ParamPtr> Parser::parse_params()
         auto parameter = this->parse_param();
         params.push_back(std::move(parameter));
         if (this->current_token == TokenType::COMMA)
-        {
             this->get_new_token();
-        }
     }
     return params;
 }
@@ -145,9 +144,7 @@ std::vector<ParamPtr> Parser::parse_params()
 TypePtr Parser::parse_type()
 {
     if (this->current_token == TokenType::KW_FN)
-    {
         return this->parse_function_type();
-    }
     else if (this->type_map.contains(this->current_token.type))
     {
 
@@ -163,7 +160,7 @@ TypePtr Parser::parse_type()
 // Types = [Type, {",", Type}]
 std::vector<TypePtr> Parser::parse_types()
 {
-    std::vector<TypePtr> types;
+    std ::vector<TypePtr> types;
     for (; this->current_token != TokenType::R_PAREN; this->get_new_token())
     {
         auto type = this->parse_type();
@@ -306,15 +303,15 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_statement()
 std::unique_ptr<Statement> Parser::parse_block_statement()
 {
     if (this->current_token == TokenType::KW_LET)
-        return (this->parse_variable_declaration());
+        return this->parse_variable_declaration();
     else if (this->current_token == TokenType::KW_RETURN)
-        return (this->parse_return_statement());
+        return this->parse_return_statement();
     else if (this->current_token == TokenType::KW_EXTERN)
-        return (this->parse_extern());
+        return this->parse_extern();
     else if (this->current_token == TokenType::KW_FN)
-        return (this->parse_function());
+        return this->parse_function();
     else if (this->current_token == TokenType::L_BRACKET)
-        return (this->parse_block());
+        return this->parse_block();
     else
         return this->report_error(L"invalid token found in a block");
 }
@@ -325,9 +322,7 @@ std::unique_ptr<Block> Parser::parse_block()
     std::vector<std::unique_ptr<Statement>> statements;
     this->get_new_token();
     for (; this->current_token != TokenType::R_BRACKET;)
-    {
         statements.push_back(this->parse_block_statement());
-    }
     this->get_new_token();
     return std::make_unique<Block>(statements);
 }
@@ -368,7 +363,6 @@ std::vector<std::unique_ptr<ExprNode>> Parser::parse_call_args()
 {
 
     std::vector<std::unique_ptr<ExprNode>> args;
-
     if (this->get_new_token() != TokenType::R_PAREN)
     {
         for (;;)
@@ -383,7 +377,6 @@ std::vector<std::unique_ptr<ExprNode>> Parser::parse_call_args()
                 TokenType::COMMA, L"expected ')' or ',' in argument list");
         }
     }
-
     return args;
 }
 
@@ -398,79 +391,121 @@ std::vector<std::optional<ExprNodePtr>> convert_to_opt_args(
     return result;
 }
 
-std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(
-    const std::wstring &name)
+void Parser::process_ellipsis(
+    bool &is_lambda, bool &post_ellipsis,
+    const std::tuple<std::vector<ExprNodePtr> &,
+                     std::vector<std::optional<ExprNodePtr>> &,
+                     std::vector<std::optional<ExprNodePtr>> &> &args_tuple)
 {
-    std::vector<std::unique_ptr<ExprNode>> args;
-    std::vector<std::optional<ExprNodePtr>> lambda_args, lambda_post_args;
-    bool is_lambda = false, post_ellipsis = false;
 
-    if (this->get_new_token() != TokenType::R_PAREN)
+    auto [args, lambda_args, _] = args_tuple;
+
+    if (!is_lambda)
     {
-        for (;;)
-        {
-            if (this->current_token == TokenType::ELLIPSIS)
-            {
-                if (!is_lambda)
-                {
-                    is_lambda = true;
-                    lambda_args = convert_to_opt_args(std::move(args));
-                }
-                if (!post_ellipsis)
-                {
-                    post_ellipsis = true;
-                    this->get_new_token();
-                }
-                else
-                {
-                    this->report_error(L"only one ellipsis allowed per "
-                                       L"in-place lambda function");
-                }
-            }
-            else if (this->current_token == TokenType::PLACEHOLDER)
-            {
-                if (!is_lambda)
-                {
-                    is_lambda = true;
-                    lambda_args = convert_to_opt_args(std::move(args));
-                }
-                if (post_ellipsis)
-                {
-                    lambda_post_args.push_back(std::nullopt);
-                }
-                else
-                {
-                    lambda_args.push_back(std::nullopt);
-                }
-                this->get_new_token();
-            }
-            else
-            {
-                if (is_lambda)
-                {
-                    if (post_ellipsis)
-                        lambda_post_args.push_back(this->parse_expression());
-                    else
-                        lambda_args.push_back(this->parse_expression());
-                }
-                else
-                    args.push_back(this->parse_expression());
-            }
-
-            if (this->current_token == TokenType::R_PAREN)
-            {
-                this->get_new_token();
-                break;
-            }
-            this->assert_current_and_eat(
-                TokenType::COMMA, L"expected ')' or ',' in argument list");
-        }
+        is_lambda = true;
+        lambda_args = convert_to_opt_args(std::move(args));
     }
+    if (!post_ellipsis)
+    {
+        post_ellipsis = true;
+        this->get_new_token();
+    }
+    else
+        this->report_error(L"only one ellipsis allowed per "
+                           L"in-place lambda function");
+}
+
+void Parser::process_placeholder(
+    bool &is_lambda, bool &post_ellipsis,
+    const std::tuple<std::vector<ExprNodePtr> &,
+                     std::vector<std::optional<ExprNodePtr>> &,
+                     std::vector<std::optional<ExprNodePtr>> &> &args_tuple)
+
+{
+    auto [args, lambda_args, lambda_post_args] = args_tuple;
+    if (!is_lambda)
+    {
+        is_lambda = true;
+        lambda_args = convert_to_opt_args(std::move(args));
+    }
+    this->push_lambda_arg(post_ellipsis, lambda_args, lambda_post_args,
+                          std::nullopt);
+    this->get_new_token();
+}
+
+void Parser::push_lambda_arg(
+    const bool &post_ellipsis,
+    std::vector<std::optional<ExprNodePtr>> &lambda_args,
+    std::vector<std::optional<ExprNodePtr>> &lambda_post_args,
+    std::optional<ExprNodePtr> &&arg)
+{
+    if (post_ellipsis)
+        lambda_post_args.push_back(std::move(arg));
+    else
+        lambda_args.push_back(std::move(arg));
+}
+
+void Parser::process_argument(
+    const bool &is_lambda, const bool &post_ellipsis,
+    const std::tuple<std::vector<ExprNodePtr> &,
+                     std::vector<std::optional<ExprNodePtr>> &,
+                     std::vector<std::optional<ExprNodePtr>> &> &args_tuple)
+{
+    auto [args, lambda_args, lambda_post_args] = args_tuple;
+
+    if (is_lambda)
+        this->push_lambda_arg(post_ellipsis, lambda_args, lambda_post_args,
+                              this->parse_expression());
+    else
+        args.push_back(this->parse_expression());
+}
+
+std::unique_ptr<ExprNode> Parser::return_call_or_lambda(
+    const bool &is_lambda, const std::wstring &name,
+    const std::tuple<std::vector<ExprNodePtr> &,
+                     std::vector<std::optional<ExprNodePtr>> &,
+                     std::vector<std::optional<ExprNodePtr>> &> &args_tuple)
+{
+    auto [args, lambda_args, lambda_post_args] = args_tuple;
     if (is_lambda)
         return std::make_unique<LambdaCallExpr>(name, lambda_args,
                                                 lambda_post_args);
     else
         return std::make_unique<CallExpr>(name, args);
+}
+
+bool Parser::process_comma_or_rparen()
+{
+    if (this->current_token == TokenType::R_PAREN)
+    {
+        this->get_new_token();
+        return false;
+    }
+    this->assert_current_and_eat(TokenType::COMMA,
+                                 L"expected ')' or ',' in argument list");
+    return true;
+}
+
+std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(
+    const std::wstring &name)
+{
+    std::vector<std::unique_ptr<ExprNode>> args;
+    std::vector<std::optional<ExprNodePtr>> lambda_args, lambda_post_args;
+    auto args_tuple = std::tie(args, lambda_args, lambda_post_args);
+    bool is_lambda = false, post_ellipsis = false;
+
+    for (this->get_new_token(); this->current_token != TokenType::R_PAREN;)
+    {
+        if (this->current_token == TokenType::ELLIPSIS)
+            this->process_ellipsis(is_lambda, post_ellipsis, args_tuple);
+        else if (this->current_token == TokenType::PLACEHOLDER)
+            this->process_placeholder(is_lambda, post_ellipsis, args_tuple);
+        else
+            this->process_argument(is_lambda, post_ellipsis, args_tuple);
+        if (!this->process_comma_or_rparen())
+            break;
+    }
+    return this->return_call_or_lambda(is_lambda, name, args_tuple);
 }
 
 std::unique_ptr<ExprNode> Parser::parse_identifier_expression()
@@ -491,9 +526,7 @@ std::unique_ptr<ExprNode> Parser::parse_lhs()
     else if (this->current_token == TokenType::L_PAREN)
         return this->parse_paren_expression();
     else if (this->type_value_map.contains(this->current_token.type))
-    {
         return this->parse_const_expression();
-    }
     else
         return this->report_error(
             L"unknown token when expecting an expression");
@@ -507,9 +540,7 @@ void Parser::check_next_op_and_parse(std::unique_ptr<ExprNode> &lhs,
     {
         auto new_op = this->binary_map.at(this->current_token.type);
         if (op->precedence < new_op->precedence)
-        {
             rhs = this->parse_op_and_rhs(op->precedence + 1, rhs);
-        }
     }
 }
 
