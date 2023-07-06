@@ -91,13 +91,13 @@ struct CallExpr : public ExprNode
 struct LambdaCallExpr : public ExprNode
 {
     std::wstring func_name;
-    std::vector<std::optional<ExprNodePtr>> args, post_ellipsis_args;
+    std::vector<std::optional<ExprNodePtr>> args;
+    bool is_ellipsis;
 
     LambdaCallExpr(const std::wstring &func_name,
                    std::vector<std::optional<ExprNodePtr>> &args,
-                   std::vector<std::optional<ExprNodePtr>> &post_ellipsis_args)
-        : func_name(func_name), args(std::move(args)),
-          post_ellipsis_args(std::move(post_ellipsis_args))
+                   const bool &is_ellipsis)
+        : func_name(func_name), args(std::move(args)), is_ellipsis(is_ellipsis)
     {
     }
 

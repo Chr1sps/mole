@@ -21,16 +21,19 @@ class Parser
     void assert_next_token(TokenType type, const std::wstring &error_msg);
 
     // type names
+
     TypePtr parse_type();
     std::vector<TypePtr> parse_types();
     TypePtr parse_return_type();
     std::unique_ptr<FunctionType> parse_function_type();
 
     // function parameters
+
     ParamPtr parse_param();
     std::vector<ParamPtr> parse_params();
 
     // statements
+
     std::unique_ptr<FuncDefStmt> parse_function();
     std::optional<TypePtr> parse_var_type();
     std::optional<ExprNodePtr> parse_var_value();
@@ -40,50 +43,24 @@ class Parser
     std::unique_ptr<Statement> parse_block_statement();
     std::unique_ptr<Block> parse_block();
 
+    // helper methods
+
+    void check_next_op_and_parse(std::unique_ptr<ExprNode> &lhs,
+                                 std::unique_ptr<ExprNode> &rhs,
+                                 const std::shared_ptr<BuiltInBinOp> &op);
+
     // expressions
+
     std::unique_ptr<I32Expr> parse_i32();
     std::unique_ptr<F32Expr> parse_f32();
     std::unique_ptr<F64Expr> parse_f64();
     std::unique_ptr<ExprNode> parse_paren_expression();
     std::unique_ptr<ExprNode> parse_unary_expression();
-    bool process_comma_or_rparen();
-    void process_ellipsis(
-        bool &is_lambda, bool &post_ellipsis,
-        const std::tuple<std::vector<ExprNodePtr> &,
-                         std::vector<std::optional<ExprNodePtr>> &,
-                         std::vector<std::optional<ExprNodePtr>> &>
-            &args_tuple);
-    void process_placeholder(
-        bool &is_lambda, bool &post_ellipsis,
-        const std::tuple<std::vector<ExprNodePtr> &,
-                         std::vector<std::optional<ExprNodePtr>> &,
-                         std::vector<std::optional<ExprNodePtr>> &>
-            &args_tuple);
-    void push_lambda_arg(
-        const bool &post_ellipsis,
-        std::vector<std::optional<ExprNodePtr>> &lambda_args,
-        std::vector<std::optional<ExprNodePtr>> &lambda_post_args,
-        std::optional<ExprNodePtr> &&arg);
-    std::unique_ptr<ExprNode> return_call_or_lambda(
-        const bool &is_lambda, const std::wstring &name,
-        const std::tuple<std::vector<ExprNodePtr> &,
-                         std::vector<std::optional<ExprNodePtr>> &,
-                         std::vector<std::optional<ExprNodePtr>> &>
-            &args_tuple);
-    void process_argument(
-        const bool &is_lambda, const bool &post_ellipsis,
-        const std::tuple<std::vector<ExprNodePtr> &,
-                         std::vector<std::optional<ExprNodePtr>> &,
-                         std::vector<std::optional<ExprNodePtr>> &>
-            &args_tuple);
     std::unique_ptr<ExprNode> parse_call_or_lambda(const std::wstring &name);
     std::unique_ptr<ExprNode> parse_identifier_expression();
     std::unique_ptr<ExprNode> parse_const_expression();
     std::vector<std::unique_ptr<ExprNode>> parse_call_args();
     std::unique_ptr<ExprNode> parse_lhs();
-    void check_next_op_and_parse(std::unique_ptr<ExprNode> &lhs,
-                                 std::unique_ptr<ExprNode> &rhs,
-                                 const std::shared_ptr<BuiltInBinOp> &op);
     std::unique_ptr<ExprNode> parse_op_and_rhs(const unsigned &precedence,
                                                std::unique_ptr<ExprNode> &lhs);
     std::unique_ptr<ExprNode> parse_expression();

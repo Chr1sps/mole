@@ -50,9 +50,11 @@ TEST_CASE("Variables.", "[VARS]")
         REPR_CHECK(L"let foo=boo(1,2,3,4);");
         REPR_CHECK(L"let foo=boo(1,_,3,_);");
         REPR_CHECK(L"let foo=boo(1,2,...);");
-        REPR_CHECK(L"let foo=boo(...,3,4);");
-        REPR_CHECK(L"let foo=boo(1,...,4);");
-        REPR_CHECK(L"let foo=boo(_,...,_);");
+        REPR_CHECK(L"let foo=boo(1,_,...);");
+        // old tests, should now throw errors
+        // REPR_CHECK(L"let foo=boo(_,...,_);");
+        // REPR_CHECK(L"let foo=boo(1,...,4);");
+        // REPR_CHECK(L"let foo=boo(...,3,4);");
     }
 }
 
