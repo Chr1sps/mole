@@ -5,6 +5,44 @@
 #include <algorithm>
 #include <tuple>
 
+namespace
+{
+
+std::vector<std::optional<ExprNodePtr>> convert_to_opt_args(
+    std::vector<ExprNodePtr> &&args)
+{
+    auto result = std::vector<std::optional<ExprNodePtr>>(args.size());
+    std::transform(args.begin(), args.end(), result.begin(),
+                   [](ExprNodePtr &node) {
+                       return std::make_optional<ExprNodePtr>(std::move(node));
+                   });
+    return result;
+}
+
+void convert_if_not_lambda(
+    std::vector<std::unique_ptr<ExprNode>> &args,
+    std::vector<std::optional<std::unique_ptr<ExprNode>>> &lambda_args,
+    bool &is_lambda)
+{
+    if (!is_lambda)
+    {
+        lambda_args = convert_to_opt_args(std::move(args));
+        is_lambda = true;
+    }
+}
+
+ExprNodePtr return_call_or_lambda(
+    const std::wstring &name, std::vector<ExprNodePtr> &args,
+    std::vector<std::optional<ExprNodePtr>> &lambda_args,
+    const bool &is_lambda)
+{
+    if (is_lambda)
+        return std::make_unique<LambdaCallExpr>(name, lambda_args, false);
+    else
+        return std::make_unique<CallExpr>(name, args);
+}
+} // namespace
+
 std::map<TokenType, std::shared_ptr<BuiltInBinOp>> Parser::binary_map{
     {TokenType::PLUS,
      std::make_shared<BuiltInBinOp>(BuiltInBinOp(45, BinOpEnum::ADD))},
@@ -380,29 +418,6 @@ std::vector<std::unique_ptr<ExprNode>> Parser::parse_call_args()
     return args;
 }
 
-std::vector<std::optional<ExprNodePtr>> convert_to_opt_args(
-    std::vector<ExprNodePtr> &&args)
-{
-    auto result = std::vector<std::optional<ExprNodePtr>>(args.size());
-    std::transform(args.begin(), args.end(), result.begin(),
-                   [](ExprNodePtr &node) {
-                       return std::make_optional<ExprNodePtr>(std::move(node));
-                   });
-    return result;
-}
-
-void convert_if_not_lambda(
-    std::vector<std::unique_ptr<ExprNode>> &args,
-    std::vector<std::optional<std::unique_ptr<ExprNode>>> &lambda_args,
-    bool &is_lambda)
-{
-    if (!is_lambda)
-    {
-        lambda_args = convert_to_opt_args(std::move(args));
-        is_lambda = true;
-    }
-}
-
 std::unique_ptr<LambdaCallExpr> Parser::return_ellipsis_lambda(
     const std::wstring &name, std::vector<std::unique_ptr<ExprNode>> &args,
     std::vector<std::optional<std::unique_ptr<ExprNode>>> &lambda_args,
@@ -426,17 +441,6 @@ bool Parser::eat_comma_or_rparen()
     this->assert_current_and_eat(TokenType::COMMA,
                                  L"expected ')' or ',' in argument list");
     return false;
-}
-
-ExprNodePtr return_call_or_lambda(
-    const std::wstring &name, std::vector<ExprNodePtr> &args,
-    std::vector<std::optional<ExprNodePtr>> &lambda_args,
-    const bool &is_lambda)
-{
-    if (is_lambda)
-        return std::make_unique<LambdaCallExpr>(name, lambda_args, false);
-    else
-        return std::make_unique<CallExpr>(name, args);
 }
 
 void Parser::push_expr(std::vector<ExprNodePtr> &args,
