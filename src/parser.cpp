@@ -391,10 +391,78 @@ std::vector<std::optional<ExprNodePtr>> convert_to_opt_args(
     return result;
 }
 
+void convert_if_not_lambda(
+    std::vector<std::unique_ptr<ExprNode>> &args,
+    std::vector<std::optional<std::unique_ptr<ExprNode>>> &lambda_args,
+    bool &is_lambda)
+{
+    if (!is_lambda)
+    {
+        lambda_args = convert_to_opt_args(std::move(args));
+        is_lambda = true;
+    }
+}
+
+std::unique_ptr<LambdaCallExpr> Parser::return_ellipsis_lambda(
+    const std::wstring &name, std::vector<std::unique_ptr<ExprNode>> &args,
+    std::vector<std::optional<std::unique_ptr<ExprNode>>> &lambda_args,
+    bool &is_lambda)
+{
+
+    convert_if_not_lambda(args, lambda_args, is_lambda);
+    this->assert_next_token(TokenType::R_PAREN,
+                            L"expected ')' after ellipsis in argument list");
+    this->get_new_token();
+    return std::make_unique<LambdaCallExpr>(name, lambda_args, true);
+}
+
+bool Parser::eat_comma_or_rparen()
+{
+    if (this->current_token == TokenType::R_PAREN)
+    {
+        this->get_new_token();
+        return true;
+    }
+    this->assert_current_and_eat(TokenType::COMMA,
+                                 L"expected ')' or ',' in argument list");
+    return false;
+}
+
+ExprNodePtr return_call_or_lambda(
+    const std::wstring &name, std::vector<ExprNodePtr> &args,
+    std::vector<std::optional<ExprNodePtr>> &lambda_args,
+    const bool &is_lambda)
+{
+    if (is_lambda)
+        return std::make_unique<LambdaCallExpr>(name, lambda_args, false);
+    else
+        return std::make_unique<CallExpr>(name, args);
+}
+
+void Parser::push_expr(std::vector<ExprNodePtr> &args,
+                       std::vector<std::optional<ExprNodePtr>> &lambda_args,
+                       const bool &is_lambda)
+{
+    if (is_lambda)
+        lambda_args.push_back(this->parse_expression());
+    else
+        args.push_back(this->parse_expression());
+}
+
+void Parser::handle_placeholder(
+    std::vector<ExprNodePtr> &args,
+    std::vector<std::optional<ExprNodePtr>> &lambda_args, bool &is_lambda)
+{
+
+    convert_if_not_lambda(args, lambda_args, is_lambda);
+    lambda_args.push_back(std::nullopt);
+    this->get_new_token();
+}
+
 std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(
     const std::wstring &name)
 {
-    std::vector<std::unique_ptr<ExprNode>> args;
+    std::vector<ExprNodePtr> args;
     std::vector<std::optional<ExprNodePtr>> lambda_args;
     auto is_lambda = false;
 
@@ -404,45 +472,22 @@ std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(
         {
             if (this->current_token == TokenType::PLACEHOLDER)
             {
-                if (!is_lambda)
-                {
-                    lambda_args = convert_to_opt_args(std::move(args));
-                    is_lambda = true;
-                }
-                lambda_args.push_back(std::nullopt);
-                this->get_new_token();
+                this->handle_placeholder(args, lambda_args, is_lambda);
             }
             else if (this->current_token == TokenType::ELLIPSIS)
             {
-                if (!is_lambda)
-                    lambda_args = convert_to_opt_args(std::move(args));
-                this->assert_next_token(
-                    TokenType::R_PAREN,
-                    L"expected ')' after ellipsis in argument list");
-                this->get_new_token();
-                return std::make_unique<LambdaCallExpr>(name, lambda_args,
-                                                        true);
+                return this->return_ellipsis_lambda(name, args, lambda_args,
+                                                    is_lambda);
             }
             else
             {
-                if (is_lambda)
-                    lambda_args.push_back(this->parse_expression());
-                else
-                    args.push_back(this->parse_expression());
+                this->push_expr(args, lambda_args, is_lambda);
             }
-            if (this->current_token == TokenType::R_PAREN)
-            {
-                this->get_new_token();
+            if (this->eat_comma_or_rparen())
                 break;
-            }
-            this->assert_current_and_eat(
-                TokenType::COMMA, L"expected ')' or ',' in argument list");
         }
     }
-    if (is_lambda)
-        return std::make_unique<LambdaCallExpr>(name, lambda_args, false);
-    else
-        return std::make_unique<CallExpr>(name, args);
+    return return_call_or_lambda(name, args, lambda_args, is_lambda);
 }
 
 std::unique_ptr<ExprNode> Parser::parse_identifier_expression()

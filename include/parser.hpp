@@ -47,8 +47,20 @@ class Parser
 
     void check_next_op_and_parse(std::unique_ptr<ExprNode> &lhs,
                                  std::unique_ptr<ExprNode> &rhs,
-                                 const std::shared_ptr<BuiltInBinOp> &op);
 
+                                 const std::shared_ptr<BuiltInBinOp> &op);
+    void push_expr(std::vector<ExprNodePtr> &args,
+                   std::vector<std::optional<ExprNodePtr>> &lambda_args,
+                   const bool &is_lambda);
+
+    void handle_placeholder(
+        std::vector<ExprNodePtr> &args,
+        std::vector<std::optional<ExprNodePtr>> &lambda_args, bool &is_lambda);
+    bool eat_comma_or_rparen();
+    std::unique_ptr<LambdaCallExpr> return_ellipsis_lambda(
+        const std::wstring &name, std::vector<std::unique_ptr<ExprNode>> &args,
+        std::vector<std::optional<std::unique_ptr<ExprNode>>> &lambda_args,
+        bool &is_lambda);
     // expressions
 
     std::unique_ptr<I32Expr> parse_i32();
