@@ -33,6 +33,15 @@ class DebugVisitor : public Visitor
         {TypeEnum::F32, L"f32"},
         {TypeEnum::F64, L"f64"},
     };
+    std::map<AssignType, std::wstring> assign_strings = {
+        {AssignType::NORMAL, L"="},   {AssignType::PLUS, L"+="},
+        {AssignType::MINUS, L"-="},   {AssignType::MUL, L"*="},
+        {AssignType::DIV, L"/="},     {AssignType::EXP, L"^^="},
+        {AssignType::MOD, L"%="},     {AssignType::BIT_NEG, L"~="},
+        {AssignType::BIT_AND, L"&="}, {AssignType::BIT_OR, L"|="},
+        {AssignType::BIT_XOR, L"^="}, {AssignType::SHL, L"<<="},
+        {AssignType::SHR, L">>="},
+    };
 
   public:
     DebugVisitor(std::wostream &out) : out(out)

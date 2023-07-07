@@ -14,6 +14,7 @@ class Parser
     static std::map<TokenType, std::shared_ptr<BuiltInUnaryOp>> unary_map;
     static std::map<TokenType, TypeEnum> type_map;
     static std::map<TokenType, TypeEnum> type_value_map;
+    static std::map<TokenType, AssignType> assign_map;
 
     Token get_new_token();
 
@@ -40,6 +41,7 @@ class Parser
     std::unique_ptr<ExternStmt> parse_extern();
     std::unique_ptr<VarDeclStmt> parse_variable_declaration();
     std::unique_ptr<ReturnStmt> parse_return_statement();
+    std::unique_ptr<AssignStmt> parse_assign_statement();
     std::unique_ptr<Statement> parse_block_statement();
     std::unique_ptr<Block> parse_block();
 
@@ -47,7 +49,6 @@ class Parser
 
     void check_next_op_and_parse(std::unique_ptr<ExprNode> &lhs,
                                  std::unique_ptr<ExprNode> &rhs,
-
                                  const std::shared_ptr<BuiltInBinOp> &op);
     void push_expr(std::vector<ExprNodePtr> &args,
                    std::vector<std::optional<ExprNodePtr>> &lambda_args,

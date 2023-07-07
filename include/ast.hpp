@@ -223,13 +223,35 @@ struct VarDeclStmt : public Statement
     }
 };
 
+enum class AssignType
+{
+    NORMAL,
+
+    PLUS,
+    MINUS,
+    MUL,
+    DIV,
+    MOD,
+    EXP,
+
+    BIT_NEG,
+    BIT_AND,
+    BIT_OR,
+    BIT_XOR,
+
+    SHL,
+    SHR,
+};
+
 struct AssignStmt : public Statement
 {
-    std::string name;
+    std::wstring name;
+    AssignType type;
     ExprNodePtr value;
 
-    AssignStmt(const std::string &name, ExprNodePtr &value)
-        : name(name), value(std::move(value))
+    AssignStmt(const std::wstring &name, const AssignType &type,
+               ExprNodePtr &value)
+        : name(name), type(type), value(std::move(value))
     {
     }
 

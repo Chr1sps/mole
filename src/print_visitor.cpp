@@ -47,6 +47,8 @@ void PrintVisitor::visit(const BinaryExpr &node)
 
 void PrintVisitor::visit(const UnaryExpr &node)
 {
+    node.op->accept(*this);
+    node.expr->accept(*this);
 }
 
 void PrintVisitor::visit(const CallExpr &node)
@@ -133,6 +135,10 @@ void PrintVisitor::visit(const FuncDefStmt &node)
 
 void PrintVisitor::visit(const AssignStmt &node)
 {
+    this->print_indent();
+    this->out << node.name << " " << this->assign_strings.at(node.type) << " ";
+    node.value->accept(*this);
+    this->out << ";\n";
 }
 
 void PrintVisitor::visit(const VarDeclStmt &node)

@@ -48,7 +48,6 @@ ExprNodePtr return_call_or_lambda(
         TokenType::token_type, std::make_shared<BuiltInBinOp>(                \
                                    precedence, BinOpEnum::bin_op_type)        \
     }
-
 std::map<TokenType, std::shared_ptr<BuiltInBinOp>> Parser::binary_map{
     BUILT_IN_BINOP(PLUS, 45, ADD),
     BUILT_IN_BINOP(MINUS, 45, SUB),
@@ -70,7 +69,6 @@ std::map<TokenType, std::shared_ptr<BuiltInBinOp>> Parser::binary_map{
     BUILT_IN_BINOP(SHIFT_LEFT, 40, SHL),
     BUILT_IN_BINOP(SHIFT_RIGHT, 40, SHR),
 };
-
 #undef BUILT_IN_BINOP
 
 #define BUILT_IN_UNOP(token_type, precedence, un_op_type)                     \
@@ -78,41 +76,56 @@ std::map<TokenType, std::shared_ptr<BuiltInBinOp>> Parser::binary_map{
         TokenType::token_type, std::make_shared<BuiltInUnaryOp>(              \
                                    precedence, UnaryOpEnum::un_op_type)       \
     }
-
 std::map<TokenType, std::shared_ptr<BuiltInUnaryOp>> Parser::unary_map{
     BUILT_IN_UNOP(INCREMENT, 60, INC),
     BUILT_IN_UNOP(DECREMENT, 60, DEC),
     BUILT_IN_UNOP(NEG, 60, NEG),
     BUILT_IN_UNOP(BIT_NEG, 60, BIT_NEG),
 };
-
 #undef BUILT_IN_UNOP
 
 #define TYPE(token_type, type)                                                \
     {                                                                         \
         TokenType::token_type, TypeEnum::type                                 \
     }
-
 std::map<TokenType, TypeEnum> Parser::type_map{
     TYPE(TYPE_I32, I32),
     TYPE(TYPE_F32, F32),
     TYPE(TYPE_F64, F64),
 };
-
 #undef TYPE
 
 #define TYPE_VALUE(token_type, type)                                          \
     {                                                                         \
         TokenType::token_type, TypeEnum::type                                 \
     }
-
 std::map<TokenType, TypeEnum> Parser::type_value_map{
     TYPE_VALUE(INT, I32),
     TYPE_VALUE(FLOAT, F32),
     TYPE_VALUE(DOUBLE, F64),
 };
-
 #undef TYPE_VALUE
+
+#define ASSIGN_TYPE(token_type, assign_type)                                  \
+    {                                                                         \
+        TokenType::token_type, AssignType::assign_type                        \
+    }
+std::map<TokenType, AssignType> Parser::assign_map{
+    ASSIGN_TYPE(ASSIGN, NORMAL),
+    ASSIGN_TYPE(ASSIGN_PLUS, PLUS),
+    ASSIGN_TYPE(ASSIGN_MINUS, MINUS),
+    ASSIGN_TYPE(ASSIGN_STAR, MUL),
+    ASSIGN_TYPE(ASSIGN_SLASH, DIV),
+    ASSIGN_TYPE(ASSIGN_PERCENT, MOD),
+    ASSIGN_TYPE(ASSIGN_EXP, EXP),
+    ASSIGN_TYPE(ASSIGN_BIT_NEG, BIT_NEG),
+    ASSIGN_TYPE(ASSIGN_AMPERSAND, BIT_AND),
+    ASSIGN_TYPE(ASSIGN_BIT_OR, BIT_OR),
+    ASSIGN_TYPE(ASSIGN_BIT_XOR, BIT_XOR),
+    ASSIGN_TYPE(ASSIGN_SHIFT_LEFT, SHL),
+    ASSIGN_TYPE(ASSIGN_SHIFT_RIGHT, SHR),
+};
+#undef ASSIGN_TYPE
 
 Token Parser::get_new_token()
 {
@@ -346,6 +359,21 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_statement()
     return std::make_unique<ReturnStmt>(expr);
 }
 
+std::unique_ptr<AssignStmt> Parser::parse_assign_statement()
+{
+    auto name = std::get<std::wstring>(this->current_token.value);
+    this->get_new_token();
+    if (!this->assign_map.contains(this->current_token.type))
+        this->report_error(L"invalid assignment operator");
+    auto assign_type = this->assign_map.at(this->current_token.type);
+    this->get_new_token();
+    auto value = this->parse_expression();
+    this->assert_current_and_eat(
+        TokenType::SEMICOLON,
+        L"no semicolon found in an assignment statement");
+    return std::make_unique<AssignStmt>(name, assign_type, value);
+}
+
 std::unique_ptr<Statement> Parser::parse_block_statement()
 {
     if (this->current_token == TokenType::KW_LET)
@@ -358,6 +386,8 @@ std::unique_ptr<Statement> Parser::parse_block_statement()
         return this->parse_function();
     else if (this->current_token == TokenType::L_BRACKET)
         return this->parse_block();
+    else if (this->current_token == TokenType::IDENTIFIER)
+        return this->parse_assign_statement();
     else
         return this->report_error(L"invalid token found in a block");
 }
