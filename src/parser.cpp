@@ -43,68 +43,76 @@ ExprNodePtr return_call_or_lambda(
 }
 } // namespace
 
+#define BUILT_IN_BINOP(token_type, precedence, bin_op_type)                   \
+    {                                                                         \
+        TokenType::token_type, std::make_shared<BuiltInBinOp>(                \
+                                   precedence, BinOpEnum::bin_op_type)        \
+    }
+
 std::map<TokenType, std::shared_ptr<BuiltInBinOp>> Parser::binary_map{
-    {TokenType::PLUS,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(45, BinOpEnum::ADD))},
-    {TokenType::MINUS,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(45, BinOpEnum::SUB))},
-    {TokenType::STAR,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(50, BinOpEnum::MUL))},
-    {TokenType::SLASH,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(50, BinOpEnum::DIV))},
-    {TokenType::PERCENT,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(50, BinOpEnum::MOD))},
-    {TokenType::EXP,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(55, BinOpEnum::EXP))},
-    {TokenType::EQUAL,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::EQ))},
-    {TokenType::NOT_EQUAL,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::NEQ))},
-    {TokenType::GREATER,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::GT))},
-    {TokenType::GREATER_EQUAL,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::GE))},
-    {TokenType::LESS,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::LT))},
-    {TokenType::LESS_EQUAL,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(20, BinOpEnum::LE))},
-    {TokenType::AND,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(15, BinOpEnum::AND))},
-    {TokenType::OR,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(10, BinOpEnum::OR))},
-    {TokenType::AMPERSAND,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(35, BinOpEnum::BIT_AND))},
-    {TokenType::BIT_OR,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(25, BinOpEnum::BIT_OR))},
-    {TokenType::BIT_XOR,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(30, BinOpEnum::BIT_XOR))},
-    {TokenType::SHIFT_LEFT,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(40, BinOpEnum::SHL))},
-    {TokenType::SHIFT_RIGHT,
-     std::make_shared<BuiltInBinOp>(BuiltInBinOp(40, BinOpEnum::SHR))},
+    BUILT_IN_BINOP(PLUS, 45, ADD),
+    BUILT_IN_BINOP(MINUS, 45, SUB),
+    BUILT_IN_BINOP(STAR, 50, MUL),
+    BUILT_IN_BINOP(SLASH, 50, DIV),
+    BUILT_IN_BINOP(PERCENT, 50, MOD),
+    BUILT_IN_BINOP(EXP, 55, EXP),
+    BUILT_IN_BINOP(EQUAL, 20, EQ),
+    BUILT_IN_BINOP(NOT_EQUAL, 20, NEQ),
+    BUILT_IN_BINOP(GREATER, 20, GT),
+    BUILT_IN_BINOP(GREATER_EQUAL, 20, GE),
+    BUILT_IN_BINOP(LESS, 20, LT),
+    BUILT_IN_BINOP(LESS_EQUAL, 20, LE),
+    BUILT_IN_BINOP(AND, 15, AND),
+    BUILT_IN_BINOP(OR, 10, OR),
+    BUILT_IN_BINOP(AMPERSAND, 35, BIT_AND),
+    BUILT_IN_BINOP(BIT_OR, 25, BIT_OR),
+    BUILT_IN_BINOP(BIT_XOR, 30, BIT_XOR),
+    BUILT_IN_BINOP(SHIFT_LEFT, 40, SHL),
+    BUILT_IN_BINOP(SHIFT_RIGHT, 40, SHR),
 };
+
+#undef BUILT_IN_BINOP
+
+#define BUILT_IN_UNOP(token_type, precedence, un_op_type)                     \
+    {                                                                         \
+        TokenType::token_type, std::make_shared<BuiltInUnaryOp>(              \
+                                   precedence, UnaryOpEnum::un_op_type)       \
+    }
 
 std::map<TokenType, std::shared_ptr<BuiltInUnaryOp>> Parser::unary_map{
-    {TokenType::INCREMENT,
-     std::make_shared<BuiltInUnaryOp>(BuiltInUnaryOp(60, UnaryOpEnum::INC))},
-    {TokenType::DECREMENT,
-     std::make_shared<BuiltInUnaryOp>(BuiltInUnaryOp(60, UnaryOpEnum::DEC))},
-    {TokenType::NEG,
-     std::make_shared<BuiltInUnaryOp>(BuiltInUnaryOp(60, UnaryOpEnum::NEG))},
-    {TokenType::BIT_NEG, std::make_shared<BuiltInUnaryOp>(
-                             BuiltInUnaryOp(60, UnaryOpEnum::BIT_NEG))},
+    BUILT_IN_UNOP(INCREMENT, 60, INC),
+    BUILT_IN_UNOP(DECREMENT, 60, DEC),
+    BUILT_IN_UNOP(NEG, 60, NEG),
+    BUILT_IN_UNOP(BIT_NEG, 60, BIT_NEG),
 };
+
+#undef BUILT_IN_UNOP
+
+#define TYPE(token_type, type)                                                \
+    {                                                                         \
+        TokenType::token_type, TypeEnum::type                                 \
+    }
 
 std::map<TokenType, TypeEnum> Parser::type_map{
-    {TokenType::TYPE_I32, TypeEnum::I32},
-    {TokenType::TYPE_F64, TypeEnum::F64},
+    TYPE(TYPE_I32, I32),
+    TYPE(TYPE_F32, F32),
+    TYPE(TYPE_F64, F64),
 };
 
+#undef TYPE
+
+#define TYPE_VALUE(token_type, type)                                          \
+    {                                                                         \
+        TokenType::token_type, TypeEnum::type                                 \
+    }
+
 std::map<TokenType, TypeEnum> Parser::type_value_map{
-    {TokenType::INT, TypeEnum::I32},
-    {TokenType::FLOAT, TypeEnum::F32},
-    {TokenType::DOUBLE, TypeEnum::F64},
+    TYPE_VALUE(INT, I32),
+    TYPE_VALUE(FLOAT, F32),
+    TYPE_VALUE(DOUBLE, F64),
 };
+
+#undef TYPE_VALUE
 
 Token Parser::get_new_token()
 {
@@ -511,6 +519,8 @@ std::unique_ptr<ExprNode> Parser::parse_lhs()
         return this->parse_identifier_expression();
     else if (this->current_token == TokenType::L_PAREN)
         return this->parse_paren_expression();
+    else if (this->unary_map.contains(this->current_token.type))
+        return this->parse_unary_expression();
     else if (this->type_value_map.contains(this->current_token.type))
         return this->parse_const_expression();
     else

@@ -31,6 +31,10 @@ void DebugVisitor::visit(const BinaryExpr &node)
 
 void DebugVisitor::visit(const UnaryExpr &node)
 {
+    this->out << "(";
+    node.op->accept(*this);
+    node.expr->accept(*this);
+    this->out << ")";
 }
 
 void DebugVisitor::visit(const CallExpr &node)

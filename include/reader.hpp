@@ -1,5 +1,6 @@
 #ifndef __READER_HPP__
 #define __READER_HPP__
+#include "locale.hpp"
 #include <concepts>
 #include <fstream>
 #include <iostream>
@@ -120,6 +121,9 @@ class FileReader : public IStreamReader<std::wifstream>
     FileReader(const std::string &file_name) : IStreamReader<std::wifstream>()
     {
         this->driver.open(file_name);
+        this->driver.imbue(Locale::get().locale());
+        if (!this->driver.good())
+            throw std::exception();
     }
 };
 

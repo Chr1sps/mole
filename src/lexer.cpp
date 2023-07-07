@@ -4,130 +4,100 @@
 #include "string_builder.hpp"
 #include <string>
 
+#define KEYWORD(wstr, token_type)                                             \
+    {                                                                         \
+        wstr, TokenType::token_type                                           \
+    }
+
 std::map<std::wstring, Token> Lexer::keywords{
-    {L"fn", Token(TokenType::KW_FN)},
-    {L"main", Token(TokenType::KW_MAIN)},
-    {L"extern", Token(TokenType::KW_EXTERN)},
-    {L"mut", Token(TokenType::KW_MUT)},
-    {L"const", Token(TokenType::KW_CONST)},
-    {L"let", Token(TokenType::KW_LET)},
-    {L"return", Token(TokenType::KW_RETURN)},
-    {L"if", Token(TokenType::KW_IF)},
-    {L"else", Token(TokenType::KW_ELSE)},
+    KEYWORD(L"fn", KW_FN),
+    KEYWORD(L"main", KW_MAIN),
+    KEYWORD(L"extern", KW_EXTERN),
+    KEYWORD(L"mut", KW_MUT),
+    KEYWORD(L"const", KW_CONST),
+    KEYWORD(L"let", KW_LET),
+    KEYWORD(L"return", KW_RETURN),
+    KEYWORD(L"if", KW_IF),
+    KEYWORD(L"else", KW_ELSE),
 
     // type names
-    {L"f32", Token(TokenType::TYPE_F32)},
-    {L"f64", Token(TokenType::TYPE_F64)},
+    KEYWORD(L"f32", TYPE_F32),
+    KEYWORD(L"f64", TYPE_F64),
 
-    {L"u8", Token(TokenType::TYPE_U8)},
-    {L"u16", Token(TokenType::TYPE_U16)},
-    {L"u32", Token(TokenType::TYPE_U32)},
-    {L"u64", Token(TokenType::TYPE_U64)},
+    KEYWORD(L"u8", TYPE_U8),
+    KEYWORD(L"u16", TYPE_U16),
+    KEYWORD(L"u32", TYPE_U32),
+    KEYWORD(L"u64", TYPE_U64),
 
-    {L"i8", Token(TokenType::TYPE_I8)},
-    {L"i16", Token(TokenType::TYPE_I16)},
-    {L"i32", Token(TokenType::TYPE_I32)},
-    {L"i64", Token(TokenType::TYPE_I64)},
+    KEYWORD(L"i8", TYPE_I8),
+    KEYWORD(L"i16", TYPE_I16),
+    KEYWORD(L"i32", TYPE_I32),
+    KEYWORD(L"i64", TYPE_I64),
 
-    {L"char", Token(TokenType::TYPE_CHAR)},
+    KEYWORD(L"char", TYPE_CHAR),
 
 };
 
+#undef KEYWORD
+
+#define CHAR_NODE(wchar, token_type, ...)                                     \
+    {                                                                         \
+        wchar,                                                                \
+        {                                                                     \
+            TokenType::token_type,                                            \
+            {                                                                 \
+                __VA_ARGS__                                                   \
+            }                                                                 \
+        }                                                                     \
+    }
+#define EMPTY_NODE(wchar, ...)                                                \
+    {                                                                         \
+        wchar,                                                                \
+        {                                                                     \
+            std::nullopt,                                                     \
+            {                                                                 \
+                __VA_ARGS__                                                   \
+            }                                                                 \
+        }                                                                     \
+    }
+
 std::map<wchar_t, CharNode> Lexer::char_nodes{
-    {L':', {TokenType::COLON, {}}},
-    {L',', {TokenType::COMMA, {}}},
-    {L';', {TokenType::SEMICOLON, {}}},
-    {L'+',
-     {TokenType::PLUS,
-      {
-          {L'+', {TokenType::INCREMENT, {}}},
-          {L'=', {TokenType::ASSIGN_PLUS, {}}},
-      }}},
-    {L'-',
-     {TokenType::MINUS,
-      {
-          {L'-', {TokenType::DECREMENT, {}}},
-          {L'=', {TokenType::ASSIGN_MINUS, {}}},
-      }}},
-    {L'*',
-     {TokenType::STAR,
-      {
-          {L'=', {TokenType::ASSIGN_STAR, {}}},
-      }}},
-    {L'%',
-     {TokenType::PERCENT,
-      {
-          {L'=', {TokenType::ASSIGN_PERCENT, {}}},
-      }}},
-    {L'~',
-     {TokenType::BIT_NEG,
-      {
-          {L'=', {TokenType::ASSIGN_BIT_NEG, {}}},
-      }}},
-    {L'=',
-     {TokenType::ASSIGN,
-      {
-          {L'>', {TokenType::LAMBDA_ARROW, {}}},
-          {L'=', {TokenType::EQUAL, {}}},
-      }}},
-    {L'<',
-     {TokenType::LESS,
-      {
-          {L'=', {TokenType::LESS_EQUAL, {}}},
-          {L'<',
-           {TokenType::SHIFT_LEFT,
-            {
-                {L'=', {TokenType::ASSIGN_SHIFT_LEFT, {}}},
-            }}},
-      }}},
-    {L'>',
-     {TokenType::GREATER,
-      {
-          {L'=', {TokenType::GREATER_EQUAL, {}}},
-          {L'>',
-           {TokenType::SHIFT_RIGHT,
-            {
-                {L'=', {TokenType::ASSIGN_SHIFT_RIGHT, {}}},
-            }}},
-      }}},
-    {L'!',
-     {TokenType::NEG,
-      {
-          {L'=', {TokenType::NOT_EQUAL, {}}},
-      }}},
-    {L'^',
-     {TokenType::BIT_XOR,
-      {
-          {L'=', {TokenType::ASSIGN_BIT_XOR, {}}},
-          {L'^',
-           {TokenType::EXP,
-            {
-                {L'=', {TokenType::ASSIGN_EXP, {}}},
-            }}},
-      }}},
-    {L'&',
-     {TokenType::AMPERSAND,
-      {
-          {L'=', {TokenType::ASSIGN_AMPERSAND, {}}},
-          {L'&', {TokenType::AND, {}}},
-      }}},
-    {L'|',
-     {TokenType::BIT_OR,
-      {
-          {L'=', {TokenType::ASSIGN_BIT_OR, {}}},
-          {L'|', {TokenType::OR, {}}},
-      }}},
-    {L'{', {TokenType::L_BRACKET, {}}},
-    {L'}', {TokenType::R_BRACKET, {}}},
-    {L'(', {TokenType::L_PAREN, {}}},
-    {L')', {TokenType::R_PAREN, {}}},
-    {L'[', {TokenType::L_SQ_BRACKET, {}}},
-    {L']', {TokenType::R_SQ_BRACKET, {}}},
-    {L'_', {TokenType::PLACEHOLDER, {}}},
-    // TODO: fix the abomination below (or not lul)
-    {L'.',
-     {std::nullopt,
-      {{L'.', {std::nullopt, {{L'.', {TokenType::ELLIPSIS, {}}}}}}}}}};
+    CHAR_NODE(L':', COLON),
+    CHAR_NODE(L',', COMMA),
+    CHAR_NODE(L';', SEMICOLON),
+    CHAR_NODE(L'+', PLUS, CHAR_NODE(L'+', INCREMENT),
+              CHAR_NODE(L'=', ASSIGN_PLUS)),
+    CHAR_NODE(L'-', MINUS, CHAR_NODE(L'-', DECREMENT),
+              CHAR_NODE(L'=', ASSIGN_MINUS)),
+    CHAR_NODE(L'*', STAR, CHAR_NODE(L'=', ASSIGN_STAR)),
+    CHAR_NODE(L'%', PERCENT, CHAR_NODE(L'=', ASSIGN_PERCENT)),
+    CHAR_NODE(L'~', BIT_NEG, CHAR_NODE(L'=', ASSIGN_BIT_NEG)),
+    CHAR_NODE(L'=', ASSIGN, CHAR_NODE(L'>', LAMBDA_ARROW),
+              CHAR_NODE(L'=', EQUAL)),
+    CHAR_NODE(L'<', LESS, CHAR_NODE(L'=', LESS_EQUAL),
+              CHAR_NODE(L'<', SHIFT_LEFT, CHAR_NODE(L'=', ASSIGN_SHIFT_LEFT))),
+    CHAR_NODE(
+        L'>', GREATER, CHAR_NODE(L'=', GREATER_EQUAL),
+        CHAR_NODE(L'>', SHIFT_RIGHT, CHAR_NODE(L'=', ASSIGN_SHIFT_RIGHT))),
+    CHAR_NODE(L'!', NEG, CHAR_NODE(L'=', NOT_EQUAL)),
+    CHAR_NODE(L'^', BIT_XOR, CHAR_NODE(L'=', ASSIGN_BIT_XOR),
+              CHAR_NODE(L'^', EXP, CHAR_NODE(L'=', ASSIGN_EXP))),
+    CHAR_NODE(L'&', AMPERSAND, CHAR_NODE(L'=', ASSIGN_AMPERSAND),
+              CHAR_NODE(L'&', AND)),
+    CHAR_NODE(L'|', BIT_OR, CHAR_NODE(L'=', ASSIGN_BIT_OR),
+              CHAR_NODE(L'|', OR)),
+    CHAR_NODE(L'{', L_BRACKET),
+    CHAR_NODE(L'}', R_BRACKET),
+    CHAR_NODE(L'(', L_PAREN),
+    CHAR_NODE(L')', R_PAREN),
+    CHAR_NODE(L'[', L_SQ_BRACKET),
+    CHAR_NODE(L']', L_SQ_BRACKET),
+    CHAR_NODE(L'_', PLACEHOLDER),
+    EMPTY_NODE(L'.', EMPTY_NODE(L'.', CHAR_NODE(L'.', ELLIPSIS))),
+};
+
+#undef CHAR_NODE
+#undef EMPTY_NODE
 
 std::optional<wchar_t> Lexer::get_new_char()
 {
@@ -260,16 +230,19 @@ std::optional<Token> Lexer::parse_possible_slash_token()
         else if (this->last_char.value() == L'=')
         {
             this->get_new_char();
-            return std::optional<Token>(Token(TokenType::ASSIGN_SLASH));
+            return std::optional<Token>(TokenType::ASSIGN_SLASH);
         }
     }
-    return std::optional<Token>(Token(TokenType::SLASH));
+    return std::optional<Token>(TokenType::SLASH);
 }
 
 Token Lexer::parse_slash()
 {
     auto result = this->parse_possible_slash_token();
-    return result.value_or(this->get_token());
+    if (result)
+        return *result;
+    else
+        return this->get_token();
 }
 
 void Lexer::skip_line_comment()
@@ -337,8 +310,8 @@ Token Lexer::get_token()
         return this->report_error(L"invalid char");
 }
 
-// the Lexer::is_*() functions below are called with an assumption, that the
-// last_char optional has a value
+// the Lexer::is_*() functions below are called with an assumption, that
+// the last_char optional has a value
 
 bool Lexer::is_a_number_char() const
 {

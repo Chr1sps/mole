@@ -13,10 +13,18 @@ bool compare_output(Parser &&parser, const std::wstring &expected)
     return result == expected;
 }
 
+void parse_source(const std::wstring &source)
+{
+    auto parser = Parser(Lexer::from_wstring(source));
+    parser.parse();
+}
+
 #define COMPARE(source, output)                                               \
     REQUIRE(compare_output(Parser(Lexer::from_wstring(source)), output))
 #define REPR_CHECK(source)                                                    \
     REQUIRE(compare_output(Parser(Lexer::from_wstring(source)), source))
+#define CHECK_EXCEPTION(source, exception)                                    \
+    REQUIRE_THROWS_AS(parse_source(source), exception)
 
 TEST_CASE("Empty code.")
 {
@@ -45,25 +53,36 @@ TEST_CASE("Variables.", "[VARS]")
         REPR_CHECK(L"let var=5.25d;");
         REPR_CHECK(L"let var=5.25f;");
     }
-    SECTION("In-place lambdas.")
+    SECTION("Type and value.")
     {
-        REPR_CHECK(L"let foo=boo(1,2,3,4);");
-        REPR_CHECK(L"let foo=boo(1,_,3,_);");
-        REPR_CHECK(L"let foo=boo(1,2,...);");
-        REPR_CHECK(L"let foo=boo(1,_,...);");
-        // old tests, should now throw errors
-        // REPR_CHECK(L"let foo=boo(_,...,_);");
-        // REPR_CHECK(L"let foo=boo(1,...,4);");
-        // REPR_CHECK(L"let foo=boo(...,3,4);");
+        REPR_CHECK(L"let var:i32=5;");
+        COMPARE(L"let var:f64=5.25;", L"let var:f64=5.25d;");
+        REPR_CHECK(L"let var:f64=5.25d;");
+        REPR_CHECK(L"let var:f32=5.25f;");
     }
 }
 
-TEST_CASE("Binary expressions.", "[VARS], [BINOP]")
+TEST_CASE("Binary operators.", "[VARS], [BINOP]")
 {
     COMPARE(L"let var=5+5;", L"let var=(5+5);");
     COMPARE(L"let var=5.5d+5;", L"let var=(5.5d+5);");
     COMPARE(L"let var=5.5f+5;", L"let var=(5.5f+5);");
     COMPARE(L"let var=5.5f>>5;", L"let var=(5.5f>>5);");
+}
+
+TEST_CASE("Unary operators.", "[VARS], [UNOP]")
+{
+    COMPARE(L"let var=++5;", L"let var=(++5);");
+    COMPARE(L"let var=--5;", L"let var=(--5);");
+    COMPARE(L"let var=!5;", L"let var=(!5);");
+    COMPARE(L"let var=~5;", L"let var=(~5);");
+}
+
+TEST_CASE("Nested operators - only binary.")
+{
+    COMPARE(L"let var=2*2*2;", L"let var=((2*2)*2);");
+    COMPARE(L"let var=2+2*2;", L"let var=(2+(2*2));");
+    COMPARE(L"let var=2*2/2%2;", L"let var=(((2*2)/2)%2);");
 }
 
 TEST_CASE("Function definitions.", "[FUNC]")
@@ -87,6 +106,23 @@ TEST_CASE("Function definitions.", "[FUNC]")
     }
 }
 
+TEST_CASE("In-place lambdas.")
+{
+    SECTION("Correct.")
+    {
+        REPR_CHECK(L"let foo=boo(1,2,3,4);");
+        REPR_CHECK(L"let foo=boo(1,_,3,_);");
+        REPR_CHECK(L"let foo=boo(1,2,...);");
+        REPR_CHECK(L"let foo=boo(1,_,...);");
+    }
+    SECTION("Exceptions.")
+    {
+        CHECK_EXCEPTION(L"let foo=boo(_,...,_);", ParserException);
+        CHECK_EXCEPTION(L"let foo=boo(1,...,4);", ParserException);
+        CHECK_EXCEPTION(L"let foo=boo(...,3,4);", ParserException);
+    }
+}
+
 TEST_CASE("Scopes in functions.", "[SCOPE]")
 {
     COMPARE(L"fn foo(){{}}", L"fn foo()=>!{{}}");
@@ -95,4 +131,5 @@ TEST_CASE("Scopes in functions.", "[SCOPE]")
 TEST_CASE("Externs.", "[EXT]")
 {
     COMPARE(L"extern foo();", L"ext foo()=>!;");
+    COMPARE(L"extern foo(x:i32);", L"ext foo(x:i32)=>!;");
 }
