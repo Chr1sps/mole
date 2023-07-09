@@ -336,9 +336,17 @@ std::optional<ExprNodePtr> Parser::parse_var_value()
 // VarDeclStmt = KW_LET, IDENTIFIER, [COLON, Type], [ASSIGN, Expression];
 std::unique_ptr<VarDeclStmt> Parser::parse_variable_declaration()
 {
-    this->assert_next_token(
-        TokenType::IDENTIFIER,
-        L"expected an identifier in a variable declaration");
+    this->get_new_token();
+    auto is_mut = false;
+    if (this->current_token == TokenType::KW_MUT)
+    {
+        is_mut = true;
+        this->get_new_token();
+    }
+
+    if (this->current_token != TokenType::IDENTIFIER)
+        this->report_error(
+            L"expected an identifier in a variable declaration");
 
     auto name = std::get<std::wstring>(this->current_token.value);
     auto type = this->parse_var_type();
@@ -347,7 +355,7 @@ std::unique_ptr<VarDeclStmt> Parser::parse_variable_declaration()
     this->assert_current_and_eat(
         TokenType::SEMICOLON, L"no semicolon found in a variable declaration");
 
-    return std::make_unique<VarDeclStmt>(name, type, initial_value);
+    return std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut);
 }
 
 std::unique_ptr<ReturnStmt> Parser::parse_return_statement()

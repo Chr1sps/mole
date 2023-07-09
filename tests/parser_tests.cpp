@@ -46,7 +46,7 @@ TEST_CASE("Variables.", "[VARS]")
         REPR_CHECK(L"let var:fn(i32)=>i32;");
         REPR_CHECK(L"let var:fn(i32,f64)=>i32;");
     }
-    SECTION("Value - constants.")
+    SECTION("Value - literals.")
     {
         REPR_CHECK(L"let var=5;");
         COMPARE(L"let var=5.25;", L"let var=5.25d;");
@@ -59,6 +59,11 @@ TEST_CASE("Variables.", "[VARS]")
         COMPARE(L"let var:f64=5.25;", L"let var:f64=5.25d;");
         REPR_CHECK(L"let var:f64=5.25d;");
         REPR_CHECK(L"let var:f32=5.25f;");
+    }
+    SECTION("Mutables.")
+    {
+        REPR_CHECK(L"let mut var=32;");
+        REPR_CHECK(L"let mut var:i32=32;");
     }
 }
 

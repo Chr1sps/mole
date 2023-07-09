@@ -195,25 +195,12 @@ struct VarDeclStmt : public Statement
     std::wstring name;
     std::optional<TypePtr> type;
     std::optional<ExprNodePtr> initial_value;
+    bool is_mut;
 
     VarDeclStmt(const std::wstring &name, std::optional<TypePtr> &type,
-                std::optional<ExprNodePtr> &value)
-        : name(name), type(std::move(type)), initial_value(std::move(value))
-    {
-    }
-
-    VarDeclStmt(const std::wstring &name, TypePtr &type, ExprNodePtr &value)
-        : name(name), type(std::move(type)), initial_value(std::move(value))
-    {
-    }
-
-    VarDeclStmt(const std::wstring &name, TypePtr &type)
-        : name(name), type(std::move(type)), initial_value({})
-    {
-    }
-
-    VarDeclStmt(const std::wstring &name, ExprNodePtr &value)
-        : name(name), type({}), initial_value(std::move(value))
+                std::optional<ExprNodePtr> &value, const bool &is_mut)
+        : name(name), type(std::move(type)), initial_value(std::move(value)),
+          is_mut(is_mut)
     {
     }
 

@@ -109,7 +109,10 @@ void DebugVisitor::visit(const AssignStmt &node)
 
 void DebugVisitor::visit(const VarDeclStmt &node)
 {
-    this->out << "let " << node.name;
+    this->out << "let ";
+    if (node.is_mut)
+        this->out << "mut ";
+    this->out << node.name;
     if (node.type.has_value())
     {
         this->out << ":";
