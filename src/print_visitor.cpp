@@ -1,9 +1,9 @@
 #include "print_visitor.hpp"
+#include <functional>
 
 void PrintVisitor::print_indent()
 {
-    for (unsigned i = 0; i < this->indent_level * 4; ++i)
-        this->out << " ";
+    this->out << this->indent_if_not_debug();
 }
 
 void PrintVisitor::increment_indent()
@@ -14,6 +14,39 @@ void PrintVisitor::increment_indent()
 void PrintVisitor::decrement_indent()
 {
     --(this->indent_level);
+}
+
+std::wstring PrintVisitor::space_if_not_debug()
+{
+    return (this->debug_mode) ? (L"") : (L" ");
+}
+
+std::wstring PrintVisitor::newline_if_not_debug()
+{
+    return (this->debug_mode) ? (L"") : (L"\n");
+}
+
+std::wstring PrintVisitor::indent_if_not_debug()
+{
+    if (this->debug_mode)
+        return L"";
+    else
+    {
+        auto result = std::wstring();
+        for (unsigned i = 0; i < this->indent_level * 4; ++i)
+            result += L" ";
+        return result;
+    }
+}
+
+std::wstring PrintVisitor::lparen_if_debug()
+{
+    return (this->debug_mode) ? (L"(") : (L"");
+}
+
+std::wstring PrintVisitor::rparen_if_debug()
+{
+    return (this->debug_mode) ? (L")") : (L"");
 }
 
 void PrintVisitor::visit(const VariableExpr &node)
@@ -29,26 +62,34 @@ void PrintVisitor::visit(const I32Expr &node)
 void PrintVisitor::visit(const F32Expr &node)
 {
     this->out << node.value;
+    if (this->debug_mode)
+        this->out << "f";
 }
 
 void PrintVisitor::visit(const F64Expr &node)
 {
     this->out << node.value;
+    if (this->debug_mode)
+        this->out << "d";
 }
 
 void PrintVisitor::visit(const BinaryExpr &node)
 {
+    this->out << this->lparen_if_debug();
     node.lhs->accept(*this);
-    this->out << " ";
+    this->out << this->space_if_not_debug();
     node.op->accept(*this);
-    this->out << " ";
+    this->out << this->space_if_not_debug();
     node.rhs->accept(*this);
+    this->out << this->rparen_if_debug();
 }
 
 void PrintVisitor::visit(const UnaryExpr &node)
 {
+    this->out << this->lparen_if_debug();
     node.op->accept(*this);
     node.expr->accept(*this);
+    this->out << this->rparen_if_debug();
 }
 
 void PrintVisitor::visit(const CallExpr &node)
@@ -58,7 +99,7 @@ void PrintVisitor::visit(const CallExpr &node)
     {
         node.args[i]->accept(*this);
         if (i < node.args.size() - 1)
-            this->out << ", ";
+            this->out << "," << this->space_if_not_debug();
     }
     this->out << ")";
 }
@@ -74,7 +115,7 @@ void PrintVisitor::print_optional_args(
         else
             this->out << "_";
         if (i < args.size() - 1)
-            this->out << ", ";
+            this->out << "," << this->space_if_not_debug();
     }
 }
 
@@ -83,7 +124,7 @@ void PrintVisitor::visit(const LambdaCallExpr &node)
     this->out << node.func_name << "(";
     this->print_optional_args(node.args);
     if (node.is_ellipsis)
-        this->out << ", ...";
+        this->out << "," << this->space_if_not_debug() << "...";
     this->out << ")";
 }
 
@@ -93,13 +134,13 @@ void PrintVisitor::visit(const Block &node)
         this->function_block_indent = false;
     else
         this->print_indent();
-    this->out << "{" << std::endl;
+    this->out << "{" << this->newline_if_not_debug();
     this->increment_indent();
     for (auto &stmt : node.statements)
         stmt->accept(*this);
     this->decrement_indent();
     this->print_indent();
-    this->out << "}" << std::endl;
+    this->out << "}" << this->newline_if_not_debug();
 }
 
 void PrintVisitor::visit(const ReturnStmt &node)
@@ -107,28 +148,32 @@ void PrintVisitor::visit(const ReturnStmt &node)
     this->print_indent();
     this->out << "return ";
     node.expr->accept(*this);
-    this->out << ";" << std::endl;
+    this->out << ";" << this->newline_if_not_debug();
 }
 
 void PrintVisitor::print_params(const std::vector<ParamPtr> &params)
 {
     for (unsigned long i = 0; i < params.size(); ++i)
     {
-        this->out << params[i]->name << ": ";
+        this->out << params[i]->name << ":" << this->space_if_not_debug();
         params[i]->type->accept(*this);
         if (i < params.size() - 1)
-            this->out << ", ";
+            this->out << "," << this->space_if_not_debug();
     }
 }
 
 void PrintVisitor::visit(const FuncDefStmt &node)
 {
     this->print_indent();
-    this->out << "fn " << node.name << "(";
+    this->out << "fn ";
+    if (node.is_const)
+        this->out << "const ";
+    this->out << node.name << "(";
     this->print_params(node.params);
-    this->out << ") => ";
+    this->out << ")" << this->space_if_not_debug() << "=>"
+              << this->space_if_not_debug();
     node.return_type->accept(*this);
-    this->out << " ";
+    this->out << this->space_if_not_debug();
     this->function_block_indent = true;
     node.block->accept(*this);
 }
@@ -136,9 +181,11 @@ void PrintVisitor::visit(const FuncDefStmt &node)
 void PrintVisitor::visit(const AssignStmt &node)
 {
     this->print_indent();
-    this->out << node.name << " " << this->assign_strings.at(node.type) << " ";
+    this->out << node.name << this->space_if_not_debug()
+              << this->assign_strings.at(node.type)
+              << this->space_if_not_debug();
     node.value->accept(*this);
-    this->out << ";\n";
+    this->out << L";" << this->newline_if_not_debug();
 }
 
 void PrintVisitor::visit(const VarDeclStmt &node)
@@ -150,15 +197,17 @@ void PrintVisitor::visit(const VarDeclStmt &node)
     this->out << node.name;
     if (node.type.has_value())
     {
-        this->out << " : ";
+        this->out << this->space_if_not_debug() << ":"
+                  << this->space_if_not_debug();
         node.type.value()->accept(*this);
     }
     if (node.initial_value.has_value())
     {
-        this->out << " = ";
+        this->out << this->space_if_not_debug() << "="
+                  << this->space_if_not_debug();
         node.initial_value.value()->accept(*this);
     }
-    this->out << ";" << std::endl;
+    this->out << ";" << this->newline_if_not_debug();
 }
 
 void PrintVisitor::visit(const ExternStmt &node)
@@ -166,9 +215,10 @@ void PrintVisitor::visit(const ExternStmt &node)
     this->print_indent();
     this->out << "extern " << node.name << "(";
     this->print_params(node.params);
-    this->out << ") => ";
+    this->out << ")" << this->space_if_not_debug() << "=>"
+              << this->space_if_not_debug();
     node.return_type->accept(*this);
-    this->out << ";" << std::endl;
+    this->out << ";" << this->newline_if_not_debug();
 }
 
 void PrintVisitor::visit(const Program &node)
@@ -200,7 +250,8 @@ void PrintVisitor::visit(const FunctionType &type)
         if (i < type.arg_types.size() - 1)
             this->out << ",";
     }
-    this->out << ") => ";
+    this->out << ")" << this->space_if_not_debug() << "=>"
+              << this->space_if_not_debug();
     type.return_type->accept(*this);
 }
 
@@ -212,4 +263,14 @@ void PrintVisitor::visit(const BuiltInBinOp &op)
 void PrintVisitor::visit(const BuiltInUnaryOp &op)
 {
     this->out << this->unary_op_strings.at(op.op);
+}
+
+void PrintVisitor::turn_on_debug_mode()
+{
+    this->debug_mode = true;
+}
+
+void PrintVisitor::turn_off_debug_mode()
+{
+    this->debug_mode = false;
 }

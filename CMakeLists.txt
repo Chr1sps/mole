@@ -34,9 +34,7 @@ set(INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests")
 
 set(HEADERS
-
     "ast.hpp"
-    "debug_visitor.hpp"
     "exceptions.hpp"
     "lexer.hpp"
     "locale.hpp"
@@ -44,18 +42,18 @@ set(HEADERS
     "parser.hpp"
     "print_visitor.hpp"
     "reader.hpp"
+    "semantic_checker.hpp"
     "string_builder.hpp"
     "token.hpp"
     "types.hpp"
     "visitor.hpp"
 )
 set(SOURCES
-
-    "debug_visitor.cpp"
     "lexer.cpp"
     "parser.cpp"
     "print_visitor.cpp"
     "reader.cpp"
+    "semantic_checker.cpp"
     "token.cpp"
 )
 set(TEST_SOURCES

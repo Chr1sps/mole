@@ -295,8 +295,15 @@ std::unique_ptr<ExternStmt> Parser::parse_extern()
 // [LAMBDA_ARROW, Type], Block, SEMICOLON;
 std::unique_ptr<FuncDefStmt> Parser::parse_function()
 {
-    this->assert_next_token(TokenType::IDENTIFIER,
-                            L"not a function identifier");
+    this->get_new_token();
+    auto is_const = false;
+    if (this->current_token == TokenType::KW_CONST)
+    {
+        is_const = true;
+        this->get_new_token();
+    }
+    if (this->current_token != TokenType::IDENTIFIER)
+        this->report_error(L"not a function identifier");
     auto name = std::get<std::wstring>(this->current_token.value);
     this->assert_next_token(
         TokenType::L_PAREN,
@@ -308,7 +315,8 @@ std::unique_ptr<FuncDefStmt> Parser::parse_function()
                                  "definition");
     auto return_type = this->parse_return_type();
     auto block = this->parse_block();
-    return std::make_unique<FuncDefStmt>(name, params, return_type, block);
+    return std::make_unique<FuncDefStmt>(name, params, return_type, block,
+                                         is_const);
 }
 
 std::optional<TypePtr> Parser::parse_var_type()

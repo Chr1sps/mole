@@ -1,13 +1,13 @@
-#include "debug_visitor.hpp"
 #include "exceptions.hpp"
 #include "parser.hpp"
+#include "print_visitor.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
 
 bool compare_output(Parser &&parser, const std::wstring &expected)
 {
     auto out_stream = std::wostringstream();
-    auto visitor = DebugVisitor(out_stream);
+    auto visitor = PrintVisitor(out_stream, true);
     visitor.visit(*(parser.parse()));
     auto result = out_stream.str();
     return result == expected;
@@ -25,6 +25,11 @@ void parse_source(const std::wstring &source)
     REQUIRE(compare_output(Parser(Lexer::from_wstring(source)), source))
 #define CHECK_EXCEPTION(source, exception)                                    \
     REQUIRE_THROWS_AS(parse_source(source), exception)
+#define FN_WRAP(source) L"fn foo()=>i32{" + std::wstring(source) + L"}"
+#define COMPARE_STATEMENT(source, output)                                     \
+    REQUIRE(compare_output(Parser(Lexer::from_wstring(FN_WRAP(source))),      \
+                           FN_WRAP(output)))
+#define REPR_STATEMENT(source) COMPARE_STATEMENT(source, source)
 
 TEST_CASE("Empty code.")
 {
@@ -109,6 +114,10 @@ TEST_CASE("Function definitions.", "[FUNC]")
     {
         REPR_CHECK(L"fn foo(x:i32,y:f64)=>i32{}");
     }
+    SECTION("Const function.")
+    {
+        REPR_CHECK(L"fn const foo(x:i32,y:f64)=>i32{}");
+    }
 }
 
 TEST_CASE("In-place lambdas.")
@@ -135,6 +144,17 @@ TEST_CASE("Scopes in functions.", "[SCOPE]")
 
 TEST_CASE("Externs.", "[EXT]")
 {
-    COMPARE(L"extern foo();", L"ext foo()=>!;");
-    COMPARE(L"extern foo(x:i32);", L"ext foo(x:i32)=>!;");
+    COMPARE(L"extern foo();", L"extern foo()=>!;");
+    COMPARE(L"extern foo(x:i32);", L"extern foo(x:i32)=>!;");
+}
+
+TEST_CASE("Assign statements.")
+{
+    REPR_STATEMENT(L"x=5;");
+    REPR_STATEMENT(L"x+=5;");
+    REPR_STATEMENT(L"x-=5;");
+    REPR_STATEMENT(L"x*=5;");
+    REPR_STATEMENT(L"x/=5;");
+    REPR_STATEMENT(L"x%=5;");
+    REPR_STATEMENT(L"x^^=5;");
 }

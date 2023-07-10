@@ -42,14 +42,28 @@ class PrintVisitor : public Visitor
         {AssignType::BIT_XOR, L"^="}, {AssignType::SHL, L"<<="},
         {AssignType::SHR, L">>="},
     };
+
+    std::wstring space_if_not_debug();
+    std::wstring newline_if_not_debug();
+    std::wstring indent_if_not_debug();
+    std::wstring lparen_if_debug();
+    std::wstring rparen_if_debug();
+
     void print_indent();
     void increment_indent();
     void decrement_indent();
+
     unsigned indent_level = 0;
     bool function_block_indent = false;
+    bool debug_mode;
 
   public:
-    PrintVisitor(std::wostream &out) : out(out)
+    PrintVisitor(std::wostream &out, const bool &debug)
+        : out(out), debug_mode(debug)
+    {
+    }
+
+    PrintVisitor(std::wostream &out) : PrintVisitor(out, false)
     {
     }
 
@@ -78,5 +92,8 @@ class PrintVisitor : public Visitor
 
     void visit(const BuiltInBinOp &op) override;
     void visit(const BuiltInUnaryOp &op) override;
+
+    void turn_on_debug_mode();
+    void turn_off_debug_mode();
 };
 #endif

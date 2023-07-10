@@ -267,11 +267,13 @@ struct FuncDefStmt : public Statement
     std::vector<ParamPtr> params;
     TypePtr return_type;
     BlockPtr block;
+    bool is_const;
 
     FuncDefStmt(const std::wstring &name, std::vector<ParamPtr> &params,
-                TypePtr &return_type, BlockPtr &block)
+                TypePtr &return_type, BlockPtr &block, const bool &is_const)
         : name(name), params(std::move(params)),
-          return_type(std::move(return_type)), block(std::move(block))
+          return_type(std::move(return_type)), block(std::move(block)),
+          is_const(is_const)
     {
     }
 

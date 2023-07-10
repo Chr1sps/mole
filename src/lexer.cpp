@@ -91,7 +91,7 @@ std::map<wchar_t, CharNode> Lexer::char_nodes{
     CHAR_NODE(L'(', L_PAREN),
     CHAR_NODE(L')', R_PAREN),
     CHAR_NODE(L'[', L_SQ_BRACKET),
-    CHAR_NODE(L']', L_SQ_BRACKET),
+    CHAR_NODE(L']', R_SQ_BRACKET),
     CHAR_NODE(L'_', PLACEHOLDER),
     EMPTY_NODE(L'.', EMPTY_NODE(L'.', CHAR_NODE(L'.', ELLIPSIS))),
 };
