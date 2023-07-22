@@ -40,11 +40,6 @@ enum class UnaryOpEnum
 
 struct Operator
 {
-    unsigned precedence;
-
-    Operator(const unsigned &precedence) : precedence(precedence)
-    {
-    }
 
     virtual void accept(Visitor &visitor) = 0;
 
@@ -55,7 +50,9 @@ struct Operator
 
 struct BinaryOperator : public Operator
 {
-    BinaryOperator(const unsigned &precedence) : Operator(precedence)
+    unsigned precedence;
+
+    BinaryOperator(const unsigned &precedence) : precedence(precedence)
     {
     }
 };
@@ -79,9 +76,6 @@ struct BuiltInBinOp : public BinaryOperator
 
 struct UnaryOperator : public Operator
 {
-    UnaryOperator(const unsigned &precedence) : Operator(precedence)
-    {
-    }
 };
 
 using UnaryPtr = std::shared_ptr<UnaryOperator>;
@@ -90,8 +84,7 @@ struct BuiltInUnaryOp : public UnaryOperator
 {
     UnaryOpEnum op;
 
-    BuiltInUnaryOp(const unsigned &precedence, const UnaryOpEnum &op)
-        : UnaryOperator(precedence), op(op)
+    BuiltInUnaryOp(const UnaryOpEnum &op) : op(op)
     {
     }
 

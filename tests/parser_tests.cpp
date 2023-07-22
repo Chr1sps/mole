@@ -95,6 +95,18 @@ TEST_CASE("Nested operators - only binary.")
     COMPARE(L"let var=2*2/2%2;", L"let var=(((2*2)/2)%2);");
 }
 
+TEST_CASE("Nested operators - only unary.")
+{
+    COMPARE(L"let var=--++!~2;", L"let var=(--(++(!(~2))));");
+}
+
+TEST_CASE("Nested operators - mixed.")
+{
+    COMPARE(L"let var=--2+--2;", L"let var=((--2)+(--2));");
+    COMPARE(L"let var=++1*--2+!3*~4-5>>6;",
+            L"let var=(((((++1)*(--2))+((!3)*(~4)))-5)>>6);");
+}
+
 TEST_CASE("Function definitions.", "[FUNC]")
 {
     SECTION("No args, no return type.")

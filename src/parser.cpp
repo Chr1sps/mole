@@ -49,38 +49,38 @@ ExprNodePtr return_call_or_lambda(
                                    precedence, BinOpEnum::bin_op_type)        \
     }
 std::map<TokenType, std::shared_ptr<BuiltInBinOp>> Parser::binary_map{
-    BUILT_IN_BINOP(PLUS, 45, ADD),
-    BUILT_IN_BINOP(MINUS, 45, SUB),
-    BUILT_IN_BINOP(STAR, 50, MUL),
-    BUILT_IN_BINOP(SLASH, 50, DIV),
-    BUILT_IN_BINOP(PERCENT, 50, MOD),
-    BUILT_IN_BINOP(EXP, 55, EXP),
-    BUILT_IN_BINOP(EQUAL, 20, EQ),
-    BUILT_IN_BINOP(NOT_EQUAL, 20, NEQ),
-    BUILT_IN_BINOP(GREATER, 20, GT),
-    BUILT_IN_BINOP(GREATER_EQUAL, 20, GE),
-    BUILT_IN_BINOP(LESS, 20, LT),
-    BUILT_IN_BINOP(LESS_EQUAL, 20, LE),
-    BUILT_IN_BINOP(AND, 15, AND),
-    BUILT_IN_BINOP(OR, 10, OR),
-    BUILT_IN_BINOP(AMPERSAND, 35, BIT_AND),
-    BUILT_IN_BINOP(BIT_OR, 25, BIT_OR),
-    BUILT_IN_BINOP(BIT_XOR, 30, BIT_XOR),
-    BUILT_IN_BINOP(SHIFT_LEFT, 40, SHL),
-    BUILT_IN_BINOP(SHIFT_RIGHT, 40, SHR),
+    BUILT_IN_BINOP(EXP, 55, EXP),           // `^^` - 55
+    BUILT_IN_BINOP(STAR, 50, MUL),          // `*`, `/`, `%` - 50
+    BUILT_IN_BINOP(SLASH, 50, DIV),         // |
+    BUILT_IN_BINOP(PERCENT, 50, MOD),       // |
+    BUILT_IN_BINOP(PLUS, 45, ADD),          // `+`, `-` - 45
+    BUILT_IN_BINOP(MINUS, 45, SUB),         // |
+    BUILT_IN_BINOP(SHIFT_LEFT, 40, SHL),    // `<<`, `>>` - 40
+    BUILT_IN_BINOP(SHIFT_RIGHT, 40, SHR),   // |
+    BUILT_IN_BINOP(AMPERSAND, 35, BIT_AND), // `&` - 35
+    BUILT_IN_BINOP(BIT_XOR, 30, BIT_XOR),   // `^` - 30
+    BUILT_IN_BINOP(BIT_OR, 25, BIT_OR),     // `|` - 25
+    BUILT_IN_BINOP(EQUAL, 20, EQ),          // `==`,`!=`,`>`,`>=`,`<`,`<=` - 20
+    BUILT_IN_BINOP(NOT_EQUAL, 20, NEQ),     // |
+    BUILT_IN_BINOP(GREATER, 20, GT),        // |
+    BUILT_IN_BINOP(GREATER_EQUAL, 20, GE),  // |
+    BUILT_IN_BINOP(LESS, 20, LT),           // |
+    BUILT_IN_BINOP(LESS_EQUAL, 20, LE),     // |
+    BUILT_IN_BINOP(AND, 15, AND),           // `&&` - 15
+    BUILT_IN_BINOP(OR, 10, OR),             // `||` - 10
 };
 #undef BUILT_IN_BINOP
 
-#define BUILT_IN_UNOP(token_type, precedence, un_op_type)                     \
+#define BUILT_IN_UNOP(token_type, un_op_type)                                 \
     {                                                                         \
-        TokenType::token_type, std::make_shared<BuiltInUnaryOp>(              \
-                                   precedence, UnaryOpEnum::un_op_type)       \
+        TokenType::token_type,                                                \
+            std::make_shared<BuiltInUnaryOp>(UnaryOpEnum::un_op_type)         \
     }
 std::map<TokenType, std::shared_ptr<BuiltInUnaryOp>> Parser::unary_map{
-    BUILT_IN_UNOP(INCREMENT, 60, INC),
-    BUILT_IN_UNOP(DECREMENT, 60, DEC),
-    BUILT_IN_UNOP(NEG, 60, NEG),
-    BUILT_IN_UNOP(BIT_NEG, 60, BIT_NEG),
+    BUILT_IN_UNOP(INCREMENT, INC),
+    BUILT_IN_UNOP(DECREMENT, DEC),
+    BUILT_IN_UNOP(NEG, NEG),
+    BUILT_IN_UNOP(BIT_NEG, BIT_NEG),
 };
 #undef BUILT_IN_UNOP
 
@@ -432,7 +432,7 @@ std::unique_ptr<ExprNode> Parser::parse_unary_expression()
 {
     auto op = this->unary_map.at(this->current_token.type);
     this->get_new_token();
-    auto expr = this->parse_expression();
+    auto expr = this->parse_lhs();
     return std::make_unique<UnaryExpr>(expr, op);
 }
 
