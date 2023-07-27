@@ -2,7 +2,7 @@
 #define __SEMANTIC_CHECKER_HPP__
 #include "visitor.hpp"
 
-class SemanticChecker : public Visitor
+class SemanticChecker : public AstVisitor
 {
   public:
     void visit(const VariableExpr &node) override;

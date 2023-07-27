@@ -16,7 +16,7 @@ struct AstNode
     {
     }
 
-    virtual void accept(Visitor &visitor) const = 0;
+    virtual void accept(AstVisitor &visitor) const = 0;
 };
 
 using AstNodePtr = std::unique_ptr<AstNode>;
@@ -35,7 +35,7 @@ struct VariableExpr : public ExprNode
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -51,7 +51,7 @@ struct BinaryExpr : public ExprNode
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -66,7 +66,7 @@ struct UnaryExpr : public ExprNode
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -82,7 +82,7 @@ struct CallExpr : public ExprNode
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -101,7 +101,7 @@ struct LambdaCallExpr : public ExprNode
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -113,13 +113,13 @@ struct ConstNode : public ExprNode
 
 struct I32Expr : public ConstNode
 {
-    int32_t value;
+    unsigned long long value;
 
-    I32Expr(const int32_t &value) : value(value)
+    I32Expr(const unsigned long long &value) : value(value)
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -133,7 +133,7 @@ struct F64Expr : public ConstNode
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -153,7 +153,7 @@ struct Block : public Statement
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -162,7 +162,6 @@ struct Block : public Statement
 using BlockPtr = std::unique_ptr<Block>;
 
 struct ReturnStmt : public Statement
-
 {
     std::optional<ExprNodePtr> expr;
 
@@ -175,7 +174,7 @@ struct ReturnStmt : public Statement
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -195,7 +194,7 @@ struct VarDeclStmt : public Statement
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -233,7 +232,7 @@ struct AssignStmt : public Statement
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -268,7 +267,7 @@ struct FuncDefStmt : public Statement
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -287,7 +286,7 @@ struct ExternStmt : public Statement
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -307,7 +306,7 @@ struct Program : public AstNode
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);
     }

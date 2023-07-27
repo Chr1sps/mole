@@ -1,6 +1,6 @@
 #ifndef __VISITOR_HPP__
 #define __VISITOR_HPP__
-
+#include <memory>
 struct VariableExpr;
 struct I32Expr;
 struct F64Expr;
@@ -26,6 +26,15 @@ struct BuiltInUnaryOp;
 class Visitor
 {
   public:
+    virtual void visit(const NeverType &type) = 0;
+    virtual void visit(const SimpleType &type) = 0;
+    virtual void visit(const FunctionType &type) = 0;
+};
+
+class AstVisitor : public Visitor
+{
+  public:
+    using Visitor::visit;
     virtual void visit(const VariableExpr &node) = 0;
     virtual void visit(const I32Expr &node) = 0;
     virtual void visit(const F64Expr &node) = 0;
@@ -40,10 +49,6 @@ class Visitor
     virtual void visit(const VarDeclStmt &node) = 0;
     virtual void visit(const ExternStmt &node) = 0;
     virtual void visit(const Program &node) = 0;
-
-    virtual void visit(const NeverType &type) = 0;
-    virtual void visit(const SimpleType &type) = 0;
-    virtual void visit(const FunctionType &type) = 0;
 
     virtual void visit(const BuiltInBinOp &op) = 0;
     virtual void visit(const BuiltInUnaryOp &op) = 0;

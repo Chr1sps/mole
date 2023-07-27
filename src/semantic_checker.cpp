@@ -1,5 +1,6 @@
 #include "semantic_checker.hpp"
 #include "ast.hpp"
+#include "exceptions.hpp"
 
 void SemanticChecker::visit(const VariableExpr &node)
 {
@@ -41,6 +42,21 @@ void SemanticChecker::visit(const ReturnStmt &node)
 
 void SemanticChecker::visit(const FuncDefStmt &node)
 {
+    if (node.name == L"main")
+    {
+        if (!(*node.return_type == NeverType() ||
+              *node.return_type == SimpleType(TypeEnum::U8)))
+        {
+            throw SemanticException(
+                L"wrong main function return type declaration");
+        }
+        if (*node.return_type == SimpleType(TypeEnum::U8) &&
+            node.block->statements.empty())
+        {
+            throw SemanticException(
+                L"main doesn't return a u8 value, when it should");
+        }
+    }
 }
 
 void SemanticChecker::visit(const AssignStmt &node)
@@ -57,6 +73,8 @@ void SemanticChecker::visit(const ExternStmt &node)
 
 void SemanticChecker::visit(const Program &node)
 {
+    for (auto &func : node.functions)
+        func->accept(*this);
 }
 
 void SemanticChecker::visit(const NeverType &type)
