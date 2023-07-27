@@ -125,20 +125,6 @@ struct I32Expr : public ConstNode
     }
 };
 
-struct F32Expr : public ConstNode
-{
-    float value;
-
-    F32Expr(const float &value) : value(value)
-    {
-    }
-
-    void accept(Visitor &visitor) const override
-    {
-        visitor.visit(*this);
-    }
-};
-
 struct F64Expr : public ConstNode
 {
     double value;
@@ -178,9 +164,14 @@ using BlockPtr = std::unique_ptr<Block>;
 struct ReturnStmt : public Statement
 
 {
-    ExprNodePtr expr;
+    std::optional<ExprNodePtr> expr;
 
-    ReturnStmt(ExprNodePtr &expr) : expr(std::move(expr))
+    ReturnStmt() : expr({})
+    {
+    }
+
+    ReturnStmt(ExprNodePtr &expr)
+        : expr(std::make_optional<ExprNodePtr>(std::move(expr)))
     {
     }
 

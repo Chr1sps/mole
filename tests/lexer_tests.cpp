@@ -108,31 +108,24 @@ TEST_CASE("Comments.", "[COMM][EOF]")
 
 TEST_CASE("Numericals.", "[NUMS][EOF]")
 {
-    COMPARE(L"1", LIST(V(INT, 1), T(END)));
-    COMPARE(L"1000", LIST(V(INT, 1000), T(END)));
-    COMPARE(L"0", LIST(V(INT, 0), T(END)));
-    COMPARE(L"00001", LIST(V(INT, 1), T(END)));
+    COMPARE(L"1", LIST(V(INT, 1ull), T(END)));
+    COMPARE(L"1000", LIST(V(INT, 1000ull), T(END)));
+    COMPARE(L"0", LIST(V(INT, 0ull), T(END)));
+    COMPARE(L"00001", LIST(V(INT, 1ull), T(END)));
     COMPARE(L"1.0", LIST(V(DOUBLE, 1.0), T(END)));
     COMPARE(L".25", LIST(V(DOUBLE, 0.25), T(END)));
-    COMPARE(L"1.0f", LIST(V(FLOAT, 1.0), T(END)));
-    COMPARE(L"1.f", LIST(V(FLOAT, 1.0), T(END)));
-    COMPARE(L"1.0d", LIST(V(DOUBLE, 1.0), T(END)));
-    COMPARE(L"1.d", LIST(V(DOUBLE, 1.0), T(END)));
 }
 
 TEST_CASE("Expressions.", "[NUMS][OPS][EOF]")
 {
-    COMPARE(L"1+1", LIST(V(INT, 1), T(PLUS), V(INT, 1), T(END)));
+    COMPARE(L"1+1", LIST(V(INT, 1ull), T(PLUS), V(INT, 1ull), T(END)));
     COMPARE(L"1.0+1.0", LIST(V(DOUBLE, 1.0), T(PLUS), V(DOUBLE, 1.0), T(END)));
     COMPARE(L"1.+1.", LIST(V(DOUBLE, 1.0), T(PLUS), V(DOUBLE, 1.0), T(END)));
-    COMPARE(L"1.f+1.f", LIST(V(FLOAT, 1.0), T(PLUS), V(FLOAT, 1.0), T(END)));
-    COMPARE(L"1.d+1.d", LIST(V(DOUBLE, 1.0), T(PLUS), V(DOUBLE, 1.0), T(END)));
 }
 
 TEST_CASE("Keywords.", "[KW][EOF]")
 {
     COMPARE(L"fn", LIST(T(KW_FN), T(END)));
-    COMPARE(L"main", LIST(T(KW_MAIN), T(END)));
     COMPARE(L"extern", LIST(T(KW_EXTERN), T(END)));
     COMPARE(L"mut", LIST(T(KW_MUT), T(END)));
     COMPARE(L"const", LIST(T(KW_CONST), T(END)));
@@ -188,16 +181,16 @@ TEST_CASE("Invalid signs.", "[ERR]")
 TEST_CASE("Assignments.", "[ASGN][KW][ID][OP][EOF]")
 {
     COMPARE(L"let name = 0;",
-            LIST(T(KW_LET), V(IDENTIFIER, L"name"), T(ASSIGN), V(INT, 0),
+            LIST(T(KW_LET), V(IDENTIFIER, L"name"), T(ASSIGN), V(INT, 0ull),
                  T(SEMICOLON), T(END)));
     COMPARE(L"let mut name: i32 = 0;",
             LIST(T(KW_LET), T(KW_MUT), V(IDENTIFIER, L"name"), T(COLON),
-                 T(TYPE_I32), T(ASSIGN), V(INT, 0), T(SEMICOLON), T(END)));
+                 T(TYPE_I32), T(ASSIGN), V(INT, 0ull), T(SEMICOLON), T(END)));
     COMPARE(L"let prąd = 1 * 2 + 3 * 4 - 5 >> 6;",
-            LIST(T(KW_LET), V(IDENTIFIER, L"prąd"), T(ASSIGN), V(INT, 1),
-                 T(STAR), V(INT, 2), T(PLUS), V(INT, 3), T(STAR), V(INT, 4),
-                 T(MINUS), V(INT, 5), T(SHIFT_RIGHT), V(INT, 6), T(SEMICOLON),
-                 T(END)));
+            LIST(T(KW_LET), V(IDENTIFIER, L"prąd"), T(ASSIGN), V(INT, 1ull),
+                 T(STAR), V(INT, 2ull), T(PLUS), V(INT, 3ull), T(STAR),
+                 V(INT, 4ull), T(MINUS), V(INT, 5ull), T(SHIFT_RIGHT),
+                 V(INT, 6ull), T(SEMICOLON), T(END)));
 }
 
 TEST_CASE("Function definitions", "[FN][KW][ID][OP][EOF]")

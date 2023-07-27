@@ -54,30 +54,33 @@ TEST_CASE("Variables.", "[VARS]")
     SECTION("Value - literals.")
     {
         REPR_CHECK(L"let var=5;");
-        COMPARE(L"let var=5.25;", L"let var=5.25d;");
-        REPR_CHECK(L"let var=5.25d;");
-        REPR_CHECK(L"let var=5.25f;");
+        REPR_CHECK(L"let var=5.25;");
     }
     SECTION("Type and value.")
     {
         REPR_CHECK(L"let var:i32=5;");
-        COMPARE(L"let var:f64=5.25;", L"let var:f64=5.25d;");
-        REPR_CHECK(L"let var:f64=5.25d;");
-        REPR_CHECK(L"let var:f32=5.25f;");
+        REPR_CHECK(L"let var:f64=5.25;");
     }
     SECTION("Mutables.")
     {
         REPR_CHECK(L"let mut var=32;");
         REPR_CHECK(L"let mut var:i32=32;");
     }
+    SECTION("UTF-8.")
+    {
+        REPR_CHECK(L"let 变量=32;");
+        REPR_CHECK(L"let μεταβλητή=32;");
+        REPR_CHECK(L"let 変数=32;");
+        REPR_CHECK(L"let 변수=32;");
+        REPR_CHECK(L"let переменная=32;");
+        REPR_CHECK(L"let चर=32;");
+        REPR_CHECK(L"let អថេរ=32;");
+    }
 }
 
 TEST_CASE("Binary operators.", "[VARS], [BINOP]")
 {
     COMPARE(L"let var=5+5;", L"let var=(5+5);");
-    COMPARE(L"let var=5.5d+5;", L"let var=(5.5d+5);");
-    COMPARE(L"let var=5.5f+5;", L"let var=(5.5f+5);");
-    COMPARE(L"let var=5.5f>>5;", L"let var=(5.5f>>5);");
 }
 
 TEST_CASE("Unary operators.", "[VARS], [UNOP]")
@@ -112,6 +115,10 @@ TEST_CASE("Function definitions.", "[FUNC]")
     SECTION("No args, no return type.")
     {
         COMPARE(L"fn foo(){}", L"fn foo()=>!{}");
+    }
+    SECTION("Never return type.")
+    {
+        REPR_CHECK(L"fn foo()=>!{}");
     }
     SECTION("Return type.")
     {
@@ -169,4 +176,22 @@ TEST_CASE("Assign statements.")
     REPR_STATEMENT(L"x/=5;");
     REPR_STATEMENT(L"x%=5;");
     REPR_STATEMENT(L"x^^=5;");
+}
+
+TEST_CASE("Return statements.")
+{
+    REPR_STATEMENT(L"return;");
+    REPR_STATEMENT(L"return 8;");
+}
+
+TEST_CASE("Type tests.")
+{
+    REPR_CHECK(L"let var:i8;");
+    REPR_CHECK(L"let var:i16;");
+    REPR_CHECK(L"let var:i32;");
+    REPR_CHECK(L"let var:i64;");
+    REPR_CHECK(L"let var:u8;");
+    REPR_CHECK(L"let var:u16;");
+    REPR_CHECK(L"let var:u32;");
+    REPR_CHECK(L"let var:u64;");
 }

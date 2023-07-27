@@ -29,9 +29,11 @@ class PrintVisitor : public Visitor
         {UnaryOpEnum::NEG, L"!"},
     };
     std::map<TypeEnum, std::wstring> type_string_map = {
-        {TypeEnum::I32, L"i32"},
-        {TypeEnum::F32, L"f32"},
-        {TypeEnum::F64, L"f64"},
+        {TypeEnum::I8, L"i8"},   {TypeEnum::I16, L"i16"},
+        {TypeEnum::I32, L"i32"}, {TypeEnum::I64, L"i64"},
+        {TypeEnum::U8, L"u8"},   {TypeEnum::U16, L"u16"},
+        {TypeEnum::U32, L"u32"}, {TypeEnum::U64, L"u64"},
+        {TypeEnum::F32, L"f32"}, {TypeEnum::F64, L"f64"},
     };
     std::map<AssignType, std::wstring> assign_strings = {
         {AssignType::NORMAL, L"="},   {AssignType::PLUS, L"+="},
@@ -69,7 +71,6 @@ class PrintVisitor : public Visitor
 
     void visit(const VariableExpr &node) override;
     void visit(const I32Expr &node) override;
-    void visit(const F32Expr &node) override;
     void visit(const F64Expr &node) override;
     void visit(const BinaryExpr &node) override;
     void visit(const UnaryExpr &node) override;

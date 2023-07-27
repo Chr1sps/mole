@@ -59,18 +59,9 @@ void PrintVisitor::visit(const I32Expr &node)
     this->out << node.value;
 }
 
-void PrintVisitor::visit(const F32Expr &node)
-{
-    this->out << node.value;
-    if (this->debug_mode)
-        this->out << "f";
-}
-
 void PrintVisitor::visit(const F64Expr &node)
 {
     this->out << node.value;
-    if (this->debug_mode)
-        this->out << "d";
 }
 
 void PrintVisitor::visit(const BinaryExpr &node)
@@ -146,8 +137,12 @@ void PrintVisitor::visit(const Block &node)
 void PrintVisitor::visit(const ReturnStmt &node)
 {
     this->print_indent();
-    this->out << "return ";
-    node.expr->accept(*this);
+    this->out << "return";
+    if (node.expr.has_value())
+    {
+        this->out << " ";
+        (*node.expr)->accept(*this);
+    }
     this->out << ";" << this->newline_if_not_debug();
 }
 

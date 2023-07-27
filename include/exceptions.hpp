@@ -50,4 +50,42 @@ class ParserException : public CompilerException
     {
     }
 };
+
+class SemanticException : public CompilerException
+{
+  public:
+    SemanticException(const std::wstring &what_str)
+        : CompilerException("Semantic error", what_str)
+    {
+    }
+};
+
+class UninitializedMutException : public SemanticException
+{
+
+  public:
+    UninitializedMutException()
+        : SemanticException(L"mutable changed before assigning")
+    {
+    }
+};
+
+class UninitializedConstException : public SemanticException
+{
+  public:
+    UninitializedConstException()
+        : SemanticException(L"uninitialized const variable")
+    {
+    }
+};
+
+class NoReturnException : public SemanticException
+{
+  public:
+    NoReturnException()
+        : SemanticException(L"function has no `return` instruction despite "
+                            L"returning a value")
+    {
+    }
+};
 #endif

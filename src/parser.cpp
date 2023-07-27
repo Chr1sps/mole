@@ -89,8 +89,9 @@ std::map<TokenType, std::shared_ptr<BuiltInUnaryOp>> Parser::unary_map{
         TokenType::token_type, TypeEnum::type                                 \
     }
 std::map<TokenType, TypeEnum> Parser::type_map{
-    TYPE(TYPE_I32, I32),
-    TYPE(TYPE_F32, F32),
+    TYPE(TYPE_U8, U8),   TYPE(TYPE_U16, U16), TYPE(TYPE_U32, U32),
+    TYPE(TYPE_U64, U64), TYPE(TYPE_I8, I8),   TYPE(TYPE_I16, I16),
+    TYPE(TYPE_I32, I32), TYPE(TYPE_I64, I64), TYPE(TYPE_F32, F32),
     TYPE(TYPE_F64, F64),
 };
 #undef TYPE
@@ -101,7 +102,6 @@ std::map<TokenType, TypeEnum> Parser::type_map{
     }
 std::map<TokenType, TypeEnum> Parser::type_value_map{
     TYPE_VALUE(INT, I32),
-    TYPE_VALUE(FLOAT, F32),
     TYPE_VALUE(DOUBLE, F64),
 };
 #undef TYPE_VALUE
@@ -151,15 +151,7 @@ void Parser::assert_next_token(TokenType type, const std::wstring &error_msg)
 std::unique_ptr<I32Expr> Parser::parse_i32()
 {
     auto result = std::make_unique<I32Expr>(
-        std::get<int32_t>(this->current_token.value));
-    this->get_new_token();
-    return result;
-}
-
-std::unique_ptr<F32Expr> Parser::parse_f32()
-{
-    auto result =
-        std::make_unique<F32Expr>(std::get<double>(this->current_token.value));
+        std::get<unsigned long long>(this->current_token.value));
     this->get_new_token();
     return result;
 }
@@ -211,6 +203,11 @@ TypePtr Parser::parse_type()
             this->type_map[this->current_token.type]);
         this->get_new_token();
         return result;
+    }
+    else if (this->current_token.type == TokenType::NEG)
+    {
+        this->get_new_token();
+        return std::make_unique<NeverType>();
     }
     else
         return this->report_error(L"invalid type syntax");
@@ -369,6 +366,11 @@ std::unique_ptr<VarDeclStmt> Parser::parse_variable_declaration()
 std::unique_ptr<ReturnStmt> Parser::parse_return_statement()
 {
     this->get_new_token();
+    if (this->current_token == TokenType::SEMICOLON)
+    {
+        this->get_new_token();
+        return std::make_unique<ReturnStmt>();
+    }
     auto expr = this->parse_expression();
     this->assert_current_and_eat(TokenType::SEMICOLON,
                                  L"no semicolon found in a return statement");
@@ -442,8 +444,6 @@ std::unique_ptr<ExprNode> Parser::parse_const_expression()
     {
     case TokenType::INT:
         return this->parse_i32();
-    case TokenType::FLOAT:
-        return this->parse_f32();
     case TokenType::DOUBLE:
         return this->parse_f64();
     default:

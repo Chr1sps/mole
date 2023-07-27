@@ -11,7 +11,6 @@
 
 std::map<std::wstring, Token> Lexer::keywords{
     KEYWORD(L"fn", KW_FN),
-    KEYWORD(L"main", KW_MAIN),
     KEYWORD(L"extern", KW_EXTERN),
     KEYWORD(L"mut", KW_MUT),
     KEYWORD(L"const", KW_CONST),
@@ -141,30 +140,13 @@ std::string Lexer::parse_digits()
     return num_str;
 }
 
-Token Lexer::parse_floating_suffix(const double &value)
-{
-    if (this->last_char.has_value())
-    {
-        if (this->last_char.value() == 'f')
-        {
-            this->get_new_char();
-            return Token(TokenType::FLOAT, value);
-        }
-        else if (this->last_char.value() == 'd')
-        {
-            this->get_new_char();
-        }
-    }
-    return Token(TokenType::DOUBLE, value);
-}
-
 Token Lexer::parse_floating_remainder(std::string &num_str)
 {
     num_str += '.';
     this->get_new_char();
     num_str += this->parse_digits();
     double value = std::strtod(num_str.c_str(), 0);
-    return this->parse_floating_suffix(value);
+    return Token(TokenType::DOUBLE, value);
 }
 
 Token Lexer::parse_number_token()
@@ -177,7 +159,7 @@ Token Lexer::parse_number_token()
     }
     else
     {
-        int value = std::stoi(num_str.c_str(), 0);
+        auto value = std::stoull(num_str.c_str(), 0);
         return Token(TokenType::INT, value);
     }
 }

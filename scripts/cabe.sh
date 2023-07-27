@@ -74,7 +74,7 @@ while IFS= read -r line; do
         fi
 
     else
-        clear_lines+="$line\n"
+        clear_lines+="${col1}\t${col2}\t${col3}\t${col5}\t${col6}\n"
     fi
 
 done <<<"$output"

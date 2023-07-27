@@ -7,7 +7,6 @@ class SemanticChecker : public Visitor
   public:
     void visit(const VariableExpr &node) override;
     void visit(const I32Expr &node) override;
-    void visit(const F32Expr &node) override;
     void visit(const F64Expr &node) override;
     void visit(const BinaryExpr &node) override;
     void visit(const UnaryExpr &node) override;

@@ -9,10 +9,6 @@ void SemanticChecker::visit(const I32Expr &node)
 {
 }
 
-void SemanticChecker::visit(const F32Expr &node)
-{
-}
-
 void SemanticChecker::visit(const F64Expr &node)
 {
 }

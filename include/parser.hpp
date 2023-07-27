@@ -65,7 +65,6 @@ class Parser
     // expressions
 
     std::unique_ptr<I32Expr> parse_i32();
-    std::unique_ptr<F32Expr> parse_f32();
     std::unique_ptr<F64Expr> parse_f64();
     std::unique_ptr<ExprNode> parse_paren_expression();
     std::unique_ptr<ExprNode> parse_unary_expression();
