@@ -267,6 +267,15 @@ struct FuncDefStmt : public Statement
     {
     }
 
+    std::shared_ptr<FunctionType> get_type()
+    {
+        std::vector<TypePtr> param_types;
+        for (auto &param_ptr : this->params)
+            param_types.push_back(param_ptr->type);
+        return std::make_shared<FunctionType>(param_types, this->return_type,
+                                              this->is_const);
+    }
+
     void accept(AstVisitor &visitor) const override
     {
         visitor.visit(*this);

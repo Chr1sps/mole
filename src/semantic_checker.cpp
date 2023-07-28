@@ -2,6 +2,18 @@
 #include "ast.hpp"
 #include "exceptions.hpp"
 
+void SemanticChecker::enter_scope()
+{
+    this->functions.push_back({});
+    this->variables.push_back({});
+}
+
+void SemanticChecker::leave_scope()
+{
+    this->functions.pop_back();
+    this->variables.pop_back();
+}
+
 void SemanticChecker::visit(const VariableExpr &node)
 {
 }
@@ -50,12 +62,8 @@ void SemanticChecker::visit(const FuncDefStmt &node)
             throw SemanticException(
                 L"wrong main function return type declaration");
         }
-        if (*node.return_type == SimpleType(TypeEnum::U8) &&
-            node.block->statements.empty())
-        {
-            throw SemanticException(
-                L"main doesn't return a u8 value, when it should");
-        }
+        if (*node.return_type == SimpleType(TypeEnum::U8))
+            node.block->accept(*this);
     }
 }
 
@@ -65,6 +73,28 @@ void SemanticChecker::visit(const AssignStmt &node)
 
 void SemanticChecker::visit(const VarDeclStmt &node)
 {
+    for (auto &scope_vars : this->variables)
+    {
+        for (auto &var : scope_vars)
+        {
+            if (node.name == var.name)
+            {
+                throw SemanticException(
+                    L"defined variable has the same name as another variable");
+            }
+        }
+    }
+    for (auto &scope_funcs : this->functions)
+    {
+        for (auto &func : scope_funcs)
+        {
+            if (node.name == func.name)
+            {
+                throw SemanticException(
+                    L"defined variable has the same name as a function");
+            }
+        }
+    }
 }
 
 void SemanticChecker::visit(const ExternStmt &node)
@@ -73,8 +103,10 @@ void SemanticChecker::visit(const ExternStmt &node)
 
 void SemanticChecker::visit(const Program &node)
 {
+    this->enter_scope();
     for (auto &func : node.functions)
         func->accept(*this);
+    this->leave_scope();
 }
 
 void SemanticChecker::visit(const NeverType &type)

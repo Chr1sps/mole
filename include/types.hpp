@@ -36,7 +36,7 @@ struct Type
     }
 };
 
-using TypePtr = std::unique_ptr<Type>;
+using TypePtr = std::shared_ptr<Type>;
 
 struct SimpleType : public Type
 {
@@ -52,8 +52,6 @@ struct SimpleType : public Type
     }
 };
 
-using SimpleTypePtr = std::unique_ptr<SimpleType>;
-
 struct NeverType : public Type
 {
     NeverType() = default;
@@ -64,15 +62,16 @@ struct NeverType : public Type
     }
 };
 
-using NeverTypePtr = std::unique_ptr<NeverType>;
-
 struct FunctionType : public Type
 {
     std::vector<TypePtr> arg_types;
     TypePtr return_type;
+    bool is_const;
 
-    FunctionType(std::vector<TypePtr> &arg_types, TypePtr &return_type)
-        : arg_types(std::move(arg_types)), return_type(std::move(return_type))
+    FunctionType(std::vector<TypePtr> &arg_types, TypePtr &return_type,
+                 const bool &is_const)
+        : arg_types(std::move(arg_types)), return_type(std::move(return_type)),
+          is_const(is_const)
     {
     }
 
@@ -81,8 +80,6 @@ struct FunctionType : public Type
         visitor.visit(*this);
     }
 };
-
-using FunctionTypePtr = std::unique_ptr<FunctionType>;
 
 // visitors used for comparing types
 
@@ -156,7 +153,8 @@ struct FunctionTypeVisitor : public Visitor
     void visit(const FunctionType &other) override
     {
         this->value = (this->type.arg_types == other.arg_types &&
-                       this->type.return_type == other.return_type);
+                       this->type.return_type == other.return_type &&
+                       this->type.is_const == other.is_const);
     }
 
   private:

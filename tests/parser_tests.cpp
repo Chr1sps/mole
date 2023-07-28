@@ -50,6 +50,7 @@ TEST_CASE("Variables.", "[VARS]")
         COMPARE(L"let var:fn(i32);", L"let var:fn(i32)=>!;");
         REPR_CHECK(L"let var:fn(i32)=>i32;");
         REPR_CHECK(L"let var:fn(i32,f64)=>i32;");
+        REPR_CHECK(L"let var:fn const(i32,f64)=>i32;");
     }
     SECTION("Value - literals.")
     {

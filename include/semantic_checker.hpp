@@ -1,9 +1,35 @@
 #ifndef __SEMANTIC_CHECKER_HPP__
 #define __SEMANTIC_CHECKER_HPP__
+#include "types.hpp"
 #include "visitor.hpp"
+#include <optional>
+#include <set>
+#include <stack>
+#include <string>
+#include <unordered_map>
 
 class SemanticChecker : public AstVisitor
 {
+    struct Variable
+    {
+        std::wstring name;
+        TypePtr &type;
+        bool mut;
+    };
+
+    struct Function
+    {
+        std::wstring name;
+        std::shared_ptr<FunctionType> &type;
+    };
+
+    std::vector<std::set<Variable>> variables;
+    std::vector<std::set<Function>> functions;
+    std::stack<std::optional<TypePtr>> return_stack;
+
+    void enter_scope();
+    void leave_scope();
+
   public:
     void visit(const VariableExpr &node) override;
     void visit(const I32Expr &node) override;

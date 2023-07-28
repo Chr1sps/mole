@@ -238,7 +238,10 @@ void PrintVisitor::visit(const SimpleType &type)
 
 void PrintVisitor::visit(const FunctionType &type)
 {
-    this->out << "fn(";
+    this->out << "fn";
+    if (type.is_const)
+        this->out << " const";
+    this->out << "(";
     for (unsigned long i = 0; i < type.arg_types.size(); ++i)
     {
         type.arg_types[i]->accept(*this);

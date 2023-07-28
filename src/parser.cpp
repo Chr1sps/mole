@@ -216,7 +216,7 @@ TypePtr Parser::parse_type()
 // Types = [Type, {",", Type}]
 std::vector<TypePtr> Parser::parse_types()
 {
-    std ::vector<TypePtr> types;
+    std::vector<TypePtr> types;
     for (; this->current_token != TokenType::R_PAREN; this->get_new_token())
     {
         auto type = this->parse_type();
@@ -247,10 +247,16 @@ TypePtr Parser::parse_return_type()
 // [LAMBDA_ARROW, Type]
 std::unique_ptr<FunctionType> Parser::parse_function_type()
 {
-    this->assert_next_token(
+    auto is_const = false;
+    this->get_new_token();
+    if (this->current_token == TokenType::KW_CONST)
+    {
+        is_const = true;
+        this->get_new_token();
+    }
+    this->assert_current_and_eat(
         TokenType::L_PAREN,
         L"no left parenthesis in the function type definition");
-    this->get_new_token();
 
     auto types = this->parse_types();
 
@@ -259,7 +265,7 @@ std::unique_ptr<FunctionType> Parser::parse_function_type()
         L"no right parenthesis in the function type definition");
 
     TypePtr return_type = this->parse_return_type();
-    return std::make_unique<FunctionType>(types, return_type);
+    return std::make_unique<FunctionType>(types, return_type, is_const);
 }
 
 // ExternStmt = KW_EXTERN, IDENTIFIER,
