@@ -4,8 +4,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
 
-bool compare_output(Parser &&parser, const std::wstring &expected)
+bool compare_output(const std::wstring &source, const std::wstring &expected)
 {
+    auto locale = Locale("en_US.utf8");
+    auto parser = Parser(Lexer::from_wstring(source));
     auto out_stream = std::wostringstream();
     auto visitor = PrintVisitor(out_stream, true);
     visitor.visit(*(parser.parse()));
@@ -15,20 +17,18 @@ bool compare_output(Parser &&parser, const std::wstring &expected)
 
 void parse_source(const std::wstring &source)
 {
+    auto locale = Locale("en_US.utf8");
     auto parser = Parser(Lexer::from_wstring(source));
     parser.parse();
 }
 
-#define COMPARE(source, output)                                               \
-    REQUIRE(compare_output(Parser(Lexer::from_wstring(source)), output))
-#define REPR_CHECK(source)                                                    \
-    REQUIRE(compare_output(Parser(Lexer::from_wstring(source)), source))
+#define COMPARE(source, output) REQUIRE(compare_output(source, output))
+#define REPR_CHECK(source) REQUIRE(compare_output(source, source))
 #define CHECK_EXCEPTION(source, exception)                                    \
     REQUIRE_THROWS_AS(parse_source(source), exception)
 #define FN_WRAP(source) L"fn foo()=>i32{" + std::wstring(source) + L"}"
 #define COMPARE_STATEMENT(source, output)                                     \
-    REQUIRE(compare_output(Parser(Lexer::from_wstring(FN_WRAP(source))),      \
-                           FN_WRAP(output)))
+    REQUIRE(compare_output(FN_WRAP(source), FN_WRAP(output)))
 #define REPR_STATEMENT(source) COMPARE_STATEMENT(source, source)
 
 TEST_CASE("Empty code.")

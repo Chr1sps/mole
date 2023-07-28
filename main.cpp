@@ -4,10 +4,8 @@
 
 int main()
 {
-    ReaderPtr reader =
-        std::make_unique<FileReader>(FileReader("../example.mole"));
-    auto lexer = std::make_unique<Lexer>(Lexer(reader));
-    auto parser = Parser(lexer);
+    auto locale = Locale("en_US.utf8");
+    auto parser = Parser(Lexer::from_file("../example.mole"));
     auto visitor = PrintVisitor(std::wcout);
     try
     {

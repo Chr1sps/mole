@@ -80,11 +80,11 @@ class Parser
     std::nullptr_t report_error(const std::wstring &error_msg);
 
   public:
-    Parser(LexerPtr &lexer) : lexer(std::move(lexer))
+    Parser(LexerPtr &lexer) : lexer(std::move(lexer)), current_token()
     {
     }
 
-    Parser(LexerPtr &&lexer) : lexer(std::move(lexer))
+    Parser(LexerPtr &&lexer) : lexer(std::move(lexer)), current_token()
     {
     }
 

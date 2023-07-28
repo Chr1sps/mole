@@ -9,7 +9,7 @@
         wstr, TokenType::token_type                                           \
     }
 
-std::map<std::wstring, Token> Lexer::keywords{
+const std::map<std::wstring, Token> Lexer::keywords{
     KEYWORD(L"fn", KW_FN),
     KEYWORD(L"extern", KW_EXTERN),
     KEYWORD(L"mut", KW_MUT),
@@ -60,7 +60,7 @@ std::map<std::wstring, Token> Lexer::keywords{
         }                                                                     \
     }
 
-std::map<wchar_t, CharNode> Lexer::char_nodes{
+const std::map<wchar_t, CharNode> Lexer::char_nodes{
     CHAR_NODE(L':', COLON),
     CHAR_NODE(L',', COMMA),
     CHAR_NODE(L';', SEMICOLON),
@@ -124,7 +124,7 @@ Token Lexer::parse_alpha_token()
              (std::isalnum(this->last_char.value(), this->locale) ||
               this->last_char.value() == L'_'));
     if (this->keywords.contains(name))
-        return this->keywords[name];
+        return this->keywords.at(name);
     return Token(TokenType::IDENTIFIER, name);
 }
 
@@ -166,14 +166,14 @@ Token Lexer::parse_number_token()
 
 Token Lexer::parse_operator()
 {
-    auto node = this->char_nodes[this->last_char.value()];
+    auto node = this->char_nodes.at(this->last_char.value());
     TokenType return_type;
     for (auto next_char = this->peek_char();;
          this->get_new_char(), next_char = this->peek_char())
     {
         if (next_char.has_value() && node.children.contains(next_char.value()))
         {
-            node = node.children[next_char.value()];
+            node = node.children.at(next_char.value());
         }
         else
         {
@@ -255,6 +255,12 @@ void Lexer::skip_block_comment()
 LexerPtr Lexer::from_wstring(const std::wstring &source)
 {
     ReaderPtr reader = std::make_unique<StringReader>(source);
+    return std::make_unique<Lexer>(reader);
+}
+
+LexerPtr Lexer::from_file(const std::string &path)
+{
+    ReaderPtr reader = std::make_unique<FileReader>(path, std::locale());
     return std::make_unique<Lexer>(reader);
 }
 

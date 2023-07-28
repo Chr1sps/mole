@@ -28,7 +28,11 @@ target_compile_options(compiler_flags
     # "-fno-exceptions"
 )
 
-target_link_options(compiler_flags INTERFACE "-fsanitize=undefined;-fsanitize=address")
+target_link_options(compiler_flags
+    INTERFACE
+    "-fsanitize=undefined"
+    "-fsanitize=address"
+)
 set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests")

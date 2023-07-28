@@ -71,3 +71,8 @@ TEST_CASE("Multiple lines.")
 {
     test_reader_sequence(L"one\ntwo\nthree\nfour");
 }
+
+TEST_CASE("UTF-8")
+{
+    test_reader_sequence(L"ąęó");
+}

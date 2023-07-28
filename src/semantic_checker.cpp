@@ -14,6 +14,16 @@ void SemanticChecker::leave_scope()
     this->variables.pop_back();
 }
 
+void SemanticChecker::register_globals(const Program &node)
+{
+    for (auto &var : node.globals)
+        var->accept(*this);
+    for (auto &ext : node.externs)
+        ext->accept(*this);
+    for (auto &func : node.functions)
+        func->accept(*this);
+}
+
 void SemanticChecker::visit(const VariableExpr &node)
 {
 }
@@ -95,6 +105,20 @@ void SemanticChecker::visit(const VarDeclStmt &node)
             }
         }
     }
+    if (node.is_mut)
+    {
+        if (!(node.initial_value || node.type))
+        {
+            throw SemanticException(
+                L"mutable must have either a type or a value assigned to it");
+        }
+    }
+    else if (!node.initial_value)
+    {
+        throw SemanticException(L"constant must have a value assigned to it");
+    }
+    if (node.name == L"main")
+        throw SemanticException(L"variable cannot be named 'main'");
 }
 
 void SemanticChecker::visit(const ExternStmt &node)
@@ -104,6 +128,10 @@ void SemanticChecker::visit(const ExternStmt &node)
 void SemanticChecker::visit(const Program &node)
 {
     this->enter_scope();
+    for (auto &var : node.globals)
+        var->accept(*this);
+    for (auto &ext : node.externs)
+        ext->accept(*this);
     for (auto &func : node.functions)
         func->accept(*this);
     this->leave_scope();

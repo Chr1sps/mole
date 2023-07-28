@@ -2,34 +2,28 @@
 #define __LOCALE_HPP__
 
 #include <locale>
+#include <memory>
 #include <string>
-#include <unistd.h>
 
 class Locale
 {
-    std::string cpp_name;
-    std::locale cpp_locale;
+    Locale(const Locale &) = delete;
+    Locale(Locale &&) = delete;
+    void operator=(const Locale &) = delete;
+    void operator=(Locale &&) = delete;
 
-    Locale(std::string name) : cpp_name(name), cpp_locale(name)
-    {
-        std::locale::global(cpp_locale);
-    }
+    std::locale current_locale;
 
   public:
-    static Locale get()
+    Locale(const std::string &locale_name)
+        : current_locale(std::locale(locale_name))
     {
-        static Locale loc{"en_US.UTF8"};
-        return loc;
+        std::locale::global(this->current_locale);
     }
 
-    const std::string &name() const noexcept
+    ~Locale()
     {
-        return cpp_name;
-    }
-
-    std::locale locale() const noexcept
-    {
-        return cpp_locale;
+        std::locale::global(std::locale::classic());
     }
 };
 

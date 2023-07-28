@@ -5,8 +5,10 @@
 
 using namespace std;
 
-bool compare_tokens(LexerPtr &&lexer, const vector<Token> &tokens)
+bool compare_tokens(const std::wstring &code, const vector<Token> &tokens)
 {
+    auto locale = Locale("en_US.utf8");
+    auto lexer = Lexer::from_wstring(code);
     for (auto &token : tokens)
     {
         auto actual = lexer->get_token();
@@ -16,8 +18,10 @@ bool compare_tokens(LexerPtr &&lexer, const vector<Token> &tokens)
     return true;
 }
 
-void consume_tokens(LexerPtr &&lexer)
+void consume_tokens(const std::wstring &source)
 {
+    auto locale = Locale("en_US.utf8");
+    auto lexer = Lexer::from_wstring(source);
     while (!lexer->eof())
         lexer->get_token();
 }
@@ -25,11 +29,9 @@ void consume_tokens(LexerPtr &&lexer)
 #define T(type) Token(TokenType::type)
 #define V(type, value) Token(TokenType::type, value)
 
-#define COMPARE(source, tokens)                                               \
-    REQUIRE(compare_tokens(Lexer::from_wstring(source), tokens))
+#define COMPARE(source, tokens) REQUIRE(compare_tokens(source, tokens))
 #define COMPARE_THROWS(source, exception_type)                                \
-    REQUIRE_THROWS_AS(consume_tokens(Lexer::from_wstring(source)),            \
-                      exception_type)
+    REQUIRE_THROWS_AS(consume_tokens(source), exception_type)
 #define LIST(...)                                                             \
     {                                                                         \
         __VA_ARGS__                                                           \
@@ -37,6 +39,7 @@ void consume_tokens(LexerPtr &&lexer)
 
 TEST_CASE("Empty code.", "[EOF]")
 {
+    auto locale = Locale("en_US.utf8");
     COMPARE(L"", LIST(T(END)));
 }
 

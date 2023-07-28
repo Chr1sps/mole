@@ -118,12 +118,25 @@ class ConsoleReader : public Reader
 class FileReader : public IStreamReader<std::wifstream>
 {
   public:
-    FileReader(const std::string &file_name) : IStreamReader<std::wifstream>()
+    FileReader(const FileReader &) = delete;
+
+    FileReader(const std::string &file_name, const std::locale &locale)
+        : IStreamReader<std::wifstream>()
     {
         this->driver.open(file_name);
-        this->driver.imbue(Locale::get().locale());
+        this->driver.imbue(locale);
         if (!this->driver.good())
             throw std::exception();
+    }
+
+    FileReader(const std::string &file_name)
+        : FileReader(file_name, std::locale())
+    {
+    }
+
+    virtual ~FileReader()
+    {
+        this->driver.close();
     }
 };
 

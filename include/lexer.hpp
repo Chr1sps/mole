@@ -26,8 +26,8 @@ class Lexer
     std::locale locale;
     Position token_position;
 
-    static std::map<std::wstring, Token> keywords;
-    static std::map<wchar_t, CharNode> char_nodes;
+    static const std::map<std::wstring, Token> keywords;
+    static const std::map<wchar_t, CharNode> char_nodes;
 
     std::optional<wchar_t> get_new_char();
     std::optional<wchar_t> get_nonempty_char();
@@ -57,13 +57,18 @@ class Lexer
     Token report_error(const std::wstring &msg);
 
   public:
-    Lexer(ReaderPtr &reader)
+    Lexer(ReaderPtr &reader, const std::locale &locale)
         : reader(std::move(reader)), last_char(L' '), error_msg(""),
-          locale(Locale::get().locale()), token_position()
+          locale(locale), token_position()
+    {
+    }
+
+    Lexer(ReaderPtr &reader) : Lexer(reader, std::locale())
     {
     }
 
     static LexerPtr from_wstring(const std::wstring &source);
+    static LexerPtr from_file(const std::string &path);
 
     Token get_token();
 
