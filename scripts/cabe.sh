@@ -17,6 +17,12 @@ yellow='\033[38;5;214m'
 reset='\033[0m' # ANSI escape sequence to reset color
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.." &>/dev/null || return
+
+if ! command -v pmccabe >/dev/null; then
+    echo "\`pmccabe\` command not found. Exiting."
+    exit
+fi
+
 output=$(pmccabe -c src/*.cpp | sort -nr -k1,1 -k2,2 -k3,3)
 warning_lines=""
 clear_lines=""

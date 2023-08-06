@@ -24,6 +24,36 @@ void SemanticChecker::register_globals(const Program &node)
         func->accept(*this);
 }
 
+void SemanticChecker::check_function_names(const VarDeclStmt &node)
+{
+    for (auto &scope_funcs : this->functions)
+    {
+        for (auto &func : scope_funcs)
+        {
+            if (node.name == func.name)
+            {
+                throw SemanticException(
+                    L"defined variable has the same name as a function");
+            }
+        }
+    }
+}
+
+void SemanticChecker::check_variable_names(const VarDeclStmt &node)
+{
+    for (auto &scope_vars : this->variables)
+    {
+        for (auto &var : scope_vars)
+        {
+            if (node.name == var.name)
+            {
+                throw SemanticException(
+                    L"defined variable has the same name as another variable");
+            }
+        }
+    }
+}
+
 void SemanticChecker::visit(const VariableExpr &node)
 {
 }
@@ -81,30 +111,16 @@ void SemanticChecker::visit(const AssignStmt &node)
 {
 }
 
+void check_main(const VarDeclStmt &node)
+{
+    if (node.name == L"main")
+        throw SemanticException(L"variable cannot be named 'main'");
+}
+
 void SemanticChecker::visit(const VarDeclStmt &node)
 {
-    for (auto &scope_vars : this->variables)
-    {
-        for (auto &var : scope_vars)
-        {
-            if (node.name == var.name)
-            {
-                throw SemanticException(
-                    L"defined variable has the same name as another variable");
-            }
-        }
-    }
-    for (auto &scope_funcs : this->functions)
-    {
-        for (auto &func : scope_funcs)
-        {
-            if (node.name == func.name)
-            {
-                throw SemanticException(
-                    L"defined variable has the same name as a function");
-            }
-        }
-    }
+    this->check_variable_names(node);
+    this->check_function_names(node);
     if (node.is_mut)
     {
         if (!(node.initial_value || node.type))
@@ -117,8 +133,7 @@ void SemanticChecker::visit(const VarDeclStmt &node)
     {
         throw SemanticException(L"constant must have a value assigned to it");
     }
-    if (node.name == L"main")
-        throw SemanticException(L"variable cannot be named 'main'");
+    check_main(node);
 }
 
 void SemanticChecker::visit(const ExternStmt &node)

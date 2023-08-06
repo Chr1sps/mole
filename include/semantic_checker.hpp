@@ -31,6 +31,9 @@ class SemanticChecker : public AstVisitor
     void leave_scope();
     void register_globals(const Program &node);
 
+    void check_function_names(const VarDeclStmt &node);
+    void check_variable_names(const VarDeclStmt &node);
+
   public:
     void visit(const VariableExpr &node) override;
     void visit(const I32Expr &node) override;
