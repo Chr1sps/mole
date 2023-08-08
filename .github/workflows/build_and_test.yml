@@ -16,8 +16,17 @@ jobs:
         steps:
             - uses: actions/checkout@v3
 
+            - name: Cache packages
+              id: cache-packages
+              uses: actions/cache@v2
+              with:
+                  path: /var/cache/apt/archives
+                  key: ${{ runner.os }}-packages-${{ hashFiles('**/packages.txt') }}
+                  restore-keys: ${{ runner.os }}-packages-
+
             - name: Download packages
-              run: sudo apt-get update -y && sudo apt-get install -y clang-format-15 pmccabe
+              if: steps.cache-packages.outputs.cache-hit != 'true'
+              run: sudo apt-get update -y && sudo apt-get install -y $(cat ${GITHUB_WORKSPACE}/packages.txt)
 
             - name: Check format
               run: ${{github.workspace}}/scripts/check_format.sh
