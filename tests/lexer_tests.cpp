@@ -30,6 +30,8 @@ void consume_tokens(const std::wstring &source)
 #define V(type, value) Token(TokenType::type, value)
 
 #define COMPARE(source, tokens) REQUIRE(compare_tokens(source, tokens))
+#define COMPARE_FALSE(source, tokens)                                         \
+    REQUIRE_FALSE(compare_tokens(source, tokens))
 #define COMPARE_THROWS(source, exception_type)                                \
     REQUIRE_THROWS_AS(consume_tokens(source), exception_type)
 #define LIST(...)                                                             \
@@ -165,6 +167,8 @@ TEST_CASE("Identifiers.", "[ID][EOF]")
     COMPARE(L"snake_case", LIST(V(IDENTIFIER, L"snake_case"), T(END)));
     COMPARE(L"_snake_case", LIST(V(IDENTIFIER, L"_snake_case"), T(END)));
     COMPARE(L"ęóąśłżźćń", LIST(V(IDENTIFIER, L"ęóąśłżźćń"), T(END)));
+    COMPARE_FALSE(L"3three", LIST(V(IDENTIFIER, L"3three"), T(END)));
+    COMPARE_FALSE(L"3_three", LIST(V(IDENTIFIER, L"3three"), T(END)));
 }
 
 TEST_CASE("Other special tokens.", "[OTHER]")

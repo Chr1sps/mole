@@ -147,13 +147,16 @@ TEST_CASE("In-place lambdas.")
         REPR_CHECK(L"let foo=boo(1,2,3,4);");
         REPR_CHECK(L"let foo=boo(1,_,3,_);");
         REPR_CHECK(L"let foo=boo(1,2,...);");
-        REPR_CHECK(L"let foo=boo(1,_,...);");
+        REPR_CHECK(L"let foo=boo(1,_,3,...);");
+        REPR_CHECK(L"let foo=boo(_,2,...);");
     }
     SECTION("Exceptions.")
     {
         CHECK_EXCEPTION(L"let foo=boo(_,...,_);", ParserException);
         CHECK_EXCEPTION(L"let foo=boo(1,...,4);", ParserException);
         CHECK_EXCEPTION(L"let foo=boo(...,3,4);", ParserException);
+        CHECK_EXCEPTION(L"let foo=boo(1,_,...);", ParserException);
+        CHECK_EXCEPTION(L"let foo=boo(...);", ParserException);
     }
 }
 
@@ -195,4 +198,10 @@ TEST_CASE("Type tests.")
     REPR_CHECK(L"let var:u16;");
     REPR_CHECK(L"let var:u32;");
     REPR_CHECK(L"let var:u64;");
+}
+
+TEST_CASE("Function calls.")
+{
+    REPR_STATEMENT(L"let var=foo();");
+    REPR_STATEMENT(L"let var=foo(1,2);");
 }

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16.3)
 project(mole)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -97,19 +99,17 @@ if(TESTS)
     include(CTest)
     include(Catch)
 
-    add_library(coverage_flags INTERFACE)
-
     if(COVERAGE)
         message(STATUS "Compiling with coverage info.")
-        target_compile_options(coverage_flags INTERFACE "--coverage")
-        target_link_options(coverage_flags INTERFACE "--coverage")
-        target_link_libraries(mole PRIVATE coverage_flags)
+
+        include(CodeCoverage)
+        append_coverage_compiler_flags_to_target(mole)
     endif()
 
     foreach(TEST_SRC IN LISTS TEST_SOURCES)
         get_filename_component(TEST_EXE "${TEST_SRC}" NAME_WE)
         add_executable("${TEST_EXE}" "${TEST_DIR}/${TEST_SRC}")
-        target_link_libraries("${TEST_EXE}" PRIVATE mole Catch2::Catch2WithMain coverage_flags)
+        target_link_libraries("${TEST_EXE}" PRIVATE mole Catch2::Catch2WithMain)
         catch_discover_tests("${TEST_EXE}")
     endforeach()
 endif()

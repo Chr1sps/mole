@@ -3,6 +3,7 @@
 #include "operators.hpp"
 #include "string_builder.hpp"
 #include <algorithm>
+#include <optional>
 #include <tuple>
 
 namespace
@@ -89,10 +90,10 @@ std::map<TokenType, std::shared_ptr<BuiltInUnaryOp>> Parser::unary_map{
         TokenType::token_type, TypeEnum::type                                 \
     }
 std::map<TokenType, TypeEnum> Parser::type_map{
-    TYPE(TYPE_U8, U8),   TYPE(TYPE_U16, U16), TYPE(TYPE_U32, U32),
-    TYPE(TYPE_U64, U64), TYPE(TYPE_I8, I8),   TYPE(TYPE_I16, I16),
-    TYPE(TYPE_I32, I32), TYPE(TYPE_I64, I64), TYPE(TYPE_F32, F32),
-    TYPE(TYPE_F64, F64),
+    TYPE(TYPE_U8, U8),   TYPE(TYPE_U16, U16),   TYPE(TYPE_U32, U32),
+    TYPE(TYPE_U64, U64), TYPE(TYPE_I8, I8),     TYPE(TYPE_I16, I16),
+    TYPE(TYPE_I32, I32), TYPE(TYPE_I64, I64),   TYPE(TYPE_F32, F32),
+    TYPE(TYPE_F64, F64), TYPE(TYPE_BOOL, BOOL),
 };
 #undef TYPE
 
@@ -147,7 +148,7 @@ void Parser::assert_next_token(TokenType type, const std::wstring &error_msg)
         this->report_error(error_msg);
 }
 
-// I32 = TYPE_I32
+// I32 = INT
 std::unique_ptr<I32Expr> Parser::parse_i32()
 {
     auto result = std::make_unique<I32Expr>(
@@ -156,7 +157,7 @@ std::unique_ptr<I32Expr> Parser::parse_i32()
     return result;
 }
 
-// F64 = TYPE_F64
+// F64 = DOUBLE
 std::unique_ptr<F64Expr> Parser::parse_f64()
 {
     auto result =
@@ -295,7 +296,7 @@ std::unique_ptr<ExternStmt> Parser::parse_extern()
 }
 
 // Function = KW_FN, IDENTIFIER, L_PAREN, Params, R_PAREN,
-// [LAMBDA_ARROW, Type], Block, SEMICOLON;
+// [LAMBDA_ARROW, Type], Block;
 std::unique_ptr<FuncDefStmt> Parser::parse_function()
 {
     this->get_new_token();
@@ -488,7 +489,10 @@ std::unique_ptr<LambdaCallExpr> Parser::return_ellipsis_lambda(
     this->assert_next_token(TokenType::R_PAREN,
                             L"expected ')' after ellipsis in argument list");
     this->get_new_token();
-    return std::make_unique<LambdaCallExpr>(name, lambda_args, true);
+    if (!lambda_args.empty() && lambda_args.back())
+        return std::make_unique<LambdaCallExpr>(name, lambda_args, true);
+    return this->report_error(L"last in-place lambda argument before the "
+                              L"ellipsis must not be a placeholder");
 }
 
 bool Parser::eat_comma_or_rparen()
@@ -523,6 +527,28 @@ void Parser::handle_placeholder(
     this->get_new_token();
 }
 
+std::unique_ptr<LambdaCallExpr> Parser::handle_call_and_lambda_args(
+    const std::wstring &name, std::vector<ExprNodePtr> &args,
+    std::vector<std::optional<ExprNodePtr>> &lambda_args, bool &is_lambda)
+{
+    for (;;)
+    {
+        switch (this->current_token.type)
+        {
+        case TokenType::PLACEHOLDER:
+            this->handle_placeholder(args, lambda_args, is_lambda);
+            break;
+        case TokenType::ELLIPSIS:
+            return this->return_ellipsis_lambda(name, args, lambda_args,
+                                                is_lambda);
+        default:
+            this->push_expr(args, lambda_args, is_lambda);
+        }
+        if (this->eat_comma_or_rparen())
+            return nullptr;
+    }
+}
+
 std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(
     const std::wstring &name)
 {
@@ -532,25 +558,14 @@ std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(
 
     if (this->get_new_token() != TokenType::R_PAREN)
     {
-        for (;;)
+        if (auto lambda = this->handle_call_and_lambda_args(
+                name, args, lambda_args, is_lambda))
         {
-            if (this->current_token == TokenType::PLACEHOLDER)
-            {
-                this->handle_placeholder(args, lambda_args, is_lambda);
-            }
-            else if (this->current_token == TokenType::ELLIPSIS)
-            {
-                return this->return_ellipsis_lambda(name, args, lambda_args,
-                                                    is_lambda);
-            }
-            else
-            {
-                this->push_expr(args, lambda_args, is_lambda);
-            }
-            if (this->eat_comma_or_rparen())
-                break;
+            return lambda;
         }
     }
+    else
+        this->get_new_token();
     return return_call_or_lambda(name, args, lambda_args, is_lambda);
 }
 
@@ -628,8 +643,7 @@ std::nullptr_t Parser::report_error(const std::wstring &msg)
     return nullptr;
 }
 
-// Program = VarDeclStmt | FuncDefStmt | ExternStmt,
-// {VarDeclStmt | FuncDefStmt | ExternStmt}
+// Program = {VarDeclStmt | FuncDefStmt | ExternStmt}
 ProgramPtr Parser::parse()
 {
     std::vector<std::unique_ptr<VarDeclStmt>> globals;

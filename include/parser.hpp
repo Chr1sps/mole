@@ -62,6 +62,9 @@ class Parser
         const std::wstring &name, std::vector<std::unique_ptr<ExprNode>> &args,
         std::vector<std::optional<std::unique_ptr<ExprNode>>> &lambda_args,
         bool &is_lambda);
+    std::unique_ptr<LambdaCallExpr> handle_call_and_lambda_args(
+        const std::wstring &name, std::vector<ExprNodePtr> &args,
+        std::vector<std::optional<ExprNodePtr>> &lambda_args, bool &is_lambda);
     // expressions
 
     std::unique_ptr<I32Expr> parse_i32();
