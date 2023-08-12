@@ -100,6 +100,29 @@ TEST_CASE("Function returns a value when it shouldn't.")
     CHECK_INVALID(L"fn foo(x: i32)=>!{return 5;}");
 }
 
+TEST_CASE("Function parameter cannot shadow a variable in scope")
+{
+    CHECK_INVALID(L"let var = 5;"
+                  L"fn foo(var: i32){}");
+}
+
+TEST_CASE("Const function cannot reference outside variables that are not "
+          "passed as arguments")
+{
+    CHECK_INVALID(L"let var = 5;"
+                  L"fn const foo(){let bar = var;}");
+    CHECK_INVALID(L"let mut var = 5;"
+                  L"fn const foo(){var = 4;}");
+    CHECK_INVALID(L"fn foo() {"
+                  L"    let var = 5;"
+                  L"    fn const boo() {let bar = var;}"
+                  L"}");
+    CHECK_INVALID(L"fn foo() {"
+                  L"    let mut var = 5;"
+                  L"    fn const boo() {var = 4;}"
+                  L"}");
+}
+
 TEST_CASE("Variable cannot be called 'main'.")
 {
     CHECK_INVALID(L"let main: i32;");
@@ -117,56 +140,3 @@ TEST_CASE("Main cannot have any parameters.")
 {
     CHECK_INVALID(L"fn main(x: i32){}");
 }
-
-// TEST_CASE("Global constants.")
-// {
-//     CHECK_INVALID(L"let var;");
-//     CHECK_INVALID(L"let var: i32;");
-//     CHECK_VALID(L"let var = 5;");
-//     CHECK_VALID(L"let var: i32 = 5;");
-// }
-
-// TEST_CASE("Global mutables.")
-// {
-//     CHECK_INVALID(L"let mut var;");
-//     CHECK_VALID(L"let mut var: i32;");
-//     CHECK_VALID(L"let mut var = 5;");
-//     CHECK_VALID(L"let mut var: i32 = 5;");
-// }
-
-// TEST_CASE("Global constants, invalid - redefinitions.")
-// {
-//     CHECK_INVALID(L"let var = 5; let var = 7;");
-// }
-
-// TEST_CASE("Global constants, invalid - name 'main'.")
-// {
-//     CHECK_INVALID(L"let main = 5;");
-// }
-
-// TEST_CASE("Empty main - valid.")
-// {
-//     CHECK_VALID(L"fn main(){}");
-//     CHECK_VALID(L"fn main()=>!{}");
-// }
-
-// TEST_CASE("Empty main - invalid return type signature.")
-// {
-//     CHECK_INVALID(L"fn main()=>i32{}");
-// }
-
-// TEST_CASE("Empty main - no return value.")
-// {
-//     CHECK_INVALID(L"fn main()=>u8{}");
-// }
-
-// TEST_CASE("Valid main, with u8 return.")
-// {
-//     CHECK_VALID(L"fn main()=>u8{return 8;}");
-// }
-
-// TEST_CASE("Main with statements, without needed return.")
-// {
-//     CHECK_INVALID(L"fn main()=>u8{let mut var : i32;}");
-//     CHECK_INVALID(L"fn main()=>u8{let mut var : i32;let mut foo : i32;}");
-// }

@@ -113,6 +113,7 @@ struct ConstNode : public ExprNode
 
 struct I32Expr : public ConstNode
 {
+    static const std::shared_ptr<SimpleType> type;
     unsigned long long value;
 
     I32Expr(const unsigned long long &value) : value(value)
@@ -127,6 +128,7 @@ struct I32Expr : public ConstNode
 
 struct F64Expr : public ConstNode
 {
+    static const std::shared_ptr<SimpleType> type;
     double value;
 
     F64Expr(const double &value) : value(value)

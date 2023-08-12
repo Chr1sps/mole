@@ -23,6 +23,8 @@ class SemanticChecker : public AstVisitor
         std::shared_ptr<FunctionType> &type;
     };
 
+    TypePtr last_type;
+
     std::vector<std::set<Variable>> variables;
     std::vector<std::set<Function>> functions;
     std::stack<std::optional<TypePtr>> return_stack;
@@ -33,6 +35,12 @@ class SemanticChecker : public AstVisitor
 
     void check_function_names(const VarDeclStmt &node);
     void check_variable_names(const VarDeclStmt &node);
+
+    void check_var_decl_type_match(const VarDeclStmt &node);
+
+    void check_main(const VarDeclStmt &node);
+
+    void report_error(const std::wstring &msg);
 
   public:
     void visit(const VariableExpr &node) override;

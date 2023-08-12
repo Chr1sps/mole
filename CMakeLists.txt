@@ -55,6 +55,7 @@ set(HEADERS
     "visitor.hpp"
 )
 set(SOURCES
+    "ast.cpp"
     "lexer.cpp"
     "parser.cpp"
     "print_visitor.cpp"
