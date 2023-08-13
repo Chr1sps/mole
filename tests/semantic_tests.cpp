@@ -16,7 +16,7 @@ void check_source(const std::wstring &source)
 #define CHECK_VALID(source) REQUIRE_NOTHROW(check_source(source))
 #define CHECK_INVALID(source)                                                 \
     REQUIRE_THROWS_AS(check_source(source), SemanticException)
-#define FN_WRAP(source) L"fn foo(){" + std::wstring(source) + L"}"
+#define FN_WRAP(source) L"fn wrap(){" + std::wstring(source) + L"}"
 
 TEST_CASE("Variable has no value or type assigned.")
 {
@@ -28,9 +28,16 @@ TEST_CASE("Variable's declared type and assigned value's type don't match")
 {
     CHECK_VALID(L"let var: i32 = 1;");
     CHECK_VALID(L"let var: f64 = 0.1;");
-
     CHECK_INVALID(L"let var: i32 = 0.1;");
     CHECK_INVALID(L"let var: f64 = 1;");
+
+    SECTION("Inside a function")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: i32 = 1;"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 0.1;"));
+        CHECK_INVALID(FN_WRAP(L"let var: i32 = 0.1;"));
+        CHECK_INVALID(FN_WRAP(L"let var: f64 = 1;"));
+    }
 }
 
 TEST_CASE("Constant has no value assigned.")
@@ -44,7 +51,7 @@ TEST_CASE("Constant cannot be reassigned.")
     CHECK_INVALID(FN_WRAP(L"let value = 5; value = 4;"));
 }
 
-TEST_CASE("Using an uninitialized mutable in an expression.")
+TEST_CASE("Using an uninitialized variable in an expression.")
 {
     CHECK_INVALID(
         FN_WRAP(L"let mut value: i32; let new_value = (4 + value);"));
@@ -54,14 +61,16 @@ TEST_CASE("Referenced value/function is not in scope.")
 {
     CHECK_INVALID(
         L"fn foo(){let value = 5;} fn goo(){let new_value = value;}");
+    CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
+                  L"fn goo(){let new_value = boo();}");
 }
 
 TEST_CASE("Function's argument type is mismatched.")
 {
-    CHECK_INVALID(L"fn foo(x: i32){}"
+    CHECK_INVALID(L"fn foo(x: i32)=>i32{return 32;}"
                   L"fn boo(){let value = 0.1; let falue = foo(value);}");
-    CHECK_INVALID(L"fn foo(x: i32){}"
-                  L"fn boo(){foo(0.1);}");
+    CHECK_INVALID(L"fn foo(x: i32)=>i32{return 3;}"
+                  L"fn boo(){let boo = foo(0.1);}");
 }
 
 TEST_CASE("Function is called with a wrong amount of arguments.")
@@ -100,9 +109,11 @@ TEST_CASE("Function returns a value when it shouldn't.")
     CHECK_INVALID(L"fn foo(x: i32)=>!{return 5;}");
 }
 
-TEST_CASE("Function parameter cannot shadow a variable in scope")
+TEST_CASE("Function parameter cannot shadow a variable/function in scope")
 {
     CHECK_INVALID(L"let var = 5;"
+                  L"fn foo(var: i32){}");
+    CHECK_INVALID(L"fn var(){}"
                   L"fn foo(var: i32){}");
 }
 

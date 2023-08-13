@@ -68,8 +68,8 @@ struct FunctionType : public Type
     TypePtr return_type;
     bool is_const;
 
-    FunctionType(std::vector<TypePtr> &arg_types, TypePtr &return_type,
-                 const bool &is_const)
+    FunctionType(const std::vector<TypePtr> &arg_types,
+                 const TypePtr &return_type, const bool &is_const)
         : arg_types(std::move(arg_types)), return_type(std::move(return_type)),
           is_const(is_const)
     {
