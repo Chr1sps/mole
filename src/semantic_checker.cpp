@@ -2,6 +2,7 @@
 #include "ast.hpp"
 #include "exceptions.hpp"
 #include "string_builder.hpp"
+#include <algorithm>
 
 void SemanticChecker::enter_scope()
 {
@@ -211,7 +212,7 @@ void SemanticChecker::visit(const VariableExpr &node)
         this->report_error(L"variable `", node.name, L"` not found in scope");
     if (!variable->initialized)
         this->report_error(L"variable `", node.name, L"` is not initialized");
-    if (variable = this->find_outside_variable(node.name))
+    if ((variable = this->find_outside_variable(node.name)))
     {
         this->report_error(L"variable `", node.name,
                            L"` is accessed in a const function");
