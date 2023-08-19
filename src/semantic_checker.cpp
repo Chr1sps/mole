@@ -262,13 +262,37 @@ void SemanticChecker::visit(const CallExpr &node)
         auto expected_type = func->type->arg_types[i];
         (node.args[i])->accept(*this);
         auto actual_type = this->last_type;
-        if (expected_type != actual_type)
+        if (*expected_type != *actual_type)
             this->report_error(L"function call argument type is mismatched");
     }
 }
 
 void SemanticChecker::visit(const LambdaCallExpr &node)
 {
+    auto func = this->find_function(node.func_name);
+    if (!func)
+        this->report_error(L"function `", node.func_name,
+                           L"` not found in scope");
+    if (node.args.size() != func->type->arg_types.size())
+    {
+        if (!((node.args.size() < func->type->arg_types.size()) &&
+              node.is_ellipsis))
+            this->report_error(
+                L"wrong amount of arguments in an in-place lambda");
+    }
+    for (size_t i = 0; i < node.args.size(); ++i)
+    {
+        auto expected_type = func->type->arg_types[i];
+        auto &param_type = node.args[i];
+        if (param_type)
+        {
+            (*param_type)->accept(*this);
+            auto actual_type = this->last_type;
+            if (*expected_type != *actual_type)
+                this->report_error(
+                    L"in-place lambda argument type is mismatched");
+        }
+    }
 }
 
 void SemanticChecker::visit(const Block &node)

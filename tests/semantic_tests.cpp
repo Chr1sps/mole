@@ -59,10 +59,20 @@ TEST_CASE("Using an uninitialized variable in an expression.")
 
 TEST_CASE("Referenced value/function is not in scope.")
 {
-    CHECK_INVALID(
-        L"fn foo(){let value = 5;} fn goo(){let new_value = value;}");
-    CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
-                  L"fn goo(){let new_value = boo();}");
+    SECTION("Default cases.")
+    {
+        CHECK_INVALID(
+            L"fn foo(){let value = 5;} fn goo(){let new_value = value;}");
+        CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
+                      L"fn goo(){let new_value = boo();}");
+    }
+    SECTION("Lambdas.")
+    {
+        CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
+                      L"fn goo(){let new_value = boo(2, ...);}");
+        CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
+                      L"fn goo(){let new_value = boo(2, ...);}");
+    }
 }
 
 TEST_CASE("Function's argument type is mismatched.")
@@ -150,4 +160,30 @@ TEST_CASE("Main should be of type fn()=>u8 or fn()=>!.")
 TEST_CASE("Main cannot have any parameters.")
 {
     CHECK_INVALID(L"fn main(x: i32){}");
+}
+
+TEST_CASE("Lambda call expression with a wrong number of arguments.")
+{
+    CHECK_INVALID(L"fn foo(a: i32, b: i32, c: i32){} "
+                  L"fn main(){let val = foo(_, 2);}");
+    CHECK_INVALID(L"fn foo(a: i32, b: i32, c: i32, d: i32){} "
+                  L"fn main(){let val = foo(_, _, 3);}");
+    CHECK_INVALID(L"fn foo(a: i32, b: i32, c: i32, d: i32){} "
+                  L"fn main(){let val = foo(_, _, 3, _, 5);}");
+    CHECK_INVALID(L"fn foo(a: i32, b: i32, c: i32, d: i32){} "
+                  L"fn main(){let val = foo(_, _, _, _, 5, ...);}");
+    CHECK_VALID(L"fn foo(a: i32, b: i32, c: i32){} "
+                L"fn main(){let val = foo(1, ...);}");
+    CHECK_VALID(L"fn foo(a: i32, b: i32, c: i32){} "
+                L"fn main(){let val = foo(_, 2, ...);}");
+    CHECK_VALID(L"fn foo(a: i32, b: i32, c: i32, d: i32){} "
+                L"fn main(){let val = foo(_, 2, _, 4, ...);}");
+}
+
+TEST_CASE("Lambda call expression has mismatched types.")
+{
+    CHECK_INVALID(L"fn foo(a: i32, b: i32){} "
+                  L"fn main(){let val = foo(_, 2.1);}");
+    CHECK_INVALID(L"fn foo(a: i32, b: i32){} "
+                  L"fn main(){let val = foo(1.05, ...);}");
 }
