@@ -56,6 +56,19 @@ void SemanticChecker::check_function_params(const FuncDefStmt &node)
     }
 }
 
+void SemanticChecker::check_function_params(const ExternStmt &node)
+{
+    for (auto &param : node.params)
+    {
+        if (auto var = this->find_variable(param->name))
+            this->report_error(L"param name cannot shadow a variable that is "
+                               L"already in scope");
+        if (auto func = this->find_function(param->name))
+            this->report_error(L"param name cannot shadow a function that is "
+                               L"already in scope");
+    }
+}
+
 void SemanticChecker::check_function_block(const FuncDefStmt &node)
 {
     if (node.is_const)
@@ -209,6 +222,23 @@ void SemanticChecker::register_local_function(const FuncDefStmt &node)
 
     auto fn_type = std::make_shared<FunctionType>(
         param_types, node.return_type, node.is_const);
+
+    auto new_func = Function(node.name, fn_type);
+
+    this->functions.back().insert(std::make_shared<Function>(new_func));
+}
+
+void SemanticChecker::register_local_function(const ExternStmt &node)
+{
+    std::vector<TypePtr> param_types;
+
+    for (auto &param : node.params)
+    {
+        param_types.push_back(param->type);
+    }
+
+    auto fn_type =
+        std::make_shared<FunctionType>(param_types, node.return_type, false);
 
     auto new_func = Function(node.name, fn_type);
 
@@ -455,15 +485,23 @@ void SemanticChecker::visit(const VarDeclStmt &node)
 
 void SemanticChecker::visit(const ExternStmt &node)
 {
+    if (node.name == L"main")
+    {
+        this->report_error(L"`main` cannot be externed");
+    }
+
+    this->check_function_params(node);
+
+    this->register_local_function(node);
 }
 
 void SemanticChecker::visit(const Program &node)
 {
     this->enter_scope();
-    for (auto &var : node.globals)
-        var->accept(*this);
     for (auto &ext : node.externs)
         ext->accept(*this);
+    for (auto &var : node.globals)
+        var->accept(*this);
     for (auto &func : node.functions)
         func->accept(*this);
     this->leave_scope();

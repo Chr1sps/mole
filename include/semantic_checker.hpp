@@ -55,6 +55,7 @@ class SemanticChecker : public AstVisitor
 
     void check_function_names(const VarDeclStmt &node);
     void check_function_params(const FuncDefStmt &node);
+    void check_function_params(const ExternStmt &node);
     void check_function_block(const FuncDefStmt &node);
     void check_variable_names(const VarDeclStmt &node);
     void check_main_function(const FuncDefStmt &node);
@@ -73,6 +74,7 @@ class SemanticChecker : public AstVisitor
 
     void register_local_variable(const VarDeclStmt &node);
     void register_local_function(const FuncDefStmt &node);
+    void register_local_function(const ExternStmt &node);
 
     void register_function_params(const FuncDefStmt &node);
     void unregister_function_params(const FuncDefStmt &node);
