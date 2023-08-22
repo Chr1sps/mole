@@ -204,4 +204,10 @@ TEST_CASE("Function calls.")
 {
     REPR_STATEMENT(L"let var=foo();");
     REPR_STATEMENT(L"let var=foo(1,2);");
+    COMPARE_STATEMENT(L"let var=(foo)(1,2);", L"let var=foo(1,2);");
+}
+
+TEST_CASE("Chaining function calls.")
+{
+    REPR_STATEMENT(L"let var=foo(1,_)(2);");
 }

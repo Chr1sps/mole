@@ -85,7 +85,8 @@ void PrintVisitor::visit(const UnaryExpr &node)
 
 void PrintVisitor::visit(const CallExpr &node)
 {
-    this->out << node.func_name << "(";
+    node.callable->accept(*this);
+    this->out << "(";
     for (unsigned long i = 0; i < node.args.size(); ++i)
     {
         node.args[i]->accept(*this);
@@ -112,7 +113,8 @@ void PrintVisitor::print_optional_args(
 
 void PrintVisitor::visit(const LambdaCallExpr &node)
 {
-    this->out << node.func_name << "(";
+    node.callable->accept(*this);
+    this->out << "(";
     this->print_optional_args(node.args);
     if (node.is_ellipsis)
         this->out << "," << this->space_if_not_debug() << "...";

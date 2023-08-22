@@ -33,14 +33,14 @@ void convert_if_not_lambda(
 }
 
 ExprNodePtr return_call_or_lambda(
-    const std::wstring &name, std::vector<ExprNodePtr> &args,
+    ExprNodePtr &expr, std::vector<ExprNodePtr> &args,
     std::vector<std::optional<ExprNodePtr>> &lambda_args,
     const bool &is_lambda)
 {
     if (is_lambda)
-        return std::make_unique<LambdaCallExpr>(name, lambda_args, false);
+        return std::make_unique<LambdaCallExpr>(expr, lambda_args, false);
     else
-        return std::make_unique<CallExpr>(name, args);
+        return std::make_unique<CallExpr>(expr, args);
 }
 } // namespace
 
@@ -434,7 +434,11 @@ std::unique_ptr<ExprNode> Parser::parse_paren_expression()
     auto expr = this->parse_expression();
     this->assert_current_and_eat(
         TokenType::R_PAREN, L"expected a right parenthesis in the expression");
-    return expr;
+
+    if (this->current_token != TokenType::L_PAREN)
+        return expr;
+
+    return this->parse_call_or_lambda(expr);
 }
 
 std::unique_ptr<ExprNode> Parser::parse_unary_expression()
@@ -480,7 +484,7 @@ std::vector<std::unique_ptr<ExprNode>> Parser::parse_call_args()
 }
 
 std::unique_ptr<LambdaCallExpr> Parser::return_ellipsis_lambda(
-    const std::wstring &name, std::vector<std::unique_ptr<ExprNode>> &args,
+    ExprNodePtr &expr, std::vector<std::unique_ptr<ExprNode>> &args,
     std::vector<std::optional<std::unique_ptr<ExprNode>>> &lambda_args,
     bool &is_lambda)
 {
@@ -490,7 +494,9 @@ std::unique_ptr<LambdaCallExpr> Parser::return_ellipsis_lambda(
                             L"expected ')' after ellipsis in argument list");
     this->get_new_token();
     if (!lambda_args.empty() && lambda_args.back())
-        return std::make_unique<LambdaCallExpr>(name, lambda_args, true);
+    {
+        return std::make_unique<LambdaCallExpr>(expr, lambda_args, true);
+    }
     return this->report_error(L"last in-place lambda argument before the "
                               L"ellipsis must not be a placeholder");
 }
@@ -528,7 +534,7 @@ void Parser::handle_placeholder(
 }
 
 std::unique_ptr<LambdaCallExpr> Parser::handle_call_and_lambda_args(
-    const std::wstring &name, std::vector<ExprNodePtr> &args,
+    ExprNodePtr &expr, std::vector<ExprNodePtr> &args,
     std::vector<std::optional<ExprNodePtr>> &lambda_args, bool &is_lambda)
 {
     for (;;)
@@ -539,7 +545,7 @@ std::unique_ptr<LambdaCallExpr> Parser::handle_call_and_lambda_args(
             this->handle_placeholder(args, lambda_args, is_lambda);
             break;
         case TokenType::ELLIPSIS:
-            return this->return_ellipsis_lambda(name, args, lambda_args,
+            return this->return_ellipsis_lambda(expr, args, lambda_args,
                                                 is_lambda);
         default:
             this->push_expr(args, lambda_args, is_lambda);
@@ -549,8 +555,7 @@ std::unique_ptr<LambdaCallExpr> Parser::handle_call_and_lambda_args(
     }
 }
 
-std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(
-    const std::wstring &name)
+std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(ExprNodePtr &expr)
 {
     std::vector<ExprNodePtr> args;
     std::vector<std::optional<ExprNodePtr>> lambda_args;
@@ -559,25 +564,31 @@ std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(
     if (this->get_new_token() != TokenType::R_PAREN)
     {
         if (auto lambda = this->handle_call_and_lambda_args(
-                name, args, lambda_args, is_lambda))
+                expr, args, lambda_args, is_lambda))
         {
             return lambda;
         }
     }
     else
         this->get_new_token();
-    return return_call_or_lambda(name, args, lambda_args, is_lambda);
+    auto result = return_call_or_lambda(expr, args, lambda_args, is_lambda);
+
+    if (this->current_token != TokenType::L_PAREN)
+        return result;
+
+    return this->parse_call_or_lambda(result);
 }
 
 std::unique_ptr<ExprNode> Parser::parse_identifier_expression()
 {
     auto name = std::get<std::wstring>(this->current_token.value);
     this->get_new_token();
+    ExprNodePtr expr = std::make_unique<VariableExpr>(name);
 
     if (this->current_token != TokenType::L_PAREN)
-        return std::make_unique<VariableExpr>(name);
+        return expr;
 
-    return this->parse_call_or_lambda(name);
+    return this->parse_call_or_lambda(expr);
 }
 
 std::unique_ptr<ExprNode> Parser::parse_lhs()

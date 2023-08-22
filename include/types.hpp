@@ -84,6 +84,7 @@ struct FunctionType : public Type
 // visitors used for comparing types
 
 struct EquationVisitor;
+inline bool operator==(const Type &first, const Type &other);
 
 struct SimpleTypeVisitor : public Visitor
 {
@@ -152,8 +153,9 @@ struct FunctionTypeVisitor : public Visitor
 
     void visit(const FunctionType &other) override
     {
+
         this->value = (this->type.arg_types == other.arg_types &&
-                       this->type.return_type == other.return_type &&
+                       *(this->type.return_type) == *(other.return_type) &&
                        this->type.is_const == other.is_const);
     }
 

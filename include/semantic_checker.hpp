@@ -42,6 +42,7 @@ class SemanticChecker : public AstVisitor
 
     std::vector<std::unordered_set<std::shared_ptr<Variable>>> variables;
     std::vector<std::unordered_set<std::shared_ptr<Function>>> functions;
+    std::vector<TypePtr> return_stack;
 
     std::vector<size_t> const_scopes;
 
@@ -56,8 +57,11 @@ class SemanticChecker : public AstVisitor
     void check_function_params(const FuncDefStmt &node);
     void check_function_block(const FuncDefStmt &node);
     void check_variable_names(const VarDeclStmt &node);
+    void check_main_function(const FuncDefStmt &node);
 
     void check_var_value_and_type(const VarDeclStmt &node);
+
+    void check_function_return(const FuncDefStmt &node);
 
     std::shared_ptr<Variable> find_variable(const std::wstring &name);
     std::shared_ptr<Function> find_function(const std::wstring &name);
@@ -70,7 +74,10 @@ class SemanticChecker : public AstVisitor
     void register_local_variable(const VarDeclStmt &node);
     void register_local_function(const FuncDefStmt &node);
 
-    void check_main(const VarDeclStmt &node);
+    void register_function_params(const FuncDefStmt &node);
+    void unregister_function_params(const FuncDefStmt &node);
+
+    void check_var_name(const VarDeclStmt &node);
 
     template <typename... Args> void report_error(Args &&...args);
 

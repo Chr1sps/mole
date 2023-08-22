@@ -59,11 +59,11 @@ class Parser
         std::vector<std::optional<ExprNodePtr>> &lambda_args, bool &is_lambda);
     bool eat_comma_or_rparen();
     std::unique_ptr<LambdaCallExpr> return_ellipsis_lambda(
-        const std::wstring &name, std::vector<std::unique_ptr<ExprNode>> &args,
+        ExprNodePtr &expr, std::vector<std::unique_ptr<ExprNode>> &args,
         std::vector<std::optional<std::unique_ptr<ExprNode>>> &lambda_args,
         bool &is_lambda);
     std::unique_ptr<LambdaCallExpr> handle_call_and_lambda_args(
-        const std::wstring &name, std::vector<ExprNodePtr> &args,
+        ExprNodePtr &expr, std::vector<ExprNodePtr> &args,
         std::vector<std::optional<ExprNodePtr>> &lambda_args, bool &is_lambda);
     // expressions
 
@@ -71,7 +71,7 @@ class Parser
     std::unique_ptr<F64Expr> parse_f64();
     std::unique_ptr<ExprNode> parse_paren_expression();
     std::unique_ptr<ExprNode> parse_unary_expression();
-    std::unique_ptr<ExprNode> parse_call_or_lambda(const std::wstring &name);
+    std::unique_ptr<ExprNode> parse_call_or_lambda(ExprNodePtr &expr);
     std::unique_ptr<ExprNode> parse_identifier_expression();
     std::unique_ptr<ExprNode> parse_const_expression();
     std::vector<std::unique_ptr<ExprNode>> parse_call_args();

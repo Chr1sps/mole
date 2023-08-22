@@ -74,11 +74,17 @@ struct UnaryExpr : public ExprNode
 
 struct CallExpr : public ExprNode
 {
-    std::wstring func_name;
+    ExprNodePtr callable;
     std::vector<ExprNodePtr> args;
 
-    CallExpr(const std::wstring &func_name, std::vector<ExprNodePtr> &args)
-        : func_name(func_name), args(std::move(args))
+    CallExpr(ExprNodePtr &callable, std::vector<ExprNodePtr> &args)
+        : callable(std::move(callable)), args(std::move(args))
+    {
+    }
+
+    CallExpr(std::unique_ptr<VariableExpr> &callable,
+             std::vector<ExprNodePtr> &args)
+        : callable(std::move(callable)), args(std::move(args))
     {
     }
 
@@ -90,14 +96,23 @@ struct CallExpr : public ExprNode
 
 struct LambdaCallExpr : public ExprNode
 {
-    std::wstring func_name;
+    ExprNodePtr callable;
     std::vector<std::optional<ExprNodePtr>> args;
     bool is_ellipsis;
 
-    LambdaCallExpr(const std::wstring &func_name,
+    LambdaCallExpr(ExprNodePtr &callable,
                    std::vector<std::optional<ExprNodePtr>> &args,
                    const bool &is_ellipsis)
-        : func_name(func_name), args(std::move(args)), is_ellipsis(is_ellipsis)
+        : callable(std::move(callable)), args(std::move(args)),
+          is_ellipsis(is_ellipsis)
+    {
+    }
+
+    LambdaCallExpr(std::unique_ptr<VariableExpr> &callable,
+                   std::vector<std::optional<ExprNodePtr>> &args,
+                   const bool &is_ellipsis)
+        : callable(std::move(callable)), args(std::move(args)),
+          is_ellipsis(is_ellipsis)
     {
     }
 

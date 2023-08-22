@@ -4,13 +4,39 @@
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
 
+#define DEBUG 1
+
+#if DEBUG
+#include "print_visitor.hpp"
+#include <sstream>
+#endif
+
 void check_source(const std::wstring &source)
 {
     auto locale = Locale("en_US.utf8");
     auto parser = Parser(Lexer::from_wstring(source));
     auto program = parser.parse();
     auto checker = SemanticChecker();
+#if DEBUG
+    auto out_stream = std::wostringstream();
+    auto printer = PrintVisitor(out_stream);
+    printer.visit(*program);
+    try
+    {
+        checker.visit(*program);
+    }
+    catch (const SemanticException &e)
+    {
+        auto result_string = build_wstring(e.wwhat(), "\n", out_stream.str());
+        throw SemanticException(result_string);
+    }
+    catch (const std::exception &e)
+    {
+        throw e;
+    }
+#else
     checker.visit(*program);
+#endif
 }
 
 #define CHECK_VALID(source) REQUIRE_NOTHROW(check_source(source))
@@ -65,6 +91,10 @@ TEST_CASE("Referenced value/function is not in scope.")
             L"fn foo(){let value = 5;} fn goo(){let new_value = value;}");
         CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
                       L"fn goo(){let new_value = boo();}");
+    }
+    SECTION("Function arguments.")
+    {
+        CHECK_VALID(L"fn foo(a: i32, b: i32) => i32 {return a + b;}");
     }
     SECTION("Lambdas.")
     {
@@ -142,6 +172,18 @@ TEST_CASE("Const function cannot reference outside variables that are not "
                   L"    let mut var = 5;"
                   L"    fn const boo() {var = 4;}"
                   L"}");
+    CHECK_VALID(L"let var = 5;"
+                L"fn foo(){let bar = var;}");
+    CHECK_VALID(L"let mut var = 5;"
+                L"fn foo(){var = 4;}");
+    CHECK_VALID(L"fn foo() {"
+                L"    let var = 5;"
+                L"    fn boo() {let bar = var;}"
+                L"}");
+    CHECK_VALID(L"fn foo() {"
+                L"    let mut var = 5;"
+                L"    fn boo() {var = 4;}"
+                L"}");
 }
 
 TEST_CASE("Variable cannot be called 'main'.")
@@ -186,4 +228,17 @@ TEST_CASE("Lambda call expression has mismatched types.")
                   L"fn main(){let val = foo(_, 2.1);}");
     CHECK_INVALID(L"fn foo(a: i32, b: i32){} "
                   L"fn main(){let val = foo(1.05, ...);}");
+}
+
+TEST_CASE("Chaining function calls.")
+{
+    CHECK_VALID(L"fn foo(a: i32, b: i32) => i32 {return a + b;}"
+                L"fn main() {"
+                L"  let boo = foo(32, _);"
+                L"  let goo = boo(32);"
+                L"}");
+    CHECK_VALID(L"fn foo(a: i32, b: i32) => i32 {return a + b;}"
+                L"fn main() {"
+                L"  let boo = foo(32, _)(32);"
+                L"}");
 }
