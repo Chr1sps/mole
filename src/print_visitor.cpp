@@ -1,6 +1,44 @@
 #include "print_visitor.hpp"
 #include <functional>
 
+std::map<BinOpEnum, std::wstring> PrintVisitor::bin_op_strings = {
+    {BinOpEnum::ADD, L"+"},     {BinOpEnum::AND, L"&&"},
+    {BinOpEnum::BIT_AND, L"&"}, {BinOpEnum::BIT_OR, L"|"},
+    {BinOpEnum::BIT_XOR, L"^"}, {BinOpEnum::DIV, L"/"},
+    {BinOpEnum::EQ, L"=="},     {BinOpEnum::EXP, L"^^"},
+    {BinOpEnum::GE, L">="},     {BinOpEnum::GT, L">"},
+    {BinOpEnum::LE, L"<="},     {BinOpEnum::LT, L">"},
+    {BinOpEnum::MOD, L"%"},     {BinOpEnum::MUL, L"*"},
+    {BinOpEnum::NEQ, L"!="},    {BinOpEnum::OR, L"||"},
+    {BinOpEnum::SHL, L"<<"},    {BinOpEnum::SHR, L">>"},
+    {BinOpEnum::SUB, L"-"},
+
+};
+
+std::map<UnaryOpEnum, std::wstring> PrintVisitor::unary_op_strings = {
+    {UnaryOpEnum::BIT_NEG, L"~"},
+    {UnaryOpEnum::DEC, L"--"},
+    {UnaryOpEnum::INC, L"++"},
+    {UnaryOpEnum::NEG, L"!"},
+};
+
+std::map<TypeEnum, std::wstring> PrintVisitor::type_string_map = {
+    {TypeEnum::I8, L"i8"},   {TypeEnum::I16, L"i16"}, {TypeEnum::I32, L"i32"},
+    {TypeEnum::I64, L"i64"}, {TypeEnum::U8, L"u8"},   {TypeEnum::U16, L"u16"},
+    {TypeEnum::U32, L"u32"}, {TypeEnum::U64, L"u64"}, {TypeEnum::F32, L"f32"},
+    {TypeEnum::F64, L"f64"},
+};
+
+std::map<AssignType, std::wstring> PrintVisitor::assign_strings = {
+    {AssignType::NORMAL, L"="},   {AssignType::PLUS, L"+="},
+    {AssignType::MINUS, L"-="},   {AssignType::MUL, L"*="},
+    {AssignType::DIV, L"/="},     {AssignType::EXP, L"^^="},
+    {AssignType::MOD, L"%="},     {AssignType::BIT_NEG, L"~="},
+    {AssignType::BIT_AND, L"&="}, {AssignType::BIT_OR, L"|="},
+    {AssignType::BIT_XOR, L"^="}, {AssignType::SHL, L"<<="},
+    {AssignType::SHR, L">>="},
+};
+
 void PrintVisitor::print_indent()
 {
     this->out << this->indent_if_not_debug();

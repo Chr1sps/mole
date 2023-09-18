@@ -35,7 +35,6 @@ class Lexer
     Token parse_alpha_token();
 
     std::string parse_digits();
-    Token parse_floating_suffix(const double &value);
     Token parse_floating_remainder(std::string &num_str);
     Token parse_number_token();
 

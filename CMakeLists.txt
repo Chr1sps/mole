@@ -62,6 +62,7 @@ set(SOURCES
     "reader.cpp"
     "semantic_checker.cpp"
     "token.cpp"
+    "types.cpp"
 )
 set(TEST_SOURCES
     "reader_tests.cpp"

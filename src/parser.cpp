@@ -407,8 +407,6 @@ std::unique_ptr<Statement> Parser::parse_block_statement()
         return this->parse_return_statement();
     else if (this->current_token == TokenType::KW_EXTERN)
         return this->parse_extern();
-    else if (this->current_token == TokenType::KW_FN)
-        return this->parse_function();
     else if (this->current_token == TokenType::L_BRACKET)
         return this->parse_block();
     else if (this->current_token == TokenType::IDENTIFIER)

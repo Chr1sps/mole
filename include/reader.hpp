@@ -1,7 +1,9 @@
 #ifndef __READER_HPP__
 #define __READER_HPP__
 #include "locale.hpp"
+#include "string_builder.hpp"
 #include <concepts>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -117,16 +119,19 @@ class ConsoleReader : public Reader
 
 class FileReader : public IStreamReader<std::wifstream>
 {
+    std::filesystem::path file_path;
+
   public:
     FileReader(const FileReader &) = delete;
 
-    FileReader(const std::string &file_name, const std::locale &locale)
-        : IStreamReader<std::wifstream>()
+    FileReader(const std::filesystem::path &path, const std::locale &locale)
+        : IStreamReader<std::wifstream>(), file_path(path)
     {
-        this->driver.open(file_name);
+        this->driver.open(path);
         this->driver.imbue(locale);
         if (!this->driver.good())
-            throw std::exception();
+            throw std::ios_base::failure(
+                build_string("File not found: ", this->file_path));
     }
 
     FileReader(const std::string &file_name)

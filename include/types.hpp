@@ -83,8 +83,9 @@ struct FunctionType : public Type
 
 // visitors used for comparing types
 
+bool operator==(const Type &first, const Type &other);
+
 struct EquationVisitor;
-inline bool operator==(const Type &first, const Type &other);
 
 struct SimpleTypeVisitor : public TypeVisitor
 {
@@ -94,20 +95,9 @@ struct SimpleTypeVisitor : public TypeVisitor
     {
     }
 
-    void visit(const SimpleType &other) override
-    {
-        this->value = this->type.type == other.type;
-    }
-
-    void visit(const NeverType &other) override
-    {
-        this->value = false;
-    }
-
-    void visit(const FunctionType &other) override
-    {
-        this->value = false;
-    }
+    void visit(const SimpleType &other) override;
+    void visit(const NeverType &other) override;
+    void visit(const FunctionType &other) override;
 
   private:
     const SimpleType &type;
@@ -117,20 +107,9 @@ struct NeverTypeVisitor : public TypeVisitor
 {
     bool value;
 
-    void visit(const SimpleType &other) override
-    {
-        this->value = false;
-    }
-
-    void visit(const NeverType &other) override
-    {
-        this->value = true;
-    }
-
-    void visit(const FunctionType &other) override
-    {
-        this->value = false;
-    }
+    void visit(const SimpleType &other) override;
+    void visit(const NeverType &other) override;
+    void visit(const FunctionType &other) override;
 };
 
 struct FunctionTypeVisitor : public TypeVisitor
@@ -141,23 +120,9 @@ struct FunctionTypeVisitor : public TypeVisitor
     {
     }
 
-    void visit(const SimpleType &other) override
-    {
-        this->value = false;
-    }
-
-    void visit(const NeverType &other) override
-    {
-        this->value = false;
-    }
-
-    void visit(const FunctionType &other) override
-    {
-
-        this->value = (this->type.arg_types == other.arg_types &&
-                       *(this->type.return_type) == *(other.return_type) &&
-                       this->type.is_const == other.is_const);
-    }
+    void visit(const SimpleType &other) override;
+    void visit(const NeverType &other) override;
+    void visit(const FunctionType &other) override;
 
   private:
     const FunctionType &type;
@@ -172,36 +137,12 @@ struct EquationVisitor : public TypeVisitor
     {
     }
 
-    void visit(const SimpleType &other) override
-    {
-        auto visitor = SimpleTypeVisitor(other);
-        type.accept(visitor);
-        this->value = visitor.value;
-    }
-
-    void visit(const NeverType &other) override
-    {
-        auto visitor = NeverTypeVisitor();
-        type.accept(visitor);
-        this->value = visitor.value;
-    }
-
-    void visit(const FunctionType &other) override
-    {
-        auto visitor = FunctionTypeVisitor(other);
-        type.accept(visitor);
-        this->value = visitor.value;
-    }
+    void visit(const SimpleType &other) override;
+    void visit(const NeverType &other) override;
+    void visit(const FunctionType &other) override;
 
   private:
     const Type &type;
 };
-
-inline bool operator==(const Type &first, const Type &other)
-{
-    auto visitor = EquationVisitor(first);
-    other.accept(visitor);
-    return visitor.value;
-}
 
 #endif

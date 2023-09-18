@@ -138,6 +138,10 @@ TEST_CASE("Function definitions.", "[FUNC]")
     {
         REPR_CHECK(L"fn const foo(x:i32,y:f64)=>i32{}");
     }
+    SECTION("Nested functions.")
+    {
+        CHECK_EXCEPTION(L"fn foo(){fn boo(){}}", ParserException);
+    }
 }
 
 TEST_CASE("In-place lambdas.")
