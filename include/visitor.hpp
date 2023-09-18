@@ -25,16 +25,26 @@ struct BuiltInUnaryOp;
 
 class Visitor
 {
+};
+
+class TypeVisitor : public Visitor
+{
   public:
     virtual void visit(const NeverType &type) = 0;
     virtual void visit(const SimpleType &type) = 0;
     virtual void visit(const FunctionType &type) = 0;
 };
 
+class BinOpVisitor : public Visitor
+{
+  public:
+    virtual void visit(const BuiltInBinOp &op) = 0;
+    virtual void visit(const BuiltInUnaryOp &op) = 0;
+};
+
 class AstVisitor : public Visitor
 {
   public:
-    using Visitor::visit;
     virtual void visit(const VariableExpr &node) = 0;
     virtual void visit(const I32Expr &node) = 0;
     virtual void visit(const F64Expr &node) = 0;
@@ -49,8 +59,5 @@ class AstVisitor : public Visitor
     virtual void visit(const VarDeclStmt &node) = 0;
     virtual void visit(const ExternStmt &node) = 0;
     virtual void visit(const Program &node) = 0;
-
-    virtual void visit(const BuiltInBinOp &op) = 0;
-    virtual void visit(const BuiltInUnaryOp &op) = 0;
 };
 #endif

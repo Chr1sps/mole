@@ -506,23 +506,3 @@ void SemanticChecker::visit(const Program &node)
         func->accept(*this);
     this->leave_scope();
 }
-
-void SemanticChecker::visit(const NeverType &type)
-{
-}
-
-void SemanticChecker::visit(const SimpleType &type)
-{
-}
-
-void SemanticChecker::visit(const FunctionType &type)
-{
-}
-
-void SemanticChecker::visit(const BuiltInBinOp &op)
-{
-}
-
-void SemanticChecker::visit(const BuiltInUnaryOp &op)
-{
-}

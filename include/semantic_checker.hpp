@@ -98,13 +98,6 @@ class SemanticChecker : public AstVisitor
     void visit(const VarDeclStmt &node) override;
     void visit(const ExternStmt &node) override;
     void visit(const Program &node) override;
-
-    void visit(const NeverType &type) override;
-    void visit(const SimpleType &type) override;
-    void visit(const FunctionType &type) override;
-
-    void visit(const BuiltInBinOp &op) override;
-    void visit(const BuiltInUnaryOp &op) override;
 };
 
 template <typename... Args> void SemanticChecker::report_error(Args &&...args)

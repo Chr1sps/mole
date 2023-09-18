@@ -29,7 +29,7 @@ struct Type
     Type() = default;
 
   public:
-    virtual void accept(Visitor &visitor) const = 0;
+    virtual void accept(TypeVisitor &visitor) const = 0;
 
     virtual ~Type()
     {
@@ -46,7 +46,7 @@ struct SimpleType : public Type
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(TypeVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -56,7 +56,7 @@ struct NeverType : public Type
 {
     NeverType() = default;
 
-    void accept(Visitor &visitor) const override
+    void accept(TypeVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -75,7 +75,7 @@ struct FunctionType : public Type
     {
     }
 
-    void accept(Visitor &visitor) const override
+    void accept(TypeVisitor &visitor) const override
     {
         visitor.visit(*this);
     }
@@ -86,7 +86,7 @@ struct FunctionType : public Type
 struct EquationVisitor;
 inline bool operator==(const Type &first, const Type &other);
 
-struct SimpleTypeVisitor : public Visitor
+struct SimpleTypeVisitor : public TypeVisitor
 {
     bool value;
 
@@ -113,7 +113,7 @@ struct SimpleTypeVisitor : public Visitor
     const SimpleType &type;
 };
 
-struct NeverTypeVisitor : public Visitor
+struct NeverTypeVisitor : public TypeVisitor
 {
     bool value;
 
@@ -133,7 +133,7 @@ struct NeverTypeVisitor : public Visitor
     }
 };
 
-struct FunctionTypeVisitor : public Visitor
+struct FunctionTypeVisitor : public TypeVisitor
 {
     bool value;
 
@@ -163,7 +163,7 @@ struct FunctionTypeVisitor : public Visitor
     const FunctionType &type;
 };
 
-struct EquationVisitor : public Visitor
+struct EquationVisitor : public TypeVisitor
 {
 
     bool value;

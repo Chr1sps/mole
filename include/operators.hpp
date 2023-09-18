@@ -41,7 +41,7 @@ enum class UnaryOpEnum
 struct Operator
 {
 
-    virtual void accept(AstVisitor &visitor) = 0;
+    virtual void accept(BinOpVisitor &visitor) = 0;
 
     virtual ~Operator()
     {
@@ -68,7 +68,7 @@ struct BuiltInBinOp : public BinaryOperator
     {
     }
 
-    void accept(AstVisitor &visitor) override
+    void accept(BinOpVisitor &visitor) override
     {
         visitor.visit(*this);
     }
@@ -88,7 +88,7 @@ struct BuiltInUnaryOp : public UnaryOperator
     {
     }
 
-    void accept(AstVisitor &visitor) override
+    void accept(BinOpVisitor &visitor) override
     {
         visitor.visit(*this);
     }

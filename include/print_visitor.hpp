@@ -6,7 +6,7 @@
 #include <map>
 #include <ostream>
 
-class PrintVisitor : public AstVisitor
+class PrintVisitor : public AstVisitor, BinOpVisitor, TypeVisitor
 {
     std::wostream &out;
     std::map<BinOpEnum, std::wstring> bin_op_strings = {
