@@ -32,16 +32,6 @@ void convert_if_not_lambda(
     }
 }
 
-ExprNodePtr return_call_or_lambda(
-    ExprNodePtr &expr, std::vector<ExprNodePtr> &args,
-    std::vector<std::optional<ExprNodePtr>> &lambda_args,
-    const bool &is_lambda)
-{
-    if (is_lambda)
-        return std::make_unique<LambdaCallExpr>(expr, lambda_args, false);
-    else
-        return std::make_unique<CallExpr>(expr, args);
-}
 } // namespace
 
 #define BUILT_IN_BINOP(token_type, precedence, bin_op_type)                   \
@@ -148,11 +138,29 @@ void Parser::assert_next_token(TokenType type, const std::wstring &error_msg)
         this->report_error(error_msg);
 }
 
+void Parser::push_pos()
+{
+    this->position_stack.push_back(this->current_token.position);
+}
+
+Position Parser::pop_pos()
+{
+    auto result = this->position_stack.back();
+    this->position_stack.pop_back();
+    return result;
+}
+
+Position Parser::read_pos()
+{
+    return this->position_stack.back();
+}
+
 // I32 = INT
 std::unique_ptr<I32Expr> Parser::parse_i32()
 {
     auto result = std::make_unique<I32Expr>(
-        std::get<unsigned long long>(this->current_token.value));
+        std::get<unsigned long long>(this->current_token.value),
+        this->current_token.position);
     this->get_new_token();
     return result;
 }
@@ -161,7 +169,8 @@ std::unique_ptr<I32Expr> Parser::parse_i32()
 std::unique_ptr<F64Expr> Parser::parse_f64()
 {
     auto result =
-        std::make_unique<F64Expr>(std::get<double>(this->current_token.value));
+        std::make_unique<F64Expr>(std::get<double>(this->current_token.value),
+                                  this->current_token.position);
     this->get_new_token();
     return result;
 }
@@ -274,6 +283,7 @@ std::unique_ptr<FunctionType> Parser::parse_function_type()
 // SEMICOLON;
 std::unique_ptr<ExternStmt> Parser::parse_extern()
 {
+    this->push_pos();
     this->assert_next_token(TokenType::IDENTIFIER,
                             L"not an identifier in an extern declaration");
     auto name = std::get<std::wstring>(this->current_token.value);
@@ -292,13 +302,15 @@ std::unique_ptr<ExternStmt> Parser::parse_extern()
     this->assert_current_and_eat(TokenType::SEMICOLON,
                                  L"not a semicolon in an extern declaration");
 
-    return std::make_unique<ExternStmt>(name, params, return_type);
+    return std::make_unique<ExternStmt>(name, params, return_type,
+                                        this->pop_pos());
 }
 
 // Function = KW_FN, IDENTIFIER, L_PAREN, Params, R_PAREN,
 // [LAMBDA_ARROW, Type], Block;
 std::unique_ptr<FuncDefStmt> Parser::parse_function()
 {
+    this->push_pos();
     this->get_new_token();
     auto is_const = false;
     if (this->current_token == TokenType::KW_CONST)
@@ -320,7 +332,7 @@ std::unique_ptr<FuncDefStmt> Parser::parse_function()
     auto return_type = this->parse_return_type();
     auto block = this->parse_block();
     return std::make_unique<FuncDefStmt>(name, params, return_type, block,
-                                         is_const);
+                                         is_const, this->pop_pos());
 }
 
 std::optional<TypePtr> Parser::parse_var_type()
@@ -348,6 +360,7 @@ std::optional<ExprNodePtr> Parser::parse_var_value()
 // VarDeclStmt = KW_LET, IDENTIFIER, [COLON, Type], [ASSIGN, Expression];
 std::unique_ptr<VarDeclStmt> Parser::parse_variable_declaration()
 {
+    this->push_pos();
     this->get_new_token();
     auto is_mut = false;
     if (this->current_token == TokenType::KW_MUT)
@@ -367,25 +380,28 @@ std::unique_ptr<VarDeclStmt> Parser::parse_variable_declaration()
     this->assert_current_and_eat(
         TokenType::SEMICOLON, L"no semicolon found in a variable declaration");
 
-    return std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut);
+    return std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut,
+                                         this->pop_pos());
 }
 
 std::unique_ptr<ReturnStmt> Parser::parse_return_statement()
 {
+    this->push_pos();
     this->get_new_token();
     if (this->current_token == TokenType::SEMICOLON)
     {
         this->get_new_token();
-        return std::make_unique<ReturnStmt>();
+        return std::make_unique<ReturnStmt>(this->pop_pos());
     }
     auto expr = this->parse_expression();
     this->assert_current_and_eat(TokenType::SEMICOLON,
                                  L"no semicolon found in a return statement");
-    return std::make_unique<ReturnStmt>(expr);
+    return std::make_unique<ReturnStmt>(expr, this->pop_pos());
 }
 
 std::unique_ptr<AssignStmt> Parser::parse_assign_statement()
 {
+    this->push_pos();
     auto name = std::get<std::wstring>(this->current_token.value);
     this->get_new_token();
     if (!this->assign_map.contains(this->current_token.type))
@@ -396,7 +412,8 @@ std::unique_ptr<AssignStmt> Parser::parse_assign_statement()
     this->assert_current_and_eat(
         TokenType::SEMICOLON,
         L"no semicolon found in an assignment statement");
-    return std::make_unique<AssignStmt>(name, assign_type, value);
+    return std::make_unique<AssignStmt>(name, assign_type, value,
+                                        this->pop_pos());
 }
 
 std::unique_ptr<Statement> Parser::parse_block_statement()
@@ -405,8 +422,6 @@ std::unique_ptr<Statement> Parser::parse_block_statement()
         return this->parse_variable_declaration();
     else if (this->current_token == TokenType::KW_RETURN)
         return this->parse_return_statement();
-    else if (this->current_token == TokenType::KW_EXTERN)
-        return this->parse_extern();
     else if (this->current_token == TokenType::L_BRACKET)
         return this->parse_block();
     else if (this->current_token == TokenType::IDENTIFIER)
@@ -419,15 +434,19 @@ std::unique_ptr<Statement> Parser::parse_block_statement()
 std::unique_ptr<Block> Parser::parse_block()
 {
     std::vector<std::unique_ptr<Statement>> statements;
+    this->push_pos();
     this->get_new_token();
     for (; this->current_token != TokenType::R_BRACKET;)
+    {
         statements.push_back(this->parse_block_statement());
+    }
     this->get_new_token();
-    return std::make_unique<Block>(statements);
+    return std::make_unique<Block>(statements, this->pop_pos());
 }
 
 std::unique_ptr<ExprNode> Parser::parse_paren_expression()
 {
+    this->push_pos();
     this->get_new_token();
     auto expr = this->parse_expression();
     this->assert_current_and_eat(
@@ -441,10 +460,11 @@ std::unique_ptr<ExprNode> Parser::parse_paren_expression()
 
 std::unique_ptr<ExprNode> Parser::parse_unary_expression()
 {
+    this->push_pos();
     auto op = this->unary_map.at(this->current_token.type);
     this->get_new_token();
     auto expr = this->parse_lhs();
-    return std::make_unique<UnaryExpr>(expr, op);
+    return std::make_unique<UnaryExpr>(expr, op, this->pop_pos());
 }
 
 std::unique_ptr<ExprNode> Parser::parse_const_expression()
@@ -493,7 +513,8 @@ std::unique_ptr<LambdaCallExpr> Parser::return_ellipsis_lambda(
     this->get_new_token();
     if (!lambda_args.empty() && lambda_args.back())
     {
-        return std::make_unique<LambdaCallExpr>(expr, lambda_args, true);
+        return std::make_unique<LambdaCallExpr>(expr, lambda_args, true,
+                                                this->pop_pos());
     }
     return this->report_error(L"last in-place lambda argument before the "
                               L"ellipsis must not be a placeholder");
@@ -553,6 +574,18 @@ std::unique_ptr<LambdaCallExpr> Parser::handle_call_and_lambda_args(
     }
 }
 
+ExprNodePtr Parser::return_call_or_lambda(
+    ExprNodePtr &expr, std::vector<ExprNodePtr> &args,
+    std::vector<std::optional<ExprNodePtr>> &lambda_args,
+    const bool &is_lambda)
+{
+    if (is_lambda)
+        return std::make_unique<LambdaCallExpr>(expr, lambda_args, false,
+                                                this->pop_pos());
+    else
+        return std::make_unique<CallExpr>(expr, args, this->pop_pos());
+}
+
 std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(ExprNodePtr &expr)
 {
     std::vector<ExprNodePtr> args;
@@ -580,11 +613,15 @@ std::unique_ptr<ExprNode> Parser::parse_call_or_lambda(ExprNodePtr &expr)
 std::unique_ptr<ExprNode> Parser::parse_identifier_expression()
 {
     auto name = std::get<std::wstring>(this->current_token.value);
+    this->push_pos();
     this->get_new_token();
-    ExprNodePtr expr = std::make_unique<VariableExpr>(name);
+    ExprNodePtr expr = std::make_unique<VariableExpr>(name, this->read_pos());
 
     if (this->current_token != TokenType::L_PAREN)
+    {
+        this->pop_pos();
         return expr;
+    }
 
     return this->parse_call_or_lambda(expr);
 }
@@ -631,7 +668,7 @@ std::unique_ptr<ExprNode> Parser::parse_op_and_rhs(
 
         auto rhs = parse_lhs();
         this->check_next_op_and_parse(lhs, rhs, op);
-        lhs = std::make_unique<BinaryExpr>(lhs, rhs, op);
+        lhs = std::make_unique<BinaryExpr>(lhs, rhs, op, this->pop_pos());
     }
 }
 

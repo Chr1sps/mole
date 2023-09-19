@@ -125,7 +125,7 @@ Token Lexer::parse_alpha_token()
               this->last_char.value() == L'_'));
     if (this->keywords.contains(name))
         return this->keywords.at(name);
-    return Token(TokenType::IDENTIFIER, name);
+    return Token(TokenType::IDENTIFIER, name, this->token_position);
 }
 
 std::string Lexer::parse_digits()
@@ -146,7 +146,7 @@ Token Lexer::parse_floating_remainder(std::string &num_str)
     this->get_new_char();
     num_str += this->parse_digits();
     double value = std::strtod(num_str.c_str(), 0);
-    return Token(TokenType::DOUBLE, value);
+    return Token(TokenType::DOUBLE, value, this->token_position);
 }
 
 Token Lexer::parse_number_token()
@@ -160,7 +160,7 @@ Token Lexer::parse_number_token()
     else
     {
         auto value = std::stoull(num_str.c_str(), 0);
-        return Token(TokenType::INT, value);
+        return Token(TokenType::INT, value, this->token_position);
     }
 }
 
@@ -283,7 +283,7 @@ Token Lexer::get_token()
     this->token_position = this->reader->get_position();
     this->get_nonempty_char();
     if (this->last_char == std::nullopt)
-        return Token(TokenType::END);
+        return Token(TokenType::END, this->token_position);
     else if (this->is_a_number_char())
         return this->parse_number_token();
     else if (this->last_char == std::make_optional<wchar_t>(L'_'))
@@ -330,7 +330,7 @@ Token Lexer::report_error(const std::wstring &msg)
         L"[ERROR] Lexer error at [", this->reader->get_position().line, ",",
         this->reader->get_position().column, "]: ", msg, ".");
     throw LexerException(error_msg);
-    return Token(TokenType::INVALID);
+    return Token(TokenType::INVALID, Position());
 }
 
 bool Lexer::eof() const

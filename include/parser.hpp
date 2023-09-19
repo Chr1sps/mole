@@ -16,6 +16,12 @@ class Parser
     static std::map<TokenType, TypeEnum> type_value_map;
     static std::map<TokenType, AssignType> assign_map;
 
+    std::vector<Position> position_stack;
+
+    void push_pos();
+    Position pop_pos();
+    Position read_pos();
+
     Token get_new_token();
 
     void assert_current_and_eat(TokenType type, const std::wstring &error_msg);
@@ -65,6 +71,10 @@ class Parser
     std::unique_ptr<LambdaCallExpr> handle_call_and_lambda_args(
         ExprNodePtr &expr, std::vector<ExprNodePtr> &args,
         std::vector<std::optional<ExprNodePtr>> &lambda_args, bool &is_lambda);
+    ExprNodePtr return_call_or_lambda(
+        ExprNodePtr &expr, std::vector<ExprNodePtr> &args,
+        std::vector<std::optional<ExprNodePtr>> &lambda_args,
+        const bool &is_lambda);
     // expressions
 
     std::unique_ptr<I32Expr> parse_i32();

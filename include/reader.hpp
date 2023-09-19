@@ -1,6 +1,7 @@
 #ifndef __READER_HPP__
 #define __READER_HPP__
 #include "locale.hpp"
+#include "position.hpp"
 #include "string_builder.hpp"
 #include <concepts>
 #include <filesystem>
@@ -9,26 +10,6 @@
 #include <memory>
 #include <optional>
 #include <sstream>
-
-struct Position
-{
-    unsigned line, column;
-
-    Position(const unsigned &line, const unsigned &column)
-        : line(line), column(column)
-    {
-    }
-
-    Position() : Position(1, 1)
-    {
-    }
-
-    friend bool operator==(const Position &first, const Position &other);
-};
-
-// for debugging purposes
-
-std::ostream &operator<<(std::ostream &os, const Position &pos);
 
 class Reader
 {

@@ -1,5 +1,6 @@
 #ifndef __TOKEN_HPP__
 #define __TOKEN_HPP__
+#include "position.hpp"
 #include <string>
 #include <variant>
 enum class TokenType
@@ -109,27 +110,35 @@ struct Token
 {
     TokenType type;
     std::variant<std::wstring, double, long long, unsigned long long> value;
+    Position position;
     Token() = default;
 
-    Token(const TokenType &type) : type(type), value(0)
+    Token(const TokenType &type, const Position &position = Position())
+        : type(type), value(0), position(position)
     {
     }
 
-    Token(const TokenType &type, const long long &num) : type(type), value(num)
+    Token(const TokenType &type, const long long &num,
+          const Position &position = Position())
+        : type(type), value(num), position(position)
     {
     }
 
-    Token(const TokenType &type, const unsigned long long &num)
-        : type(type), value(num)
+    Token(const TokenType &type, const unsigned long long &num,
+          const Position &position = Position())
+        : type(type), value(num), position(position)
     {
     }
 
-    Token(const TokenType &type, const double &num) : type(type), value(num)
+    Token(const TokenType &type, const double &num,
+          const Position &position = Position())
+        : type(type), value(num), position(position)
     {
     }
 
-    Token(const TokenType &type, const std::wstring &str)
-        : type(type), value(str)
+    Token(const TokenType &type, const std::wstring &str,
+          const Position &position = Position())
+        : type(type), value(str), position(position)
     {
     }
 

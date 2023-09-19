@@ -4,27 +4,37 @@
 #include "semantic_checker.hpp"
 #include <system_error>
 
-int main()
+int main(int argc, char **argv)
 {
-    try
+    if (argc < 2)
     {
-        auto locale = Locale("en_US.utf8");
-        auto parser = Parser(Lexer::from_file("../example.mole"));
-        auto visitor = PrintVisitor(std::wcout);
-        auto checker = SemanticChecker();
-        auto program = parser.parse();
-        checker.visit(*(program));
-        visitor.visit(*(program));
-    }
-    catch (const CompilerException &e)
-    {
-        std::wcerr << e.wwhat() << std::endl;
+        std::cerr << "No filename provided. Usage: ./molec <filename>."
+                  << std::endl;
         return std::make_error_condition(std::errc::invalid_argument).value();
     }
-    catch (const std::ios_base::failure &e)
+    else
     {
-        std::cerr << e.what() << std::endl;
-        return std::make_error_condition(std::errc::io_error).value();
+        try
+        {
+            auto locale = Locale("en_US.utf8");
+            auto parser = Parser(Lexer::from_file(argv[1]));
+            auto visitor = PrintVisitor(std::wcout);
+            auto checker = SemanticChecker();
+            auto program = parser.parse();
+            checker.visit(*(program));
+            visitor.visit(*(program));
+        }
+        catch (const CompilerException &e)
+        {
+            std::wcerr << e.wwhat() << std::endl;
+            return std::make_error_condition(std::errc::invalid_argument)
+                .value();
+        }
+        catch (const std::ios_base::failure &e)
+        {
+            std::cerr << e.what() << std::endl;
+            return std::make_error_condition(std::errc::io_error).value();
+        }
+        return 0;
     }
-    return 0;
 }

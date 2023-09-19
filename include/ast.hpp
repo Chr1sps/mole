@@ -1,6 +1,7 @@
 #ifndef __AST_HPP__
 #define __AST_HPP__
 #include "operators.hpp"
+#include "position.hpp"
 #include "types.hpp"
 #include "visitor.hpp"
 #include <cstdint>
@@ -11,6 +12,7 @@
 
 struct AstNode
 {
+
   public:
     virtual ~AstNode()
     {
@@ -23,6 +25,12 @@ using AstNodePtr = std::unique_ptr<AstNode>;
 
 struct ExprNode : public AstNode
 {
+  protected:
+    Position position;
+
+    ExprNode(const Position &position) : position(position)
+    {
+    }
 };
 
 using ExprNodePtr = std::unique_ptr<ExprNode>;
@@ -31,7 +39,8 @@ struct VariableExpr : public ExprNode
 {
     std::wstring name;
 
-    VariableExpr(const std::wstring &name) : name(name)
+    VariableExpr(const std::wstring &name, const Position &position)
+        : ExprNode(position), name(name)
     {
     }
 
@@ -46,8 +55,9 @@ struct BinaryExpr : public ExprNode
     ExprNodePtr lhs, rhs;
     BinaryPtr op;
 
-    BinaryExpr(ExprNodePtr &lhs, ExprNodePtr &rhs, const BinaryPtr &op)
-        : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
+    BinaryExpr(ExprNodePtr &lhs, ExprNodePtr &rhs, const BinaryPtr &op,
+               const Position &position)
+        : ExprNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
     {
     }
 
@@ -62,7 +72,8 @@ struct UnaryExpr : public ExprNode
     ExprNodePtr expr;
     UnaryPtr op;
 
-    UnaryExpr(ExprNodePtr &expr, UnaryPtr op) : expr(std::move(expr)), op(op)
+    UnaryExpr(ExprNodePtr &expr, UnaryPtr op, const Position &position)
+        : ExprNode(position), expr(std::move(expr)), op(op)
     {
     }
 
@@ -77,14 +88,17 @@ struct CallExpr : public ExprNode
     ExprNodePtr callable;
     std::vector<ExprNodePtr> args;
 
-    CallExpr(ExprNodePtr &callable, std::vector<ExprNodePtr> &args)
-        : callable(std::move(callable)), args(std::move(args))
+    CallExpr(ExprNodePtr &callable, std::vector<ExprNodePtr> &args,
+             const Position &position)
+        : ExprNode(position), callable(std::move(callable)),
+          args(std::move(args))
     {
     }
 
     CallExpr(std::unique_ptr<VariableExpr> &callable,
-             std::vector<ExprNodePtr> &args)
-        : callable(std::move(callable)), args(std::move(args))
+             std::vector<ExprNodePtr> &args, const Position &position)
+        : ExprNode(position), callable(std::move(callable)),
+          args(std::move(args))
     {
     }
 
@@ -102,17 +116,17 @@ struct LambdaCallExpr : public ExprNode
 
     LambdaCallExpr(ExprNodePtr &callable,
                    std::vector<std::optional<ExprNodePtr>> &args,
-                   const bool &is_ellipsis)
-        : callable(std::move(callable)), args(std::move(args)),
-          is_ellipsis(is_ellipsis)
+                   const bool &is_ellipsis, const Position &position)
+        : ExprNode(position), callable(std::move(callable)),
+          args(std::move(args)), is_ellipsis(is_ellipsis)
     {
     }
 
     LambdaCallExpr(std::unique_ptr<VariableExpr> &callable,
                    std::vector<std::optional<ExprNodePtr>> &args,
-                   const bool &is_ellipsis)
-        : callable(std::move(callable)), args(std::move(args)),
-          is_ellipsis(is_ellipsis)
+                   const bool &is_ellipsis, const Position &position)
+        : ExprNode(position), callable(std::move(callable)),
+          args(std::move(args)), is_ellipsis(is_ellipsis)
     {
     }
 
@@ -124,6 +138,10 @@ struct LambdaCallExpr : public ExprNode
 
 struct ConstNode : public ExprNode
 {
+  protected:
+    ConstNode(const Position &position) : ExprNode(position)
+    {
+    }
 };
 
 struct I32Expr : public ConstNode
@@ -131,7 +149,8 @@ struct I32Expr : public ConstNode
     static const std::shared_ptr<SimpleType> type;
     unsigned long long value;
 
-    I32Expr(const unsigned long long &value) : value(value)
+    I32Expr(const unsigned long long &value, const Position &position)
+        : ConstNode(position), value(value)
     {
     }
 
@@ -146,7 +165,8 @@ struct F64Expr : public ConstNode
     static const std::shared_ptr<SimpleType> type;
     double value;
 
-    F64Expr(const double &value) : value(value)
+    F64Expr(const double &value, const Position &position)
+        : ConstNode(position), value(value)
     {
     }
 
@@ -158,6 +178,12 @@ struct F64Expr : public ConstNode
 
 struct Statement : public AstNode
 {
+  protected:
+    Position position;
+
+    Statement(const Position &position) : position(position)
+    {
+    }
 };
 
 using StmtPtr = std::unique_ptr<Statement>;
@@ -166,7 +192,8 @@ struct Block : public Statement
 {
     std::vector<StmtPtr> statements;
 
-    Block(std::vector<StmtPtr> &statements) : statements(std::move(statements))
+    Block(std::vector<StmtPtr> &statements, const Position &position)
+        : Statement(position), statements(std::move(statements))
     {
     }
 
@@ -182,12 +209,13 @@ struct ReturnStmt : public Statement
 {
     std::optional<ExprNodePtr> expr;
 
-    ReturnStmt() : expr({})
+    ReturnStmt(const Position &position) : Statement(position), expr({})
     {
     }
 
-    ReturnStmt(ExprNodePtr &expr)
-        : expr(std::make_optional<ExprNodePtr>(std::move(expr)))
+    ReturnStmt(ExprNodePtr &expr, const Position &position)
+        : Statement(position),
+          expr(std::make_optional<ExprNodePtr>(std::move(expr)))
     {
     }
 
@@ -205,9 +233,10 @@ struct VarDeclStmt : public Statement
     bool is_mut;
 
     VarDeclStmt(const std::wstring &name, std::optional<TypePtr> &type,
-                std::optional<ExprNodePtr> &value, const bool &is_mut)
-        : name(name), type(std::move(type)), initial_value(std::move(value)),
-          is_mut(is_mut)
+                std::optional<ExprNodePtr> &value, const bool &is_mut,
+                const Position &position)
+        : Statement(position), name(name), type(std::move(type)),
+          initial_value(std::move(value)), is_mut(is_mut)
     {
     }
 
@@ -244,8 +273,8 @@ struct AssignStmt : public Statement
     ExprNodePtr value;
 
     AssignStmt(const std::wstring &name, const AssignType &type,
-               ExprNodePtr &value)
-        : name(name), type(type), value(std::move(value))
+               ExprNodePtr &value, const Position &position)
+        : Statement(position), name(name), type(type), value(std::move(value))
     {
     }
 
@@ -277,8 +306,9 @@ struct FuncDefStmt : public Statement
     bool is_const;
 
     FuncDefStmt(const std::wstring &name, std::vector<ParamPtr> &params,
-                TypePtr &return_type, BlockPtr &block, const bool &is_const)
-        : name(name), params(std::move(params)),
+                TypePtr &return_type, BlockPtr &block, const bool &is_const,
+                const Position &position)
+        : Statement(position), name(name), params(std::move(params)),
           return_type(std::move(return_type)), block(std::move(block)),
           is_const(is_const)
     {
@@ -306,8 +336,8 @@ struct ExternStmt : public Statement
     TypePtr return_type;
 
     ExternStmt(const std::wstring &name, std::vector<ParamPtr> &params,
-               TypePtr &return_type)
-        : name(name), params(std::move(params)),
+               TypePtr &return_type, const Position &position)
+        : Statement(position), name(name), params(std::move(params)),
           return_type(std::move(return_type))
     {
     }

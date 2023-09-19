@@ -46,6 +46,7 @@ set(HEADERS
     "locale.hpp"
     "operators.hpp"
     "parser.hpp"
+    "position.hpp"
     "print_visitor.hpp"
     "reader.hpp"
     "semantic_checker.hpp"
@@ -58,6 +59,7 @@ set(SOURCES
     "ast.cpp"
     "lexer.cpp"
     "parser.cpp"
+    "position.cpp"
     "print_visitor.cpp"
     "reader.cpp"
     "semantic_checker.cpp"
@@ -83,8 +85,8 @@ option(COVERAGE "Compile tests with coverage flags." FALSE)
 option(TESTS "Compile the tests executables." TRUE)
 
 if(NOT COVERAGE)
-    add_executable(out main.cpp)
-    target_link_libraries(out PRIVATE mole)
+    add_executable(molec main.cpp)
+    target_link_libraries(molec PRIVATE mole)
 endif()
 
 if(TESTS)
