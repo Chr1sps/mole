@@ -26,7 +26,7 @@ class Lexer
     std::locale locale;
     Position token_position;
 
-    static const std::map<std::wstring, Token> keywords;
+    static const std::map<std::wstring, TokenType> keywords;
     static const std::map<wchar_t, CharNode> char_nodes;
 
     std::optional<wchar_t> get_new_char();

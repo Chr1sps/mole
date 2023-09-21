@@ -9,7 +9,7 @@
         wstr, TokenType::token_type                                           \
     }
 
-const std::map<std::wstring, Token> Lexer::keywords{
+const std::map<std::wstring, TokenType> Lexer::keywords{
     KEYWORD(L"fn", KW_FN),
     KEYWORD(L"extern", KW_EXTERN),
     KEYWORD(L"mut", KW_MUT),
@@ -124,7 +124,7 @@ Token Lexer::parse_alpha_token()
              (std::isalnum(this->last_char.value(), this->locale) ||
               this->last_char.value() == L'_'));
     if (this->keywords.contains(name))
-        return this->keywords.at(name);
+        return Token(this->keywords.at(name), this->token_position);
     return Token(TokenType::IDENTIFIER, name, this->token_position);
 }
 
@@ -189,7 +189,7 @@ Token Lexer::parse_operator()
             }
         }
     }
-    return Token(return_type);
+    return Token(return_type, this->token_position);
 }
 
 std::optional<Token> Lexer::parse_possible_slash_token()
@@ -212,10 +212,11 @@ std::optional<Token> Lexer::parse_possible_slash_token()
         else if (this->last_char.value() == L'=')
         {
             this->get_new_char();
-            return std::optional<Token>(TokenType::ASSIGN_SLASH);
+            return std::optional<Token>(
+                Token(TokenType::ASSIGN_SLASH, this->token_position));
         }
     }
-    return std::optional<Token>(TokenType::SLASH);
+    return std::optional<Token>(Token(TokenType::SLASH, this->token_position));
 }
 
 Token Lexer::parse_slash()
@@ -274,14 +275,14 @@ Token Lexer::parse_underscore()
     else
     {
         this->get_new_char();
-        return Token(TokenType::PLACEHOLDER);
+        return Token(TokenType::PLACEHOLDER, this->token_position);
     }
 }
 
 Token Lexer::get_token()
 {
-    this->token_position = this->reader->get_position();
     this->get_nonempty_char();
+    this->token_position = this->reader->get_position();
     if (this->last_char == std::nullopt)
         return Token(TokenType::END, this->token_position);
     else if (this->is_a_number_char())

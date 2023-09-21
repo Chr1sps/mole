@@ -113,31 +113,30 @@ struct Token
     Position position;
     Token() = default;
 
-    Token(const TokenType &type, const Position &position = Position())
+    Token(const TokenType &type, const Position &position)
         : type(type), value(0), position(position)
     {
     }
 
     Token(const TokenType &type, const long long &num,
-          const Position &position = Position())
+          const Position &position)
         : type(type), value(num), position(position)
     {
     }
 
     Token(const TokenType &type, const unsigned long long &num,
-          const Position &position = Position())
+          const Position &position)
         : type(type), value(num), position(position)
     {
     }
 
-    Token(const TokenType &type, const double &num,
-          const Position &position = Position())
+    Token(const TokenType &type, const double &num, const Position &position)
         : type(type), value(num), position(position)
     {
     }
 
     Token(const TokenType &type, const std::wstring &str,
-          const Position &position = Position())
+          const Position &position)
         : type(type), value(str), position(position)
     {
     }
