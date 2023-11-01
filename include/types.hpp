@@ -85,7 +85,7 @@ struct FunctionType : public Type
 
 bool operator==(const Type &first, const Type &other);
 
-struct EquationVisitor;
+struct TypeEquationVisitor;
 
 struct SimpleTypeVisitor : public TypeVisitor
 {
@@ -128,12 +128,12 @@ struct FunctionTypeVisitor : public TypeVisitor
     const FunctionType &type;
 };
 
-struct EquationVisitor : public TypeVisitor
+struct TypeEquationVisitor : public TypeVisitor
 {
 
     bool value;
 
-    EquationVisitor(const Type &type) : type(type)
+    TypeEquationVisitor(const Type &type) : type(type)
     {
     }
 

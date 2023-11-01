@@ -47,21 +47,21 @@ void FunctionTypeVisitor::visit(const FunctionType &other)
                    this->type.is_const == other.is_const);
 }
 
-void EquationVisitor::visit(const SimpleType &other)
+void TypeEquationVisitor::visit(const SimpleType &other)
 {
     auto visitor = SimpleTypeVisitor(other);
     type.accept(visitor);
     this->value = visitor.value;
 }
 
-void EquationVisitor::visit(const NeverType &other)
+void TypeEquationVisitor::visit(const NeverType &other)
 {
     auto visitor = NeverTypeVisitor();
     type.accept(visitor);
     this->value = visitor.value;
 }
 
-void EquationVisitor::visit(const FunctionType &other)
+void TypeEquationVisitor::visit(const FunctionType &other)
 {
     auto visitor = FunctionTypeVisitor(other);
     type.accept(visitor);
@@ -70,7 +70,7 @@ void EquationVisitor::visit(const FunctionType &other)
 
 bool operator==(const Type &first, const Type &other)
 {
-    auto visitor = EquationVisitor(first);
+    auto visitor = TypeEquationVisitor(first);
     other.accept(visitor);
     return visitor.value;
 }

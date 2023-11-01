@@ -378,5 +378,4 @@ struct Program : public AstNode
 };
 
 using ProgramPtr = std::unique_ptr<Program>;
-// struct
 #endif

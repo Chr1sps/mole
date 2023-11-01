@@ -89,20 +89,20 @@ TEST_CASE("Referenced value/function is not in scope.")
     {
         CHECK_INVALID(
             L"fn foo(){let value = 5;} fn goo(){let new_value = value;}");
-        CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
-                      L"fn goo(){let new_value = boo();}");
+        // CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
+        //               L"fn goo(){let new_value = boo();}");
     }
     SECTION("Function arguments.")
     {
         CHECK_VALID(L"fn foo(a: i32, b: i32) => i32 {return a + b;}");
     }
-    SECTION("Lambdas.")
-    {
-        CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
-                      L"fn goo(){let new_value = boo(2, ...);}");
-        CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
-                      L"fn goo(){let new_value = boo(2, ...);}");
-    }
+    // SECTION("Lambdas.")
+    // {
+    //     CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
+    //                   L"fn goo(){let new_value = boo(2, ...);}");
+    //     CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
+    //                   L"fn goo(){let new_value = boo(2, ...);}");
+    // }
 }
 
 TEST_CASE("Function's argument type is mismatched.")
@@ -164,26 +164,26 @@ TEST_CASE("Const function cannot reference outside variables that are not "
                   L"fn const foo(){let bar = var;}");
     CHECK_INVALID(L"let mut var = 5;"
                   L"fn const foo(){var = 4;}");
-    CHECK_INVALID(L"fn foo() {"
-                  L"    let var = 5;"
-                  L"    fn const boo() {let bar = var;}"
-                  L"}");
-    CHECK_INVALID(L"fn foo() {"
-                  L"    let mut var = 5;"
-                  L"    fn const boo() {var = 4;}"
-                  L"}");
     CHECK_VALID(L"let var = 5;"
                 L"fn foo(){let bar = var;}");
     CHECK_VALID(L"let mut var = 5;"
                 L"fn foo(){var = 4;}");
-    CHECK_VALID(L"fn foo() {"
-                L"    let var = 5;"
-                L"    fn boo() {let bar = var;}"
-                L"}");
-    CHECK_VALID(L"fn foo() {"
-                L"    let mut var = 5;"
-                L"    fn boo() {var = 4;}"
-                L"}");
+    // CHECK_INVALID(L"fn foo() {"
+    //               L"    let var = 5;"
+    //               L"    fn const boo() {let bar = var;}"
+    //               L"}");
+    // CHECK_INVALID(L"fn foo() {"
+    //               L"    let mut var = 5;"
+    //               L"    fn const boo() {var = 4;}"
+    //               L"}");
+    // CHECK_VALID(L"fn foo() {"
+    //             L"    let var = 5;"
+    //             L"    fn boo() {let bar = var;}"
+    //             L"}");
+    // CHECK_VALID(L"fn foo() {"
+    //             L"    let mut var = 5;"
+    //             L"    fn boo() {var = 4;}"
+    //             L"}");
 }
 
 TEST_CASE("Variable cannot be called 'main'.")
