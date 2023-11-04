@@ -1,5 +1,210 @@
 # Mole programming language specification
 
+## Table of contents
+
+- [Mole programming language specification](#mole-programming-language-specification)
+  - [Table of contents](#table-of-contents)
+  - [Type system](#type-system)
+    - [Supported types](#supported-types)
+    - [Type casting](#type-casting)
+  - [Operators](#operators)
+    - [Expression precedence](#expression-precedence)
+  - [String support](#string-support)
+    - [Escape sequences](#escape-sequences)
+  - [Control flow](#control-flow)
+    - [`if () {} else {}` statement](#if---else--statement)
+    - [`while` loop](#while-loop)
+  - [Functions](#functions)
+  - [Constant functions](#constant-functions)
+  - [Lambda calls](#lambda-calls)
+  - [In-place lambdas](#in-place-lambdas)
+  - [Pattern matching](#pattern-matching)
+  - [Code examples](#code-examples)
+  - [Usage](#usage)
+  - [Grammar](#grammar)
+    - [Lexer helper rules](#lexer-helper-rules)
+    - [Lexer rules](#lexer-rules)
+    - [Intermediate rules](#intermediate-rules)
+    - [AST rules](#ast-rules)
+  - [Compiler structure](#compiler-structure)
+    - [Error handling](#error-handling)
+  - [Testing](#testing)
+
+<!-- ## Introduction -->
+
+## Type system
+
+Mole is a strongly, statically typed language with type inference.
+
+### Supported types
+
+The language supports following types:
+
+- `i32` (equivalent of `int` in other languages)
+- `f64` (equivalent of `double` in other languages)
+- `bool`
+- `char`
+- `str` (this type *only* works as a reference type: `&str`).
+
+It also supports both non-mutable and mutable references (`&` and
+`&mut`, respectfully) for aliasing purposes.
+
+### Type casting
+
+Type casting can *only* work between primitive, non-referenced types.
+
+The `as` operator is used to cast values between types.
+
+The following table shows which types can be casted between:
+
+|From\To|bool|i32|f64|char|
+|:-----:|:--:|:-:|:-:|:--:|
+|  bool |  ✓ | X | X | X  |
+|  i32  |  X | ✓ | ✓ | X  |
+|  f64  |  X | ✓ | ✓ | X  |
+|  char |  X | X | X | ✓  |
+
+Unlike languages such as C++ and JavaScript, Mole has no concept of truthy
+values in order to emphasise clean code by removing implicit casts that may
+introduce confusion.
+
+## Operators
+
+### Expression precedence
+
+The expressions in Mole are evaluated in the following order:
+
+|   Operator/expression     |Associativity|
+|:-------------------------:|:-----------:|
+|Lambda calls, function calls, array indexing||
+|Unary operators `++`,`--`,`!`,`~`,`-`|   |
+|Casting operator `as`      |left-to-right|
+|`^^`                       |right-to-left|
+|`*`,`/`,`%`                |left-to-right|
+|`+`,`-`                    |left-to-right|
+|`<<`,`>>`                  |left-to-right|
+|`&`                        |left-to-right|
+|`^`                        |left-to-right|
+|`\|`                       |left-to-right|
+|`==`,`!=`,`<`,`<=`,`>=`,`>`|left-to-right|
+|`&&`                       |left-to-right|
+|`\|\|`                     |left-to-right|
+
+## String support
+
+### Escape sequences
+
+Shown below is the list of escape sequences used in Mole:
+
+|Sequence|Meaning    |
+|----|---------------|
+|`\\`|Backslash      |
+|`\n`|Newline        |
+|`\t`|Carriage return|
+|`\'`|Single apostrophe|
+|`\"`|Double apostrophe|
+|`\NN`|Arbitrary ASCII character (`NN` indicates two-digit hexadecimal code)|
+
+## Control flow
+
+### `if () {} else {}` statement
+
+### `while` loop
+
+## Functions
+
+## Constant functions
+
+*Constant functions* are a feature that allow a programmer to signify that a
+function doesn't change the outside state.
+
+When a function is marked `const`, the compiler will check if there are any
+reads/writes to a non-constant variable outside of the function scope (but
+**not** taking into account passed parameters, as these are handled through
+parameter type declarations) and throw an error when such a situation occurs.
+
+```txt
+// this works
+fn const foo(a: i32, b: i32) {
+    return a + b;
+}
+
+// this works - only the `a` parameter changes, not the outside state
+fn const foo(a: &mut i32, b: i32) {
+    a += b;
+}
+
+let mut some_value = 0;
+
+// this works
+fn boo() {
+    some_value = 1;
+}
+
+// this does NOT work - `some_value` is changed
+// despite the function being constant
+fn const boo() {
+    some_value = 2;
+}
+```
+
+## Lambda calls
+
+```txt
+
+fn main() {
+    let foo = () => {};
+}
+
+```
+
+## In-place lambdas
+
+*In-place lambdas* are inpired by function currying from functional
+programming. It's a syntactic sugar of partially applying function arguments.
+
+```txt
+fn foo(a: i32, b: i32, c: i32, d: i32) => i32 {
+    return a+b+c+d;
+}
+
+fn main() {
+    let a: fn(i32,i32,i32) => i32 = foo(1, ...);
+    let b: fn(i32) => i32 = foo(1, _, 3, 4);
+
+    // useful for delaying function execution, for example in a button handler
+    let c: fn() => i32 = foo(1, 2, 3, 4, ...); 
+
+    //both styles can be mixed...
+    let d: fn(i32,i32,i32) => i32 = foo(_, 2, ...); 
+
+    //...provided the `_` token isn't next to the `...` token
+    // this doesn't work
+    let e = foo(1, _, ...);
+}
+```
+
+## Pattern matching
+
+Mole has a simple pattern matching system that works with primitive,
+non-referenced types:
+
+```txt
+fn main() {
+    let value = 5;
+    match value {
+        0 => {value = 1;}
+        1 | 2 => {value = 0;}
+        value < 0 => {value = 2;}
+        _ => {value = 3;}
+    };
+}
+```
+
+## Code examples
+
+## Usage
+
 ## Grammar
 
 Below is an Extended Backus-Nauf Form specification of Mole's grammar. It is
@@ -34,6 +239,9 @@ alpha = ? any alphabetic utf-8 char ?;
 alphanum = ? any alphanumeric utf-8 char ?;
 identifier_char = alpha |
                   "_";
+escaped_char = "\n" |
+               "\r" |
+
 ```
 
 ### Lexer rules
@@ -51,6 +259,11 @@ KW_MUT = "mut";
 KW_CONST = "const";
 KW_IF = "if";
 KW_ELSE = "else";
+KW_WHILE = "while";
+KW_CONTINUE = "continue";
+KW_BREAK = "break";
+KW_AS = "as";
+KW_STR = "str";
 
 TYPE_BOOL = "bool";
 
@@ -150,6 +363,7 @@ BUILT_IN_TYPE = TYPE_BOOL |
 TYPE = NEVER_TYPE |
        SIMPLE_TYPE |
        FUNCTION_TYPE;
+       
 TYPES = [TYPE, {COMMA, TYPE}];
 
 TYPE_SPECIFIER = COLON, TYPE;
@@ -157,9 +371,9 @@ INITIAL_VALUE = ASSIGN, EXPRESSION;
 
 RETURN_TYPE = [LAMBDA_ARROW, TYPE];
 
-TOP_LEVEL_STATEMENT = FUNCTION |
-                      EXTERN |
-                      VAR_DECL;
+TOP_LEVEL_STATEMENT = FUNC_DEF_STMT |
+                      EXTERN_STMT |
+                      VAR_DECL_STMT;
 
 ARG = EXPRESSION;
 ARGS = [ARG, {COMMA, ARG}];
@@ -272,3 +486,73 @@ BLOCK = L_BRACKET, {NON_FUNC_STMT}, R_BRACKET;
 
 PROGRAM = {TOP_LEVEL_STATEMENT};
 ```
+
+## Compiler structure
+
+The compiler consists of two parallel threads. The main thread is responsible
+for outputting error information to the user, while the joined thread contains
+the entire compiler pipeline. The pipeline sends generated warnings and errors
+to the main thread through a synchonized queue.
+
+Compiler pipeline components:
+
+- `Reader` - provides a common interface for working with any type of input
+(files, standard input, etc.) that allows other classes to extract characters
+from the source as well as get data about their position in the code
+- `Lexer` - lazily fetches characters provided by the `Reader` and generates
+a sequence of tokens based on the predefined grammar rules
+- `Parser` - lazily fetches tokens from the `Lexer` and generates an abstract
+syntax tree
+- `SemanticChecker` - visits the created AST and checks if it is
+semantically correct
+- `CodeGenerator` - visits the now syntactically and semantically correct AST
+and generates LLVM IR.
+
+Other components:
+
+- `ErrorHandler` - runs in the main thread of the compiler and reports all the
+warnings and errors raised by the pipeline.
+
+### Error handling
+
+Depending on where in the pipeline an error occured, the compiler may or may
+not continue processing the code in order to gather more information and
+report more issues. The behaviour is described as follows:
+
+- when an error occurs in the `Reader` or the `Lexer`, the compiler will
+immediately stop processing the code as either there is an issue with the
+source file that prevents reading from it or the source contains sequences that
+cannot be converted into tokens, which prevents any further code analysis
+- when an error occurs in the `Parser` or the `SemanticChecker` the compiler
+will continue analysing the code and outputting error messages, but will
+**not** pass the result to the next pipeline component in line
+- when an error occurs in the `CodeGenerator` the compiler will immediately
+stop as this indicates issues with code generation that may cause the output to
+be corrupted.
+
+## Testing
+
+Each of the compiler pipeline components shall be tested both using unit tests
+and integration tests:
+
+- `Reader` - must provide capabilities of character and position extraction
+(unit tests)
+- `Lexer` - must be able to process an input provided by a `Reader` into tokens
+(integration tests)
+- `Parser` - must be able to process both preset token sequences (unit tests)
+as well as ones generated by a `Lexer` from source code (integration tests).
+Due to the complexity of the AST it is preferred to validate the output using a
+custom printing visitor class that can visit the tree and generate an
+informative string about the code that can then be checked against a pattern
+- `SemanticChecker` - due to the complexity of defining an AST structure, the
+`SemanticChecker` shall utilize the previous pipeline components (that have
+presumably been tested beforehand) to generate an AST based on source code.
+Due to the `SemanticChecker` not generating any intermediate artifacts to be
+passed onward when working on an AST, the main subject of tests is checking if
+the component correctly asserts the code's semantic validity by checking
+generated errors in the `ErrorHandler`
+
+Additionally, all the classes must correctly report errors to an `ErrorHandler`
+(integration tests).
+
+As a final step
