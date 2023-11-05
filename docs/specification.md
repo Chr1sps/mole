@@ -10,27 +10,20 @@
   - [Operators](#operators)
     - [Expression precedence](#expression-precedence)
   - [String support](#string-support)
-    - [Escape sequences](#escape-sequences)
+    - [String escape sequences](#string-escape-sequences)
   - [Control flow](#control-flow)
-    - [`if () {} else {}` statement](#if---else--statement)
-    - [`while` loop](#while-loop)
   - [Functions](#functions)
-  - [Constant functions](#constant-functions)
-  - [Lambda calls](#lambda-calls)
-  - [In-place lambdas](#in-place-lambdas)
+    - [Constant functions](#constant-functions)
+    - [Externing functions](#externing-functions)
+    - [In-place lambdas](#in-place-lambdas)
   - [Pattern matching](#pattern-matching)
-  - [Code examples](#code-examples)
-  - [Usage](#usage)
+  - [Comments](#comments)
   - [Grammar](#grammar)
-    - [Lexer helper rules](#lexer-helper-rules)
     - [Lexer rules](#lexer-rules)
-    - [Intermediate rules](#intermediate-rules)
-    - [AST rules](#ast-rules)
+    - [Parser rules](#parser-rules)
   - [Compiler structure](#compiler-structure)
     - [Error handling](#error-handling)
   - [Testing](#testing)
-
-<!-- ## Introduction -->
 
 ## Type system
 
@@ -40,35 +33,65 @@ Mole is a strongly, statically typed language with type inference.
 
 The language supports following types:
 
-- `i32` (equivalent of `int` in other languages)
-- `f64` (equivalent of `double` in other languages)
-- `bool`
-- `char`
-- `str` (this type *only* works as a reference type: `&str`).
+- `i32` - equivalent of `int` in other languages
+- `u32` - unsigned equivalent of `i32`
+- `f64` - equivalent of `double` in other languages
+- `bool` - boolean type with values `true` and `false`
+- `char` - equivalent of `wchar_t` in C++
+- `str` - equivalent of an array of `wchar_t` in C++.
 
 It also supports both non-mutable and mutable references (`&` and
 `&mut`, respectfully) for aliasing purposes.
 
+Due to fact that the `str` type has string literals that are heap-allocated the
+type can *only* exist as a non-mutable reference `&str`.
+
 ### Type casting
 
-Type casting can *only* work between primitive, non-referenced types.
+Type casting can *only* work between primitive, non-referenced types (`&str`
+cannot be cast into anything else).
 
 The `as` operator is used to cast values between types.
 
 The following table shows which types can be casted between:
 
-|From\To|bool|i32|f64|char|
-|:-----:|:--:|:-:|:-:|:--:|
-|  bool |  ✓ | X | X | X  |
-|  i32  |  X | ✓ | ✓ | X  |
-|  f64  |  X | ✓ | ✓ | X  |
-|  char |  X | X | X | ✓  |
+|From\To|bool|u32|i32|f64|char|
+|:-----:|:--:|:-:|:-:|:-:|:--:|
+|  bool |  ✓ | ✓ | ✓ | ✓ | X  |
+|  u32  |  X | ✓ | ✓ | ✓ | ✓  |
+|  i32  |  X | ✓ | ✓ | ✓ | ✓  |
+|  f64  |  X | ✓ | ✓ | ✓ | X  |
+|  char |  X | ✓ | ✓ | X | ✓  |
 
 Unlike languages such as C++ and JavaScript, Mole has no concept of truthy
-values in order to emphasise clean code by removing implicit casts that may
-introduce confusion.
+values or implicit type conversions in order to emphasise on code clarity.
 
 ## Operators
+
+All operators listed below are binary, unless indicated otherwise:
+
+|Operator type|Operators|
+|:-:|:-:|
+|Arithmetical|`+`, `-`, `*`, `/`, `%`, unary `-`, unary `++`, unary `--`|
+|Comparison|`==`,`!=`,`<`,`<=`,`>=`,`>`|
+|Bitwise|`<<`, `>>`, `&`, `\|`, `^`, unary `~`|
+|Logical|`&&`,`\|\|`, unary `!`               |
+|Cast|`as` (takes type name as a second parameter)|
+|Reference|Unary `&`|
+
+Different types have different operator support:
+
+|Operator\Type|`bool`|`u32`|`i32`|`f64`|`char`|`str`   |
+|:-----------:|:----:|:---:|:---:|:---:|:----:|:------:|
+|Arithmetical |X     |  ✓  |✓    |✓    |X     |only `+`|
+|Comparison   |only `==`,`!=`|✓|✓|✓|✓|only `==`,`!=`|
+|Bitwise      |X|✓|✓|X|X|X|
+|Logical      |✓|X|X|X|X|X|
+|Cast         |✓|✓|✓|✓|✓|✓*|
+|Reference    |✓|✓|✓|✓|✓|✓|
+
+\* `str` type has no casts supported, but the casting capability is still
+supported
 
 ### Expression precedence
 
@@ -76,7 +99,7 @@ The expressions in Mole are evaluated in the following order:
 
 |   Operator/expression     |Associativity|
 |:-------------------------:|:-----------:|
-|Lambda calls, function calls, array indexing||
+|Lambda calls, function calls, string indexing||
 |Unary operators `++`,`--`,`!`,`~`,`-`|   |
 |Casting operator `as`      |left-to-right|
 |`^^`                       |right-to-left|
@@ -92,7 +115,14 @@ The expressions in Mole are evaluated in the following order:
 
 ## String support
 
-### Escape sequences
+Mole support an equivalent of `wchar_t` based strings from C++, alongside a
+basic set of operators:
+
+- `+` for string concatenation (works both with other strings and with `char`s)
+- `[N]` for indexing (where `N` indicates an `u32` value)
+- `==` and `!=` for comparison.
+
+### String escape sequences
 
 Shown below is the list of escape sequences used in Mole:
 
@@ -103,17 +133,97 @@ Shown below is the list of escape sequences used in Mole:
 |`\t`|Carriage return|
 |`\'`|Single apostrophe|
 |`\"`|Double apostrophe|
-|`\NN`|Arbitrary ASCII character (`NN` indicates two-digit hexadecimal code)|
+|`\0`|Null character|
+|`\{NN..}`|Arbitrary UTF-8 character (`NN..` indicates 2-,4-,6- or 8-digit hexadecimal code)|
 
 ## Control flow
 
-### `if () {} else {}` statement
+Mole has two constructs that define control flow in a program:
 
-### `while` loop
+- the `if` statement takes a boolean value in the parentheses and executes the
+following statement(s) if the condition evaluates to `true`; the statement can
+be followed with the `else` section that executes when the condition is
+evaluated as `false`
+
+```txt
+// ...
+
+if (condition) {
+
+    // do something if condition is true
+
+} else { 
+
+    // do something if condition is false
+
+}
+
+// ...
+```
+
+- the `while` loop takes a boolean value in the parentheses and continues
+  evaluating the statement(s) associated with the loop as long as the condition
+  evaluates to `true`
+
+  ```txt
+  // ...
+
+  let mut a = 0;
+  let mut i = 5;
+
+  while (i > 0) {
+      a += i;
+      --i;
+  }
+
+
+  // ...
+  ```
+
+When in the while loop, `continue` and `break` statement can be used to either
+immediately skip to the next iteration of the loop or stop proccesing and exit
+the loop. Note that both of these instructions only work for the innermost loop
+currently in the scope:
+
+```txt
+
+while (true) {
+    while (true) {
+        if (a == 0) {
+            break;
+        }
+        --a;
+    }
+    // this loop still executes after the inner break statement
+}
+
+```
 
 ## Functions
 
-## Constant functions
+Arguments in functions can be passed by value or by reference (either
+constant or non-mutable):
+
+```txt
+fn foo(a: i32, b: i32) => i32 {
+    return a + b;
+}
+
+fn boo(a: &mut i32, b: &i32) {
+    a += b;
+}
+```
+
+Functions can then be called as follows:
+
+```txt
+foo(32,32);
+let mut a = 0;
+let b = 3;
+boo(a, b);
+```
+
+### Constant functions
 
 *Constant functions* are a feature that allow a programmer to signify that a
 function doesn't change the outside state.
@@ -124,41 +234,45 @@ reads/writes to a non-constant variable outside of the function scope (but
 parameter type declarations) and throw an error when such a situation occurs.
 
 ```txt
-// this works
+// this compiles
 fn const foo(a: i32, b: i32) {
     return a + b;
 }
 
-// this works - only the `a` parameter changes, not the outside state
+// this compiles - only the `a` parameter changes, not the outside state
 fn const foo(a: &mut i32, b: i32) {
     a += b;
 }
 
 let mut some_value = 0;
 
-// this works
+// this compiles
 fn boo() {
     some_value = 1;
 }
 
-// this does NOT work - `some_value` is changed
+// this does NOT compile - `some_value` is changed
 // despite the function being constant
 fn const boo() {
     some_value = 2;
 }
 ```
 
-## Lambda calls
+### Externing functions
+
+The language provides a syntax for importing external functions from other
+languages, such as C or C++:
 
 ```txt
-
-fn main() {
-    let foo = () => {};
-}
-
+extern isalnum(ch: i32) => i32;
+extern exit(exit_code: i32);
+extern getchar() => i32;
 ```
 
-## In-place lambdas
+These functions are by default non-constant, as the language cannot ensure that
+they obey the rules of accessing outside variables.
+
+### In-place lambdas
 
 *In-place lambdas* are inpired by function currying from functional
 programming. It's a syntactic sugar of partially applying function arguments.
@@ -190,32 +304,65 @@ Mole has a simple pattern matching system that works with primitive,
 non-referenced types:
 
 ```txt
-fn main() {
-    let value = 5;
-    match value {
-        0 => {value = 1;}
-        1 | 2 => {value = 0;}
-        value < 0 => {value = 2;}
-        _ => {value = 3;}
-    };
-}
+let value = 5;
+match value {
+    0 => {value = 1;}           // matches 0
+    1 | 2 => {value = 0;}       // matches 1 or 2
+    _ => {value = 3;}           // matches any value leftover
+};
 ```
 
-## Code examples
+The example above shows all 3 possible scenarios of patterns:
 
-## Usage
+- comparing against a single literal
+- comparing against multiple literals joined by the `|` sign
+- matching against all values left with the dummy `_` pattern.
+
+Pattern matching only works against compile-time literals and expressions that
+are based on them.
+
+Not covering all the cases in the `match` statement will raise a warning from
+the compiler. If a value matched against doesn't match any of the cases in that
+case the behaviour is undefined:
+
+```txt
+let value = 3;
+// code below is undefined behaviour
+match value {
+    0 => {value = 1;}           
+    1 | 2 => {value = 0;}       
+    value < 0 => {value = 2;}   
+};
+```
+
+## Comments
+
+Mole support two types of comments:
+
+- single line comments: `// this is a single line comment`
+- multi-line comments:
+
+  ```txt
+  /*
+  this is a multi-line comment
+  */
+  ```
+
+These comments are ignored by the compiler during the lexing phase.
 
 ## Grammar
 
 Below is an Extended Backus-Nauf Form specification of Mole's grammar. It is
-divided into four sections:
+divided into two sections:
 
-- lexer helper rules - helper rules for lexeme production
-- lexer rules - rules that specify lexeme production
-- intermediate rules - helper rules for transitioning from lexemes to AST
-- AST rules - rules that specify AST nodes.
+- lexer rules - rules that specify lexeme productions
+- parser rules - rules that specify AST nodes.
 
-### Lexer helper rules
+Because the lexer omits all the comments and doesn't generate any tokens
+related to them, the parser rules assume that comments are treated as
+whitespace.
+
+### Lexer rules
 
 ```ebnf
 non_zero = "1" |
@@ -243,8 +390,6 @@ escaped_char = "\n" |
                "\r" |
 
 ```
-
-### Lexer rules
 
 ```ebnf
 IDENTIFIER = identifier_char, {identifier_char};
@@ -344,7 +489,7 @@ END = ? any character (or lack thereof) representing EOF ?;
 
 ```
 
-### Intermediate rules
+### Parser rules
 
 ```ebnf
 BUILT_IN_TYPE = TYPE_BOOL |
@@ -424,11 +569,7 @@ ASSIGN_OP = ASSIGN |
 
 MUT_VAR_DECL = KW_LET, KW_MUT, IDENTIFIER, (TYPE_SPECIFIER | INITIAL_VALUE | (TYPE_SPECIFIER, INITIAL_VALUE)), SEMICOLON;
 CONST_VAR_DECL = KW_LET, IDENTIFIER, (TYPE_SPECIFIER), INITIAL_VALUE, SEMICOLON;
-```
 
-### AST rules
-
-```ebnf
 NEVER_TYPE = NEG;
 SIMPLE_TYPE = TYPE_U8 |
               TYPE_U16 |
@@ -538,12 +679,17 @@ and integration tests:
 - `Reader` - must provide capabilities of character and position extraction
 (unit tests)
 - `Lexer` - must be able to process an input provided by a `Reader` into tokens
-(integration tests)
+(integration tests). In particular, it must be able to correctly differentiate
+tokens that begin with the same terminal characters (for example: `-`, `--` and
+`-=`)
 - `Parser` - must be able to process both preset token sequences (unit tests)
 as well as ones generated by a `Lexer` from source code (integration tests).
 Due to the complexity of the AST it is preferred to validate the output using a
 custom printing visitor class that can visit the tree and generate an
-informative string about the code that can then be checked against a pattern
+informative string about the code that can then be checked against a pattern.
+As with the `Lexer`, the `Parser` needs to be able to differentiate edge cases
+where there are productions beggining with the same sequence of tokens (for
+example: variable expressions \[`foo`\] and function calls \[`foo()`\])
 - `SemanticChecker` - due to the complexity of defining an AST structure, the
 `SemanticChecker` shall utilize the previous pipeline components (that have
 presumably been tested beforehand) to generate an AST based on source code.
@@ -555,4 +701,5 @@ generated errors in the `ErrorHandler`
 Additionally, all the classes must correctly report errors to an `ErrorHandler`
 (integration tests).
 
-As a final step
+To test the compiler fully, an additional set of integration/acceptance tests
+may be performed on the final compiler using example source code files.
