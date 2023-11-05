@@ -321,17 +321,15 @@ The example above shows all 3 possible scenarios of patterns:
 Pattern matching only works against compile-time literals and expressions that
 are based on them.
 
-Not covering all the cases in the `match` statement will raise a warning from
-the compiler. If a value matched against doesn't match any of the cases in that
-case the behaviour is undefined:
+Not covering all the cases in the `match` statement will raise a compilation
+error:
 
 ```txt
 let value = 3;
-// code below is undefined behaviour
+// code below won't compile
 match value {
     0 => {value = 1;}           
     1 | 2 => {value = 0;}       
-    value < 0 => {value = 2;}   
 };
 ```
 
@@ -401,8 +399,8 @@ hex_digit = digit |
             "E";
 
 IDENTIFIER = identifier_char, {identifier_char};
-INT = digit, {digit};
-DOUBLE = INT, ".", INT;
+UINT = digit, {digit};
+DOUBLE = UINT, ".", UINT;
 
 STRING = '"', {string_char | "'"} '"';
 CHAR = "'", {string_char | '"'} "'";
@@ -508,36 +506,45 @@ TOP_LEVEL_STATEMENT = FUNC_DEF_STMT |
                       EXTERN_STMT |
                       VAR_DECL_STMT;
 
-FUNC_DEF_STMT = KW_FN, IDENTIFIER, L_PAREN, PARAMS, R_PAREN, RETURN_TYPE, BLOCK;
+EXTERN_STMT = KW_EXTERN, FUNC_NAME_AND_PARAMS, SEMICOLON;
+FUNC_DEF_STMT = KW_FN, [KW_CONST], FUNC_NAME_AND_PARAMS, BLOCK;
+
+FUNC_NAME_AND_PARAMS = IDENTIFIER, L_PAREN, PARAMS, R_PAREN, RETURN_TYPE;
 
 PARAMS = [PARAMETER, {COMMA, PARAMETER}];
-PARAMETER = IDENTIFIER, COLON, TYPE;
+PARAMETER = IDENTIFIER, TYPE_SPECIFIER;
+TYPE_SPECIFIER = COLON, TYPE_WITH_REF_SPEC;
+TYPE_WITH_REF_SPEC = [REF_SPECIFIER], TYPE;
+REF_SPECIFIER = AMPERSAND, [KW_MUT];
 
-RETURN_TYPE = [LAMBDA_ARROW, TYPE];
+RETURN_TYPE = [LAMBDA_ARROW, TYPE_WITH_REF_SPEC];
 
-TYPE = NEVER_TYPE |
-       SIMPLE_TYPE |
+TYPE = SIMPLE_TYPE |
        FUNCTION_TYPE;
 
-NEVER_TYPE = NEG;
 SIMPLE_TYPE = TYPE_U32 |
               TYPE_I32 |
               TYPE_F64 |
               TYPE_BOOL |
               TYPE_CHAR |
               TYPE_STR;
-FUNCTION_TYPE = KW_FN, L_PAREN, TYPES, R_PAREN, RETURN_TYPE;
-TYPES = [TYPE, {COMMA, TYPE}];
+FUNCTION_TYPE = KW_FN, L_PAREN, TYPES, R_PAREN, [RETURN_TYPE];
+
+TYPES = [TYPE_WITH_REF_SPEC, {COMMA, TYPE_WITH_REF_SPEC}];
 
 BLOCK = L_BRACKET, {NON_FUNC_STMT}, R_BRACKET;
 
 NON_FUNC_STMT = RETURN_STMT |
                 ASSIGN_STMT |
                 VAR_DECL_STMT |
+                IF_STMT |
+                WHILE_STMT |
+                MATCH_STMT |
+                CALL_EXPR |
                 BLOCK;
 
 RETURN_STMT = KW_RETURN, [EXPRESSION], SEMICOLON;
-ASSIGN_STMT = IDENTIFIER, ASSIGN_OP, EXPRESSION, SEMICOLON;
+ASSIGN_STMT = EXPRESSION, ASSIGN_OP, EXPRESSION, SEMICOLON;
 
 ASSIGN_OP = ASSIGN |
             ASSIGN_PLUS |
@@ -559,21 +566,29 @@ VAR_DECL_STMT = MUT_VAR_DECL | CONST_VAR_DECL;
 MUT_VAR_DECL = KW_LET, KW_MUT, IDENTIFIER, (TYPE_SPECIFIER | INITIAL_VALUE | (TYPE_SPECIFIER, INITIAL_VALUE)), SEMICOLON;
 CONST_VAR_DECL = KW_LET, IDENTIFIER, (TYPE_SPECIFIER), INITIAL_VALUE, SEMICOLON;
 
-TYPE_SPECIFIER = COLON, TYPE;
 
 INITIAL_VALUE = ASSIGN, EXPRESSION;
 
-EXPRESSION = I32_EXPR |
-             F64_EXPR |
+EXPRESSION = LITERAL |
              BINARY_EXPR |
              UNARY_EXPR |
              VARIABLE_EXPR |
              CALL_EXPR |
              LAMBDA_CALL_EXPR |
+             INDEX_EXPR |
              PAREN_EXPR;
 
-I32_EXPR = INT;
+LITERAL = U32_EXPR |
+          I32_EXPR |
+          F64_EXPR |
+          STRING_EXPR |
+          CHAR_EXPR;
+
+U32_EXPR = UINT;
+I32_EXPR = MINUS, U32_EXPR;
 F64_EXPR = DOUBLE;
+STRING_EXPR = STRING;
+CHAR_EXPR = CHAR;
 
 BINARY_EXPR = EXPRESSION, BINARY_OP, EXPRESSION;
 BINARY_OP = EXP |
@@ -614,11 +629,29 @@ ARG_WITH_ELLIPSIS = ARG, COMMA, ELLIPSIS;
 LAMBDA_ARG = EXPRESSION |
              PLACEHOLDER;
 
-PAREN_EXPR= L_PAREN, EXPRESSION, R_PAREN;
+INDEX_EXPR = EXPRESSION, "[", U32_EXPR ,"]";
 
+PAREN_EXPR = L_PAREN, EXPRESSION, R_PAREN;
 
+IF_STMT = KW_IF, PAREN_EXPR, BLOCK, [ELSE_BLOCK];
+ELSE_BLOCK = KW_ELSE, BLOCK;
 
-EXTERN_STMT = KW_EXTERN, IDENTIFIER, L_PAREN, PARAMS, R_PAREN, RETURN_TYPE, SEMICOLON;
+WHILE_STMT = KW_WHILE, PAREN_EXPRESSION, LOOP_BLOCK;
+LOOP_BLOCK = L_BRACKET, LOOP_STMT, R_BRACKET;
+LOOP_STMT = NON_FUNC_STMT |
+               LOOP_BLOCK |
+            CONTINUE_STMT |
+               BREAK_STMT;
+
+MATCH_STMT = KW_MATCH, PAREN_EXPRESSION, L_BRACKET, {MATCH_CASE}, R_BRACKET;
+MATCH_CASE = MATCH_SPECIFIER, LAMBDA_ARROW, BLOCK;
+MATCH_SPECIFIER = MATCH_LITERALS | PLACEHOLDER;
+MATCH_LITERALS = LITERAL, {BIT_OR, LITERAL}
+LITERAL = U32_EXPR |
+          I32_EXPR |
+          F64_EXPR |
+          STRING |
+          CHAR;
 ```
 
 ## Compiler structure
