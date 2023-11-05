@@ -130,11 +130,11 @@ Shown below is the list of escape sequences used in Mole:
 |----|---------------|
 |`\\`|Backslash      |
 |`\n`|Newline        |
-|`\t`|Carriage return|
+|`\r`|Carriage return|
 |`\'`|Single apostrophe|
 |`\"`|Double apostrophe|
 |`\0`|Null character|
-|`\{NN..}`|Arbitrary UTF-8 character (`NN..` indicates 2-,4-,6- or 8-digit hexadecimal code)|
+|`\{NN..}`|Arbitrary UTF-8 character (`NN..` indicates arbitrary-length hexadecimal code)|
 
 ## Control flow
 
@@ -365,6 +365,14 @@ whitespace.
 ### Lexer rules
 
 ```ebnf
+comment = single_line_comment | multi_line_comment;
+
+single_line_comment = "//", {? any non-newline character ?}, ? newline character ?;
+multi_line_comment = "/*", { non_asterisk | ("*", non_slash) }, "*/";
+
+non_asterisk = ? any non-asterisk character ?;
+non_slash= ? any non-slash character ?;
+
 non_zero = "1" |
            "2" |
            "3" |
@@ -375,26 +383,38 @@ non_zero = "1" |
            "8" |
            "9";
 digit = non_zero | "0";
-special_char = "+" |
-               "-" |
-               "*" |
-               "/" |
-               "%" |
-               "^";
 white_space = ? any white space character ?;
 alpha = ? any alphabetic utf-8 char ?;
 alphanum = ? any alphanumeric utf-8 char ?;
 identifier_char = alpha |
                   "_";
-escaped_char = "\n" |
-               "\r" |
+hex_digit = digit |
+            "a" |
+            "b" |
+            "c" |
+            "d" |
+            "e" |
+            "A" |
+            "B" |
+            "C" |
+            "D" |
+            "E";
 
-```
-
-```ebnf
 IDENTIFIER = identifier_char, {identifier_char};
 INT = digit, {digit};
 DOUBLE = INT, ".", INT;
+
+STRING = '"', {string_char | "'"} '"';
+CHAR = "'", {string_char | '"'} "'";
+string_char = ? any character that isn't a backslash, an apostrophe or a double apostrophe? | escaped_char;
+string_and_char_compatible_char = 
+escaped_char = "\\" |
+               "\n" |
+               "\r" |
+               "\'" |
+               '\"' |
+               "\0" |
+               ("\{", hex_digit, {hex_digit}, "}");
 
 KW_FN = "fn";
 KW_EXTERN = "extern";
@@ -405,27 +425,19 @@ KW_CONST = "const";
 KW_IF = "if";
 KW_ELSE = "else";
 KW_WHILE = "while";
+KW_MATCH = "match";
 KW_CONTINUE = "continue";
 KW_BREAK = "break";
 KW_AS = "as";
-KW_STR = "str";
 
 TYPE_BOOL = "bool";
 
-TYPE_U8 = "u8";
-TYPE_U16 = "u16";
 TYPE_U32 = "u32";
-TYPE_U64 = "u64";
-
-TYPE_I8 = "i8";
-TYPE_I16 = "i16";
 TYPE_I32 = "i32";
-TYPE_I64 = "i64";
-
-TYPE_F32 = "f32";
 TYPE_F64 = "f64";
 
 TYPE_CHAR = "char";
+TYPE_STR = "str";
 
 PLUS = "+";
 MINUS = "-";
@@ -485,73 +497,48 @@ COLON = ":";
 COMMA = ",";
 SEMICOLON = ";";
 
-END = ? any character (or lack thereof) representing EOF ?;
-
 ```
 
 ### Parser rules
 
 ```ebnf
-BUILT_IN_TYPE = TYPE_BOOL |
-                TYPE_U8 |
-                TYPE_U16 |
-                TYPE_U32 |
-                TYPE_U64 |
-                TYPE_I8 |
-                TYPE_I16 |
-                TYPE_I32 |
-                TYPE_I64 |
-                TYPE_F32 |
-                TYPE_F64 |
-                TYPE_CHAR;
-
-TYPE = NEVER_TYPE |
-       SIMPLE_TYPE |
-       FUNCTION_TYPE;
-       
-TYPES = [TYPE, {COMMA, TYPE}];
-
-TYPE_SPECIFIER = COLON, TYPE;
-INITIAL_VALUE = ASSIGN, EXPRESSION;
-
-RETURN_TYPE = [LAMBDA_ARROW, TYPE];
+PROGRAM = {TOP_LEVEL_STATEMENT};
 
 TOP_LEVEL_STATEMENT = FUNC_DEF_STMT |
                       EXTERN_STMT |
                       VAR_DECL_STMT;
 
-ARG = EXPRESSION;
-ARGS = [ARG, {COMMA, ARG}];
-LAMBDA_ARG = EXPRESSION |
-             PLACEHOLDER;
-ARG_WITH_ELLIPSIS = ARG, COMMA, ELLIPSIS;
-LAMBDA_ARGS = [LAMBDA_ARG, {COMMA, LAMBDA_ARG}, [COMMA, ARG_WITH_ELLIPSIS]];
+FUNC_DEF_STMT = KW_FN, IDENTIFIER, L_PAREN, PARAMS, R_PAREN, RETURN_TYPE, BLOCK;
 
-EXPRESSION = I32_EXPR |
-             F64_EXPR |
-             BINARY_EXPR |
-             UNARY_EXPR |
-             VARIABLE_EXPR |
-             CALL_EXPR |
-             LAMBDA_CALL_EXPR |
-             PAREN_EXPR;
-CALLABLE_EXPR = VARIABLE_EXPR |
-                CALL_EXPR |
-                LAMBDA_CALL_EXPR |
-                PAREN_EXPR;
+PARAMS = [PARAMETER, {COMMA, PARAMETER}];
+PARAMETER = IDENTIFIER, COLON, TYPE;
+
+RETURN_TYPE = [LAMBDA_ARROW, TYPE];
+
+TYPE = NEVER_TYPE |
+       SIMPLE_TYPE |
+       FUNCTION_TYPE;
+
+NEVER_TYPE = NEG;
+SIMPLE_TYPE = TYPE_U32 |
+              TYPE_I32 |
+              TYPE_F64 |
+              TYPE_BOOL |
+              TYPE_CHAR |
+              TYPE_STR;
+FUNCTION_TYPE = KW_FN, L_PAREN, TYPES, R_PAREN, RETURN_TYPE;
+TYPES = [TYPE, {COMMA, TYPE}];
+
+BLOCK = L_BRACKET, {NON_FUNC_STMT}, R_BRACKET;
+
 NON_FUNC_STMT = RETURN_STMT |
                 ASSIGN_STMT |
                 VAR_DECL_STMT |
                 BLOCK;
 
-PARAMETER = IDENTIFIER, COLON, TYPE;
-PARAMS = [PARAMETER, {COMMA, PARAMETER}];
+RETURN_STMT = KW_RETURN, [EXPRESSION], SEMICOLON;
+ASSIGN_STMT = IDENTIFIER, ASSIGN_OP, EXPRESSION, SEMICOLON;
 
-LHS = EXPRESSION;
-PAREN_EXPR= L_PAREN, EXPRESSION, R_PAREN;
-
-BINARY_OP = BUILT_IN_BINARY_OP;
-UNARY_OP = BUILT_IN_UNARY_OP;
 ASSIGN_OP = ASSIGN |
             ASSIGN_PLUS |
             ASSIGN_MINUS |
@@ -567,65 +554,71 @@ ASSIGN_OP = ASSIGN |
             ASSIGN_SHIFT_LEFT |
             ASSIGN_SHIFT_RIGHT;
 
+VAR_DECL_STMT = MUT_VAR_DECL | CONST_VAR_DECL;
+
 MUT_VAR_DECL = KW_LET, KW_MUT, IDENTIFIER, (TYPE_SPECIFIER | INITIAL_VALUE | (TYPE_SPECIFIER, INITIAL_VALUE)), SEMICOLON;
 CONST_VAR_DECL = KW_LET, IDENTIFIER, (TYPE_SPECIFIER), INITIAL_VALUE, SEMICOLON;
 
-NEVER_TYPE = NEG;
-SIMPLE_TYPE = TYPE_U8 |
-              TYPE_U16 |
-              TYPE_U32 |
-              TYPEU64 |
-              TYPE_I8 |
-              TYPE_I16 |
-              TYPE_I32 |
-              TYPE_I64 |
-              TYPE_F32 |
-              TYPE_F64 |
-              TYPE_BOOL |
-              TYPE_CHAR;
-FUNCTION_TYPE = KW_FN, L_PAREN, TYPES, R_PAREN, RETURN_TYPE;
+TYPE_SPECIFIER = COLON, TYPE;
 
-BUILT_IN_BINARY_OP = EXP |
-                     STAR |
-                     SLASH |
-                     PERCENT |
-                     PLUS |
-                     MINUS |
-                     SHIFT_LEFT |
-                     SHIFT_RIGHT |
-                     AMPERSAND |
-                     BIT_XOR |
-                     BIT_OR |
-                     EQUAL |
-                     NOT_EQUAL |
-                     GREATER |
-                     GREATER_EQUAL |
-                     LESS |
-                     LESS_EQUAL |
-                     AND |
-                     OR;
-BUILT_IN_UNARY_OP = INCREMENT |
-                    DECREMENT |
-                    NEG |
-                    BIT_NEG;
+INITIAL_VALUE = ASSIGN, EXPRESSION;
+
+EXPRESSION = I32_EXPR |
+             F64_EXPR |
+             BINARY_EXPR |
+             UNARY_EXPR |
+             VARIABLE_EXPR |
+             CALL_EXPR |
+             LAMBDA_CALL_EXPR |
+             PAREN_EXPR;
 
 I32_EXPR = INT;
 F64_EXPR = DOUBLE;
+
 BINARY_EXPR = EXPRESSION, BINARY_OP, EXPRESSION;
+BINARY_OP = EXP |
+            STAR |
+            SLASH |
+            PERCENT |
+            PLUS |
+            MINUS |
+            SHIFT_LEFT |
+            SHIFT_RIGHT |
+            AMPERSAND |
+            BIT_XOR |
+            BIT_OR |
+            EQUAL |
+            NOT_EQUAL |
+            GREATER |
+            GREATER_EQUAL |
+            LESS |
+            LESS_EQUAL |
+            AND |
+            OR;
+
 UNARY_EXPR = UNARY_OP, EXPRESSION;
+UNARY_OP = INCREMENT |
+           DECREMENT |
+           NEG |
+           BIT_NEG |
+           MINUS;
+
 VARIABLE_EXPR = IDENTIFIER;
-CALL_EXPR = EXPRESSION, L_PAREN, Parameters, R_PAREN;
+CALL_EXPR = EXPRESSION, L_PAREN, ARGS, R_PAREN;
+ARGS = [ARG, {COMMA, ARG}];
+ARG = EXPRESSION;
+
 LAMBDA_CALL_EXPR = EXPRESSION, L_PAREN, (LAMBDA_ARGS | ARG_WITH_ELLIPSIS), R_PAREN;
+LAMBDA_ARGS = [LAMBDA_ARG, {COMMA, LAMBDA_ARG}, [COMMA, ARG_WITH_ELLIPSIS]];
+ARG_WITH_ELLIPSIS = ARG, COMMA, ELLIPSIS;
+LAMBDA_ARG = EXPRESSION |
+             PLACEHOLDER;
 
-RETURN_STMT = KW_RETURN, [EXPRESSION], SEMICOLON;
-ASSIGN_STMT = IDENTIFIER, ASSIGN, EXPRESSION, SEMICOLON;
+PAREN_EXPR= L_PAREN, EXPRESSION, R_PAREN;
+
+
+
 EXTERN_STMT = KW_EXTERN, IDENTIFIER, L_PAREN, PARAMS, R_PAREN, RETURN_TYPE, SEMICOLON;
-FUNC_DEF_STMT = KW_FN, IDENTIFIER, L_PAREN, PARAMS, R_PAREN, RETURN_TYPE, BLOCK;
-VAR_DECL_STMT = MUT_VAR_DECL | CONST_VAR_DECL;
-
-BLOCK = L_BRACKET, {NON_FUNC_STMT}, R_BRACKET;
-
-PROGRAM = {TOP_LEVEL_STATEMENT};
 ```
 
 ## Compiler structure
