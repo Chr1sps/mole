@@ -41,7 +41,7 @@ class Lexer
     Token parse_operator();
 
     std::optional<Token> parse_possible_slash_token();
-    Token parse_slash();
+    std::optional<Token> parse_slash();
 
     Token parse_underscore();
 
@@ -69,7 +69,7 @@ class Lexer
     static LexerPtr from_wstring(const std::wstring &source);
     static LexerPtr from_file(const std::string &path);
 
-    Token get_token();
+    std::optional<Token> get_token();
 
     const Position &get_position() const;
     bool eof() const;

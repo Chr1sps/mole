@@ -219,7 +219,7 @@ std::optional<Token> Lexer::parse_possible_slash_token()
     return std::optional<Token>(Token(TokenType::SLASH, this->token_position));
 }
 
-Token Lexer::parse_slash()
+std::optional<Token> Lexer::parse_slash()
 {
     auto result = this->parse_possible_slash_token();
     if (result)
@@ -279,12 +279,12 @@ Token Lexer::parse_underscore()
     }
 }
 
-Token Lexer::get_token()
+std::optional<Token> Lexer::get_token()
 {
     this->get_nonempty_char();
     this->token_position = this->reader->get_position();
     if (this->last_char == std::nullopt)
-        return Token(TokenType::END, this->token_position);
+        return std::nullopt;
     else if (this->is_a_number_char())
         return this->parse_number_token();
     else if (this->last_char == std::make_optional<wchar_t>(L'_'))

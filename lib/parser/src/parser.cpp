@@ -118,7 +118,7 @@ std::map<TokenType, AssignType> Parser::assign_map{
 };
 #undef ASSIGN_TYPE
 
-Token Parser::get_new_token()
+std::optional<Token> Parser::get_new_token()
 {
     return this->current_token = this->lexer->get_token();
 }

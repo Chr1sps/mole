@@ -9,7 +9,7 @@
 class Parser
 {
     LexerPtr lexer;
-    Token current_token;
+    std::optional<Token> current_token;
     static std::map<TokenType, std::shared_ptr<BuiltInBinOp>> binary_map;
     static std::map<TokenType, std::shared_ptr<BuiltInUnaryOp>> unary_map;
     static std::map<TokenType, TypeEnum> type_map;
@@ -22,7 +22,7 @@ class Parser
     Position pop_pos();
     Position read_pos();
 
-    Token get_new_token();
+    std::optional<Token> get_new_token();
 
     void assert_current_and_eat(TokenType type, const std::wstring &error_msg);
     void assert_next_token(TokenType type, const std::wstring &error_msg);
