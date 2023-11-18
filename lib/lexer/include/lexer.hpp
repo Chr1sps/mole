@@ -73,6 +73,9 @@ class Lexer
 
     const Position &get_position() const;
     bool eof() const;
+
+    void add_logger(const LoggerPtr &logger);
+    void remove_logger(const LoggerPtr &logger);
 };
 
 #endif

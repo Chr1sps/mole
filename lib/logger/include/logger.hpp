@@ -17,6 +17,8 @@ struct LogMessage
 {
     std::wstring text;
     LogLevel log_level;
+    friend bool operator==(const LogMessage &, const LogLevel &);
+    friend bool operator!=(const LogMessage &, const LogLevel &);
 };
 
 class Logger
@@ -30,7 +32,7 @@ class Logger
 
 using LoggerPtr = std::shared_ptr<Logger>;
 
-class FileLogger : Logger
+class FileLogger : public Logger
 {
     std::filesystem::path file_path;
     std::wofstream output;
@@ -45,7 +47,7 @@ class FileLogger : Logger
     void log(const LogMessage &msg) override;
 };
 
-class DebugLogger : Logger
+class DebugLogger : public Logger
 {
     std::vector<LogMessage> messages;
 

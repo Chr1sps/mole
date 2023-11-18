@@ -2,6 +2,7 @@
 #include "logger.hpp"
 #include "reader.hpp"
 #include "string_builder.hpp"
+#include <algorithm>
 #include <string>
 
 #define KEYWORD(wstr, token_type)                                             \
@@ -347,4 +348,14 @@ bool Lexer::eof() const
 const Position &Lexer::get_position() const
 {
     return this->token_position;
+}
+
+void Lexer::add_logger(const LoggerPtr &logger)
+{
+    this->loggers.push_back(logger);
+}
+
+void Lexer::remove_logger(const LoggerPtr &logger)
+{
+    std::erase(this->loggers, logger);
 }

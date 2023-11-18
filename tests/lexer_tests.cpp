@@ -1,4 +1,5 @@
 #include "lexer.hpp"
+#include "logger.hpp"
 #include "token.hpp"
 #include <catch2/catch_test_macros.hpp>
 
@@ -6,15 +7,17 @@ using namespace std;
 
 bool compare_tokens(const std::wstring &code, const vector<Token> &tokens)
 {
+    auto logger = std::make_shared<DebugLogger>();
     auto locale = Locale("C.utf8");
     auto lexer = Lexer::from_wstring(code);
+    lexer->add_logger(logger);
     for (auto &token : tokens)
     {
         auto actual = lexer->get_token();
         if (actual != token)
             return false;
     }
-    return true;
+    return logger->get_messages().empty();
 }
 
 void consume_tokens(const std::wstring &source)

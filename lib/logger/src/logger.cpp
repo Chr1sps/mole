@@ -1,5 +1,15 @@
 #include "logger.hpp"
 
+bool operator==(const LogMessage &msg, const LogLevel &level)
+{
+    return msg.log_level == level;
+}
+
+bool operator!=(const LogMessage &msg, const LogLevel &level)
+{
+    return msg.log_level != level;
+}
+
 std::map<LogLevel, std::wstring> Logger::log_level_strings = {
     {LogLevel::INFO, L"INFO"},
     {LogLevel::WARNING, L"WARNING"},
