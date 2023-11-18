@@ -1,5 +1,5 @@
 #include "lexer.hpp"
-#include "exceptions.hpp"
+#include "logger.hpp"
 #include "reader.hpp"
 #include "string_builder.hpp"
 #include <string>
@@ -327,10 +327,15 @@ std::optional<wchar_t> Lexer::peek_char() const
 
 Token Lexer::report_error(const std::wstring &msg)
 {
-    auto error_msg = build_wstring(
+    auto error_text = build_wstring(
         L"[ERROR] Lexer error at [", this->reader->get_position().line, ",",
         this->reader->get_position().column, "]: ", msg, ".");
-    throw LexerException(error_msg);
+    auto log_msg = LogMessage(error_text, LogLevel::ERROR);
+    for (auto logger : this->loggers)
+    {
+        logger->log(log_msg);
+    }
+
     return Token(TokenType::INVALID, Position());
 }
 

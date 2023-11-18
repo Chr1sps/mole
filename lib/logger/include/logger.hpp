@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 enum class LogLevel
@@ -27,6 +28,8 @@ class Logger
     virtual void log(const LogMessage &) = 0;
 };
 
+using LoggerPtr = std::shared_ptr<Logger>;
+
 class FileLogger : Logger
 {
     std::filesystem::path file_path;
@@ -49,5 +52,6 @@ class DebugLogger : Logger
   public:
     DebugLogger() = default;
     void log(const LogMessage &msg) override;
+    const std::vector<LogMessage> &get_messages() const;
 };
 #endif

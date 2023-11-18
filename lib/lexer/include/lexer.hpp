@@ -1,6 +1,7 @@
 #ifndef __LEXER_HPP__
 #define __LEXER_HPP__
 #include "locale.hpp"
+#include "logger.hpp"
 #include "reader.hpp"
 #include "token.hpp"
 #include <locale>
@@ -21,10 +22,13 @@ using LexerPtr = std::unique_ptr<Lexer>;
 class Lexer
 {
     ReaderPtr reader;
+
     std::optional<wchar_t> last_char;
-    std::string error_msg;
-    std::locale locale;
     Position token_position;
+
+    std::locale locale;
+
+    std::vector<LoggerPtr> loggers;
 
     static const std::map<std::wstring, TokenType> keywords;
     static const std::map<wchar_t, CharNode> char_nodes;
@@ -56,14 +60,10 @@ class Lexer
     Token report_error(const std::wstring &msg);
 
   public:
-    Lexer(ReaderPtr &reader, const std::locale &locale)
-        : reader(std::move(reader)), last_char(L' '), error_msg(""),
-          locale(locale), token_position()
+    Lexer(ReaderPtr &reader)
+        : reader(std::move(reader)), last_char(L' '), token_position()
     {
-    }
-
-    Lexer(ReaderPtr &reader) : Lexer(reader, std::locale())
-    {
+        this->locale = this->reader->get_locale();
     }
 
     static LexerPtr from_wstring(const std::wstring &source);

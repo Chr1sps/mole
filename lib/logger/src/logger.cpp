@@ -15,3 +15,8 @@ void DebugLogger::log(const LogMessage &msg)
 {
     this->messages.push_back(msg);
 }
+
+const std::vector<LogMessage> &DebugLogger::get_messages() const
+{
+    return this->messages;
+}

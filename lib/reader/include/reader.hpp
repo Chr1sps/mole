@@ -16,9 +16,15 @@ class Reader
     Position current_position;
 
   protected:
+    std::locale locale;
+
     void update_position(const wchar_t &ch);
     virtual wchar_t get_raw() = 0;
     virtual wchar_t peek_raw() = 0;
+
+    Reader(const std::locale &locale) : locale(locale)
+    {
+    }
 
   public:
     const Position &get_position() const noexcept
@@ -46,6 +52,11 @@ class Reader
         }
     }
 
+    const std::locale &get_locale() const
+    {
+        return this->locale;
+    }
+
     virtual bool eof() = 0;
     virtual ~Reader() = default;
 };
@@ -71,6 +82,10 @@ template <DerivedFromWistream T> class IStreamReader : public Reader
         return this->driver.peek();
     }
 
+    IStreamReader(const std::locale &locale) : Reader(locale)
+    {
+    }
+
   public:
     bool eof() override
     {
@@ -92,6 +107,16 @@ class ConsoleReader : public Reader
     }
 
   public:
+    ConsoleReader(const ConsoleReader &) = delete;
+
+    ConsoleReader(const std::locale &locale) : Reader(locale)
+    {
+    }
+
+    ConsoleReader() : ConsoleReader(std::locale())
+    {
+    }
+
     bool eof() override
     {
         return std::wcin.eof();
@@ -106,7 +131,7 @@ class FileReader : public IStreamReader<std::wifstream>
     FileReader(const FileReader &) = delete;
 
     FileReader(const std::filesystem::path &path, const std::locale &locale)
-        : IStreamReader<std::wifstream>(), file_path(path)
+        : IStreamReader<std::wifstream>(locale), file_path(path)
     {
         this->driver.open(path);
         this->driver.imbue(locale);
@@ -129,8 +154,16 @@ class FileReader : public IStreamReader<std::wifstream>
 class StringReader : public IStreamReader<std::wistringstream>
 {
   public:
+    StringReader(const StringReader &) = delete;
+
+    StringReader(const std::wstring &code, const std::locale &locale)
+        : IStreamReader<std::wistringstream>(locale)
+    {
+        this->driver.str(code);
+    }
+
     StringReader(const std::wstring &code)
-        : IStreamReader<std::wistringstream>()
+        : IStreamReader<std::wistringstream>(std::locale())
     {
         this->driver.str(code);
     }
