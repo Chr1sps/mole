@@ -144,24 +144,21 @@ TEST_CASE("Keywords.", "[KW][EOF]")
     COMPARE(L"return", LIST(T(KW_RETURN, 1, 1)));
     COMPARE(L"if", LIST(T(KW_IF, 1, 1)));
     COMPARE(L"else", LIST(T(KW_ELSE, 1, 1)));
+    COMPARE(L"while", LIST(T(KW_WHILE, 1, 1)));
+    COMPARE(L"match", LIST(T(KW_MATCH, 1, 1)));
+    COMPARE(L"continue", LIST(T(KW_CONTINUE, 1, 1)));
+    COMPARE(L"break", LIST(T(KW_BREAK, 1, 1)));
+    COMPARE(L"as", LIST(T(KW_AS, 1, 1)));
 }
 
 TEST_CASE("Type names.", "[TYPE][EOF]")
 {
-    COMPARE(L"u8", LIST(T(TYPE_U8, 1, 1)));
-    COMPARE(L"u16", LIST(T(TYPE_U16, 1, 1)));
     COMPARE(L"u32", LIST(T(TYPE_U32, 1, 1)));
-    COMPARE(L"u64", LIST(T(TYPE_U64, 1, 1)));
-
-    COMPARE(L"i8", LIST(T(TYPE_I8, 1, 1)));
-    COMPARE(L"i16", LIST(T(TYPE_I16, 1, 1)));
     COMPARE(L"i32", LIST(T(TYPE_I32, 1, 1)));
-    COMPARE(L"i64", LIST(T(TYPE_I64, 1, 1)));
-
-    COMPARE(L"f32", LIST(T(TYPE_F32, 1, 1)));
     COMPARE(L"f64", LIST(T(TYPE_F64, 1, 1)));
 
     COMPARE(L"char", LIST(T(TYPE_CHAR, 1, 1)));
+    COMPARE(L"str", LIST(T(TYPE_STR, 1, 1)));
 }
 
 TEST_CASE("Identifiers.", "[ID][EOF]")
@@ -216,9 +213,9 @@ TEST_CASE("Function definitions", "[FN][KW][ID][OP][EOF]")
             LIST(T(KW_FN, 1, 1), V(IDENTIFIER, L"noop", 1, 4),
                  T(L_PAREN, 1, 8), T(R_PAREN, 1, 9), T(LAMBDA_ARROW, 1, 11),
                  T(L_BRACKET, 1, 14), T(R_BRACKET, 1, 15)));
-    COMPARE(L"fn foo(f: f32, i: i32) => i32 {i}",
+    COMPARE(L"fn foo(f: f64, i: i32) => i32 {i}",
             LIST(T(KW_FN, 1, 1), V(IDENTIFIER, L"foo", 1, 4), T(L_PAREN, 1, 7),
-                 V(IDENTIFIER, L"f", 1, 8), T(COLON, 1, 9), T(TYPE_F32, 1, 11),
+                 V(IDENTIFIER, L"f", 1, 8), T(COLON, 1, 9), T(TYPE_F64, 1, 11),
                  T(COMMA, 1, 14), V(IDENTIFIER, L"i", 1, 16), T(COLON, 1, 17),
                  T(TYPE_I32, 1, 19), T(R_PAREN, 1, 22), T(LAMBDA_ARROW, 1, 24),
                  T(TYPE_I32, 1, 27), T(L_BRACKET, 1, 31),

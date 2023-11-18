@@ -1,5 +1,4 @@
 set(LIB_HEADERS
-    "exceptions.hpp"
     "locale.hpp"
     "position.hpp"
     "string_builder.hpp"

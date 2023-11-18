@@ -13,28 +13,26 @@
 const std::map<std::wstring, TokenType> Lexer::keywords{
     KEYWORD(L"fn", KW_FN),
     KEYWORD(L"extern", KW_EXTERN),
-    KEYWORD(L"mut", KW_MUT),
-    KEYWORD(L"const", KW_CONST),
     KEYWORD(L"let", KW_LET),
     KEYWORD(L"return", KW_RETURN),
+    KEYWORD(L"mut", KW_MUT),
+    KEYWORD(L"const", KW_CONST),
     KEYWORD(L"if", KW_IF),
     KEYWORD(L"else", KW_ELSE),
+    KEYWORD(L"while", KW_WHILE),
+    KEYWORD(L"match", KW_MATCH),
+    KEYWORD(L"continue", KW_CONTINUE),
+    KEYWORD(L"break", KW_BREAK),
+    KEYWORD(L"as", KW_AS),
 
     // type names
-    KEYWORD(L"f32", TYPE_F32),
+
+    KEYWORD(L"u32", TYPE_U32),
+    KEYWORD(L"i32", TYPE_I32),
     KEYWORD(L"f64", TYPE_F64),
 
-    KEYWORD(L"u8", TYPE_U8),
-    KEYWORD(L"u16", TYPE_U16),
-    KEYWORD(L"u32", TYPE_U32),
-    KEYWORD(L"u64", TYPE_U64),
-
-    KEYWORD(L"i8", TYPE_I8),
-    KEYWORD(L"i16", TYPE_I16),
-    KEYWORD(L"i32", TYPE_I32),
-    KEYWORD(L"i64", TYPE_I64),
-
     KEYWORD(L"char", TYPE_CHAR),
+    KEYWORD(L"str", TYPE_STR),
 
 };
 

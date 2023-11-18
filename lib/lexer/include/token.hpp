@@ -71,34 +71,33 @@ enum class TokenType
     ELLIPSIS,     // "..."
     LAMBDA_ARROW, // '=>'
 
-    KW_FN,     // "fn"
-    KW_EXTERN, // "extern"
-    KW_LET,    // "let"
-    KW_RETURN, // "return"
-    KW_MUT,    // "mut"
-    KW_CONST,  // "const"
-    KW_IF,     // "if"
-    KW_ELSE,   // "else"
+    KW_FN,       // "fn"
+    KW_EXTERN,   // "extern"
+    KW_LET,      // "let"
+    KW_RETURN,   // "return"
+    KW_MUT,      // "mut"
+    KW_CONST,    // "const"
+    KW_IF,       // "if"
+    KW_ELSE,     // "else"
+    KW_WHILE,    // "while"
+    KW_MATCH,    // "match"
+    KW_CONTINUE, // "continue"
+    KW_BREAK,    // "break"
+    KW_AS,       // "as"
 
-    INT,
-    DOUBLE,
+    INT,    // holds a u32 value
+    DOUBLE, // holds a f64 value
+    STRING, // holds a str value
+    CHAR,   // holds a char value
 
     TYPE_BOOL, // "bool"
 
-    TYPE_U8,  // "u8"
-    TYPE_U16, // "u16"
     TYPE_U32, // "u32"
-    TYPE_U64, // "u64"
-
-    TYPE_I8,  // "i8"
-    TYPE_I16, // "i16"
     TYPE_I32, // "i32"
-    TYPE_I64, // "i64"
-
-    TYPE_F32, // "f32"
     TYPE_F64, // "f64"
 
     TYPE_CHAR, // "char"
+    TYPE_STR,  // "char"
 
     END,
 
