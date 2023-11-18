@@ -37,13 +37,6 @@ set(TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests")
 set(LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
 add_subdirectory("${LIB_DIR}")
 
-# set(TEST_SOURCES
-# "reader_tests.cpp"
-# "lexer_tests.cpp"
-# "parser_tests.cpp"
-# "semantic_tests.cpp"
-# )
-
 # add_library(mole ${HEADERS} ${SOURCES})
 # target_include_directories(mole PUBLIC "${INCLUDE}" "${LLVM_INCLUDE_DIRS}")
 # target_link_libraries(mole PUBLIC LLVM compiler_flags)

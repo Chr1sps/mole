@@ -14,5 +14,5 @@ add_library(mole_lexer
 )
 
 target_include_directories(mole_lexer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_link_libraries(mole_lexer PUBLIC mole_reader mole_utils)
+target_link_libraries(mole_lexer PUBLIC mole_reader mole_utils mole_logger)
 target_link_libraries(mole_lexer PUBLIC compiler_flags)
