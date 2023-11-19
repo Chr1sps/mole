@@ -196,16 +196,29 @@ TEST_CASE("Identifiers.", "[ID]")
 
 TEST_CASE("Other special tokens.", "[OTHER]")
 {
-    COMPARE(L"...", LIST(T(ELLIPSIS, 1, 1)));
+    COMPARE(L"@", LIST(T(AT, 1, 1)));
     COMPARE(L"_", LIST(T(PLACEHOLDER, 1, 1)));
 }
 
 TEST_CASE("Invalid signs.", "[ERR]")
 {
-    COMPARE_WITH_LOG_LEVELS(L".", LIST(), LIST(L(ERROR)));
-    COMPARE_WITH_LOG_LEVELS(L"..", LIST(), LIST(L(ERROR)));
-    COMPARE_WITH_LOG_LEVELS(L"$", LIST(), LIST(L(ERROR)));
-    COMPARE_WITH_LOG_LEVELS(L"#", LIST(), LIST(L(ERROR)));
+    COMPARE_WITH_LOG_LEVELS(L".", LIST(T(INVALID, 1, 1)), LIST(L(ERROR)));
+    COMPARE_WITH_LOG_LEVELS(L"..", LIST(T(INVALID, 1, 1), T(INVALID, 1, 2)),
+                            LIST(L(ERROR), L(ERROR)));
+    COMPARE_WITH_LOG_LEVELS(L"$", LIST(T(INVALID, 1, 1)), LIST(L(ERROR)));
+    COMPARE_WITH_LOG_LEVELS(L"#", LIST(T(INVALID, 1, 1)), LIST(L(ERROR)));
+}
+
+TEST_CASE("Chars.", "[CHAR]")
+{
+    COMPARE(L"''", LIST(V(CHAR, L'\0', 1, 1)));
+    COMPARE(L"'a'", LIST(V(CHAR, L'a', 1, 1)));
+}
+
+TEST_CASE("Strings.", "[STR]")
+{
+    COMPARE(L"\"\"", LIST(V(STRING, L"", 1, 1)));
+    COMPARE(L"\"test123\"", LIST(V(STRING, L"test123", 1, 1)));
 }
 
 TEST_CASE("Assignments.", "[ASGN][KW][ID][OP]")

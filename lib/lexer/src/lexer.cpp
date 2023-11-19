@@ -91,7 +91,7 @@ const std::map<wchar_t, CharNode> Lexer::char_nodes{
     CHAR_NODE(L'[', L_SQ_BRACKET),
     CHAR_NODE(L']', R_SQ_BRACKET),
     CHAR_NODE(L'_', PLACEHOLDER),
-    EMPTY_NODE(L'.', EMPTY_NODE(L'.', CHAR_NODE(L'.', ELLIPSIS))),
+    CHAR_NODE(L'@', AT),
 };
 
 #undef CHAR_NODE
@@ -283,6 +283,130 @@ Token Lexer::parse_underscore(const Position &position)
     }
 }
 
+std::optional<wchar_t> Lexer::parse_hex_escape_sequence()
+{
+    this->get_new_char();
+    std::wstring buffer = L"";
+
+    for (int i = 0; i < 8 && this->last_char; ++i)
+    {
+        if (std::iswxdigit(this->last_char->character))
+        {
+            buffer += this->last_char->character;
+            this->get_new_char();
+        }
+        else
+            break;
+    }
+
+    if (this->last_char != L'}')
+        return std::nullopt;
+    this->get_new_char();
+    return static_cast<wchar_t>(std::stoi(buffer, nullptr, 16));
+}
+
+std::optional<wchar_t> Lexer::parse_escape_sequence()
+{
+    this->get_new_char();
+    if (!this->last_char)
+    {
+        return std::nullopt;
+    }
+    wchar_t result;
+    switch (this->last_char->character)
+    {
+    case L'\\':
+        result = L'\\';
+        break;
+    case L'n':
+        result = L'\n';
+        break;
+    case L'r':
+        result = L'\r';
+        break;
+    case L't':
+        result = L'\t';
+        break;
+    case L'\'':
+        result = L'\'';
+        break;
+    case L'\"':
+        result = L'\"';
+        break;
+    case L'0':
+        result = L'\0';
+        break;
+    case L'{':
+        return this->parse_hex_escape_sequence();
+        break;
+
+    default:
+        return std::nullopt;
+        break;
+    }
+    this->get_new_char();
+    return result;
+}
+
+std::optional<wchar_t> Lexer::parse_language_char()
+{
+    if (!this->last_char.has_value())
+        return std::nullopt;
+    switch (this->last_char->character)
+    {
+    case '\\':
+        return this->parse_escape_sequence();
+    case '\'':
+    case '\"':
+        return std::nullopt;
+
+    default:
+        auto result = this->last_char->character;
+        this->get_new_char();
+        return result;
+    }
+}
+
+Token Lexer::parse_char(const Position &position)
+{
+    this->get_new_char();
+    wchar_t value = '\0';
+
+    if (this->last_char == L'\"')
+    {
+        this->get_new_char();
+        value = L'\"';
+    }
+    else if (auto opt_char = this->parse_language_char())
+        value = *opt_char;
+
+    if (this->last_char != L'\'')
+        return this->report_error(L"invalid char in a char literal");
+
+    return Token(TokenType::CHAR, value, position);
+}
+
+Token Lexer::parse_str(const Position &position)
+{
+    this->get_new_char();
+    std::wstringstream out_stream(L"");
+    for (unsigned long long i = 0; i <= Lexer::MAX_STR_SIZE; ++i)
+    {
+        if (this->last_char == L'\'')
+        {
+            this->get_new_char();
+            out_stream << L'\'';
+        }
+        else if (auto opt_char = this->parse_language_char())
+            out_stream << *opt_char;
+        else
+            break;
+    }
+    if (this->last_char != L'\"')
+        return this->report_error(L"str literal isn't enclosed");
+    return Token(TokenType::STRING, out_stream.str(), position);
+}
+
 std::optional<Token> Lexer::get_token()
 {
     this->get_nonempty_char();
@@ -291,18 +415,32 @@ std::optional<Token> Lexer::get_token()
     else
     {
         auto position = this->last_char->position;
-        if (this->is_a_number_char())
-            return this->parse_number_token(position);
-        else if (this->last_char == L'_')
+        switch (this->last_char->character)
+        {
+        case L'_':
             return this->parse_underscore(position);
-        else if (this->is_identifier_char())
-            return this->parse_alpha_token(position);
-        else if (this->last_char == L'/')
+            break;
+        case L'/':
             return this->parse_slash(position);
-        else if (this->is_an_operator_char())
-            return this->parse_operator(position);
-        else
-            return this->report_error(L"invalid char");
+            break;
+        case L'\'':
+            return this->parse_char(position);
+            break;
+        case L'\"':
+            return this->parse_str(position);
+            break;
+
+        default:
+            if (this->is_a_number_char())
+                return this->parse_number_token(position);
+            else if (this->is_identifier_char())
+                return this->parse_alpha_token(position);
+            else if (this->is_an_operator_char())
+                return this->parse_operator(position);
+            else
+                return this->report_and_consume(L"invalid char");
+            break;
+        }
     }
 }
 
@@ -334,12 +472,13 @@ std::optional<IndexedChar> Lexer::peek_char() const
     return this->reader->peek();
 }
 
-std::nullopt_t Lexer::report_error(const std::wstring &msg)
+Token Lexer::report_error(const std::wstring &msg)
 {
     std::wstring position_text;
+    Position position = Position(-1, -1);
     if (this->last_char)
     {
-        auto position = this->last_char->position;
+        position = this->last_char->position;
         position_text = build_wstring(position.line, ",", position.column);
     }
     else
@@ -354,7 +493,14 @@ std::nullopt_t Lexer::report_error(const std::wstring &msg)
         logger->log(log_msg);
     }
 
-    return std::nullopt;
+    return Token(TokenType::INVALID, position);
+}
+
+Token Lexer::report_and_consume(const std::wstring &msg)
+{
+    auto result = this->report_error(msg);
+    this->get_new_char();
+    return result;
 }
 
 void Lexer::add_logger(const LoggerPtr &logger)

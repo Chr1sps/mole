@@ -402,10 +402,9 @@ IDENTIFIER = identifier_char, {identifier_char};
 UINT = digit, {digit};
 DOUBLE = UINT, ".", UINT;
 
-STRING = '"', {string_char | "'"} '"';
-CHAR = "'", {string_char | '"'} "'";
+STRING = '"', {string_char | "'"}, '"';
+CHAR = "'", (string_char | '"'), "'";
 string_char = ? any character that isn't a backslash, an apostrophe or a double apostrophe? | escaped_char;
-string_and_char_compatible_char = 
 escaped_char = "\\" |
                "\n" |
                "\r" |

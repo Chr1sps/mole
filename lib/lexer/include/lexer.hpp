@@ -28,6 +28,7 @@ class Lexer
 
     static const std::map<std::wstring, TokenType> keywords;
     static const std::map<wchar_t, CharNode> char_nodes;
+    static const unsigned long long MAX_STR_SIZE = 255;
 
     std::optional<IndexedChar> get_new_char();
     std::optional<IndexedChar> peek_char() const;
@@ -36,15 +37,21 @@ class Lexer
 
     Token parse_number_token(const Position &position);
     Token parse_underscore(const Position &position);
+    std::optional<wchar_t> parse_hex_escape_sequence();
     Token parse_alpha_token(const Position &position);
     std::optional<Token> parse_slash(const Position &position);
     std::optional<Token> parse_operator(const Position &position);
+    Token parse_char(const Position &position);
+    Token parse_str(const Position &position);
 
     std::string parse_digits();
     Token parse_floating_remainder(std::string &num_str,
                                    const Position &position);
 
     std::optional<Token> parse_possible_slash_token(const Position &position);
+
+    std::optional<wchar_t> parse_escape_sequence();
+    std::optional<wchar_t> parse_language_char();
 
     void skip_line_comment();
     void skip_block_comment();
@@ -53,7 +60,8 @@ class Lexer
     bool is_identifier_char() const;
     bool is_an_operator_char() const;
 
-    std::nullopt_t report_error(const std::wstring &msg);
+    Token report_error(const std::wstring &msg);
+    Token report_and_consume(const std::wstring &msg);
 
   public:
     Lexer(ReaderPtr &reader) : reader(std::move(reader))

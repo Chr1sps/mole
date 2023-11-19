@@ -67,8 +67,8 @@ enum class TokenType
     L_SQ_BRACKET, // '['
     R_SQ_BRACKET, // ']'
 
+    AT,           // '@'
     PLACEHOLDER,  // '_'
-    ELLIPSIS,     // "..."
     LAMBDA_ARROW, // '=>'
 
     KW_FN,       // "fn"
@@ -98,17 +98,24 @@ enum class TokenType
 
     TYPE_CHAR, // "char"
     TYPE_STR,  // "str"
+
+    // Token used as a placeholder for invalid values; it is used as a means of
+    // distinguishing between when a lexer output an invalid value (by
+    // returning an invalid token) and when lexer has no more tokens to output
+    // (by returning std::nullopt).
+    INVALID
 };
 
 struct Token
 {
     TokenType type;
-    std::variant<std::wstring, double, long long, unsigned long long> value;
+    std::variant<std::wstring, wchar_t, double, long long, unsigned long long>
+        value;
     Position position;
     Token() = default;
 
     Token(const TokenType &type, const Position &position)
-        : type(type), value(0), position(position)
+        : type(type), value(0ull), position(position)
     {
     }
 
@@ -132,6 +139,11 @@ struct Token
     Token(const TokenType &type, const std::wstring &str,
           const Position &position)
         : type(type), value(str), position(position)
+    {
+    }
+
+    Token(const TokenType &type, const wchar_t &chr, const Position &position)
+        : type(type), value(chr), position(position)
     {
     }
 
