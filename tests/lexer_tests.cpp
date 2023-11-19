@@ -5,39 +5,50 @@
 
 using namespace std;
 
-bool compare_tokens(const std::wstring &code, const vector<Token> &tokens)
+bool check_log_levels(const std::vector<LogMessage> &messages,
+                      const std::vector<LogLevel> &log_levels)
+{
+    std::vector<LogLevel> output_levels{};
+    std::transform(messages.begin(), messages.end(),
+                   std::back_inserter(output_levels),
+                   [](const LogMessage &msg) { return msg.log_level; });
+    return output_levels == log_levels;
+}
+
+bool check_lexer(const std::wstring &code, const std::vector<Token> &tokens,
+                 const std::vector<LogLevel> &log_levels)
 {
     auto logger = std::make_shared<DebugLogger>();
     auto locale = Locale("C.utf8");
     auto lexer = Lexer::from_wstring(code);
     lexer->add_logger(logger);
-    for (auto &token : tokens)
+
+    std::vector<Token> output_tokens;
+    for (auto token = lexer->get_token(); token.has_value();
+         token = lexer->get_token())
     {
-        auto actual = lexer->get_token();
-        if (actual != token)
-            return false;
+        output_tokens.push_back(*token);
     }
-    return logger->get_messages().empty();
+    return (output_tokens == tokens) &&
+           (check_log_levels(logger->get_messages(), log_levels));
 }
 
-void consume_tokens(const std::wstring &source)
+bool compare_tokens(const std::wstring &code, const vector<Token> &tokens)
 {
-    auto locale = Locale("C.utf8");
-    auto lexer = Lexer::from_wstring(source);
-    while (!lexer->get_token())
-    {
-    }
+    return check_lexer(code, tokens, {});
 }
 
 #define T(type, line, column) Token(TokenType::type, Position(line, column))
 #define V(type, value, line, column)                                          \
     Token(TokenType::type, value, Position(line, column))
 
+#define L(level) LogLevel::level
+
 #define COMPARE(source, tokens) REQUIRE(compare_tokens(source, tokens))
 #define COMPARE_FALSE(source, tokens)                                         \
     REQUIRE_FALSE(compare_tokens(source, tokens))
-#define COMPARE_THROWS(source, exception_type)                                \
-    REQUIRE_THROWS_AS(consume_tokens(source), exception_type)
+#define COMPARE_WITH_LOG_LEVELS(source, tokens, log_levels)                   \
+    REQUIRE(check_lexer(source, tokens, log_levels))
 #define LIST(...)                                                             \
     {                                                                         \
         __VA_ARGS__                                                           \
@@ -45,11 +56,10 @@ void consume_tokens(const std::wstring &source)
 
 TEST_CASE("Empty code.", "[EOF]")
 {
-    auto locale = Locale("en_US.utf8");
     COMPARE(L"", LIST());
 }
 
-TEST_CASE("Single char tokens (with no branching alternatives).", "[OPS][EOF]")
+TEST_CASE("Single char tokens (with no branching alternatives).", "[OPS]")
 {
     COMPARE(L":", LIST(T(COLON, 1, 1)));
     COMPARE(L",", LIST(T(COMMA, 1, 1)));
@@ -78,7 +88,7 @@ TEST_CASE("Single char tokens (with no branching alternatives).", "[OPS][EOF]")
     COMPARE(L"]", LIST(T(R_SQ_BRACKET, 1, 1)));
 }
 
-TEST_CASE("Multiple char tokens.", "[LONG][EOF]")
+TEST_CASE("Multiple char tokens.", "[OPS]")
 {
     COMPARE(L"++", LIST(T(INCREMENT, 1, 1)));
     COMPARE(L"+=", LIST(T(ASSIGN_PLUS, 1, 1)));
@@ -106,7 +116,16 @@ TEST_CASE("Multiple char tokens.", "[LONG][EOF]")
     COMPARE(L">>=", LIST(T(ASSIGN_SHIFT_RIGHT, 1, 1)));
 }
 
-TEST_CASE("Comments.", "[COMM][EOF]")
+TEST_CASE("Combined operators.")
+{
+    COMPARE(L"+++", LIST(T(INCREMENT, 1, 1), T(PLUS, 1, 3)));
+    COMPARE(L"++++", LIST(T(INCREMENT, 1, 1), T(INCREMENT, 1, 3)));
+    COMPARE(L"++==", LIST(T(INCREMENT, 1, 1), T(EQUAL, 1, 3)));
+    COMPARE(L">>>=", LIST(T(SHIFT_RIGHT, 1, 1), T(GREATER_EQUAL, 1, 3)));
+    COMPARE(L">>=>", LIST(T(ASSIGN_SHIFT_RIGHT, 1, 1), T(GREATER, 1, 4)));
+}
+
+TEST_CASE("Comments.", "[COMM]")
 {
     COMPARE(L"//", LIST());
     COMPARE(L"// one 2 _three four\n", LIST());
@@ -115,7 +134,7 @@ TEST_CASE("Comments.", "[COMM][EOF]")
     COMPARE(L"/***/", LIST());
 }
 
-TEST_CASE("Numericals.", "[NUMS][EOF]")
+TEST_CASE("Numericals.", "[NUMS]")
 {
     COMPARE(L"1", LIST(V(INT, 1ull, 1, 1)));
     COMPARE(L"1000", LIST(V(INT, 1000ull, 1, 1)));
@@ -125,7 +144,7 @@ TEST_CASE("Numericals.", "[NUMS][EOF]")
     COMPARE(L".25", LIST(V(DOUBLE, 0.25, 1, 1)));
 }
 
-TEST_CASE("Expressions.", "[NUMS][OPS][EOF]")
+TEST_CASE("Expressions.", "[NUMS][OPS]")
 {
     COMPARE(L"1+1",
             LIST(V(INT, 1ull, 1, 1), T(PLUS, 1, 2), V(INT, 1ull, 1, 3)));
@@ -135,7 +154,7 @@ TEST_CASE("Expressions.", "[NUMS][OPS][EOF]")
             LIST(V(DOUBLE, 1.0, 1, 1), T(PLUS, 1, 3), V(DOUBLE, 1.0, 1, 4)));
 }
 
-TEST_CASE("Keywords.", "[KW][EOF]")
+TEST_CASE("Keywords.", "[KW]")
 {
     COMPARE(L"fn", LIST(T(KW_FN, 1, 1)));
     COMPARE(L"extern", LIST(T(KW_EXTERN, 1, 1)));
@@ -152,7 +171,7 @@ TEST_CASE("Keywords.", "[KW][EOF]")
     COMPARE(L"as", LIST(T(KW_AS, 1, 1)));
 }
 
-TEST_CASE("Type names.", "[TYPE][EOF]")
+TEST_CASE("Type names.", "[TYPE]")
 {
     COMPARE(L"u32", LIST(T(TYPE_U32, 1, 1)));
     COMPARE(L"i32", LIST(T(TYPE_I32, 1, 1)));
@@ -162,7 +181,7 @@ TEST_CASE("Type names.", "[TYPE][EOF]")
     COMPARE(L"str", LIST(T(TYPE_STR, 1, 1)));
 }
 
-TEST_CASE("Identifiers.", "[ID][EOF]")
+TEST_CASE("Identifiers.", "[ID]")
 {
     COMPARE(L"name", LIST(V(IDENTIFIER, L"name", 1, 1)));
     COMPARE(L"Name", LIST(V(IDENTIFIER, L"Name", 1, 1)));
@@ -183,13 +202,13 @@ TEST_CASE("Other special tokens.", "[OTHER]")
 
 TEST_CASE("Invalid signs.", "[ERR]")
 {
-    // COMPARE_THROWS(L".", LexerException);
-    // COMPARE_THROWS(L"..", LexerException);
-    // COMPARE_THROWS(L"$", LexerException);
-    // COMPARE_THROWS(L"#", LexerException);
+    COMPARE_WITH_LOG_LEVELS(L".", LIST(), LIST(L(ERROR)));
+    COMPARE_WITH_LOG_LEVELS(L"..", LIST(), LIST(L(ERROR)));
+    COMPARE_WITH_LOG_LEVELS(L"$", LIST(), LIST(L(ERROR)));
+    COMPARE_WITH_LOG_LEVELS(L"#", LIST(), LIST(L(ERROR)));
 }
 
-TEST_CASE("Assignments.", "[ASGN][KW][ID][OP][EOF]")
+TEST_CASE("Assignments.", "[ASGN][KW][ID][OP]")
 {
     COMPARE(L"let name = 0;",
             LIST(T(KW_LET, 1, 1), V(IDENTIFIER, L"name", 1, 5),
@@ -208,7 +227,7 @@ TEST_CASE("Assignments.", "[ASGN][KW][ID][OP][EOF]")
                  V(INT, 6ull, 1, 33), T(SEMICOLON, 1, 34)));
 }
 
-TEST_CASE("Function definitions", "[FN][KW][ID][OP][EOF]")
+TEST_CASE("Function definitions", "[FN][KW][ID][OP]")
 {
     COMPARE(L"fn noop() => {}",
             LIST(T(KW_FN, 1, 1), V(IDENTIFIER, L"noop", 1, 4),

@@ -17,8 +17,6 @@ struct LogMessage
 {
     std::wstring text;
     LogLevel log_level;
-    friend bool operator==(const LogMessage &, const LogLevel &);
-    friend bool operator!=(const LogMessage &, const LogLevel &);
 };
 
 class Logger

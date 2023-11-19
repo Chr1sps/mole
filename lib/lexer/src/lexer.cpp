@@ -164,10 +164,11 @@ Token Lexer::parse_number_token(const Position &position)
     }
 }
 
-Token Lexer::parse_operator(const Position &position)
+std::optional<Token> Lexer::parse_operator(const Position &position)
 {
     auto node = this->char_nodes.at(this->last_char->character);
     TokenType return_type;
+    std::optional<Token> result;
     for (auto next_char = this->peek_char();;
          this->get_new_char(), next_char = this->peek_char())
     {
@@ -181,16 +182,17 @@ Token Lexer::parse_operator(const Position &position)
             try
             {
                 return_type = node.type.value();
-                this->get_new_char();
-                break;
+                result = Token(return_type, position);
             }
             catch (const std::bad_optional_access &e)
             {
-                this->report_error(L"this operator is not supported");
+                result = this->report_error(L"this operator is not supported");
             }
+            this->get_new_char();
+            break;
         }
     }
-    return Token(return_type, position);
+    return result;
 }
 
 std::optional<Token> Lexer::parse_possible_slash_token(
