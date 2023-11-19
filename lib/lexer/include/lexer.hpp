@@ -57,7 +57,7 @@ class Lexer
     bool is_an_operator_char() const;
 
     std::optional<wchar_t> peek_char() const;
-    Token report_error(const std::wstring &msg);
+    std::nullopt_t report_error(const std::wstring &msg);
 
   public:
     Lexer(ReaderPtr &reader)
@@ -70,9 +70,6 @@ class Lexer
     static LexerPtr from_file(const std::string &path);
 
     std::optional<Token> get_token();
-
-    const Position &get_position() const;
-    bool eof() const;
 
     void add_logger(const LoggerPtr &logger);
     void remove_logger(const LoggerPtr &logger);

@@ -324,7 +324,7 @@ std::optional<wchar_t> Lexer::peek_char() const
     return this->reader->peek();
 }
 
-Token Lexer::report_error(const std::wstring &msg)
+std::nullopt_t Lexer::report_error(const std::wstring &msg)
 {
     auto error_text = build_wstring(
         L"[ERROR] Lexer error at [", this->reader->get_position().line, ",",
@@ -335,17 +335,7 @@ Token Lexer::report_error(const std::wstring &msg)
         logger->log(log_msg);
     }
 
-    return Token(TokenType::INVALID, Position());
-}
-
-bool Lexer::eof() const
-{
-    return this->reader->eof();
-}
-
-const Position &Lexer::get_position() const
-{
-    return this->token_position;
+    return std::nullopt;
 }
 
 void Lexer::add_logger(const LoggerPtr &logger)

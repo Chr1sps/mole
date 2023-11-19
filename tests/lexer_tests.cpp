@@ -24,8 +24,9 @@ void consume_tokens(const std::wstring &source)
 {
     auto locale = Locale("C.utf8");
     auto lexer = Lexer::from_wstring(source);
-    while (!lexer->eof())
-        lexer->get_token();
+    while (!lexer->get_token())
+    {
+    }
 }
 
 #define T(type, line, column) Token(TokenType::type, Position(line, column))

@@ -97,12 +97,7 @@ enum class TokenType
     TYPE_F64, // "f64"
 
     TYPE_CHAR, // "char"
-    TYPE_STR,  // "char"
-
-    END,
-
-    OTHER,
-    INVALID,
+    TYPE_STR,  // "str"
 };
 
 struct Token
