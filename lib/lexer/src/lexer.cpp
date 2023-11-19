@@ -97,82 +97,84 @@ const std::map<wchar_t, CharNode> Lexer::char_nodes{
 #undef CHAR_NODE
 #undef EMPTY_NODE
 
-std::optional<wchar_t> Lexer::get_new_char()
+std::optional<IndexedChar> Lexer::get_new_char()
 {
     return this->last_char = this->reader->get();
 }
 
-std::optional<wchar_t> Lexer::get_nonempty_char()
+std::optional<IndexedChar> Lexer::get_nonempty_char()
 {
     while (this->last_char.has_value() &&
-           std::isspace(this->last_char.value(), this->locale))
+           std::isspace(this->last_char->character, this->locale))
     {
         this->get_new_char();
     }
     return this->last_char;
 }
 
-Token Lexer::parse_alpha_token()
+Token Lexer::parse_alpha_token(const Position &position)
 {
     std::wstring name;
     do
     {
-        name += this->last_char.value();
+        name += this->last_char->character;
         this->get_new_char();
     } while (this->last_char.has_value() &&
-             (std::isalnum(this->last_char.value(), this->locale) ||
-              this->last_char.value() == L'_'));
+             (std::isalnum(this->last_char->character, this->locale) ||
+              *this->last_char == L'_'));
     if (this->keywords.contains(name))
-        return Token(this->keywords.at(name), this->token_position);
-    return Token(TokenType::IDENTIFIER, name, this->token_position);
+        return Token(this->keywords.at(name), position);
+    return Token(TokenType::IDENTIFIER, name, position);
 }
 
 std::string Lexer::parse_digits()
 {
     std::string num_str;
     while (this->last_char.has_value() &&
-           std::isdigit(this->last_char.value(), this->locale))
+           std::isdigit(this->last_char->character, this->locale))
     {
-        num_str += this->last_char.value();
+        num_str += this->last_char->character;
         this->get_new_char();
     }
     return num_str;
 }
 
-Token Lexer::parse_floating_remainder(std::string &num_str)
+Token Lexer::parse_floating_remainder(std::string &num_str,
+                                      const Position &position)
 {
     num_str += '.';
     this->get_new_char();
     num_str += this->parse_digits();
     double value = std::strtod(num_str.c_str(), 0);
-    return Token(TokenType::DOUBLE, value, this->token_position);
+    return Token(TokenType::DOUBLE, value, position);
 }
 
-Token Lexer::parse_number_token()
+Token Lexer::parse_number_token(const Position &position)
 {
     std::string num_str;
     num_str += this->parse_digits();
-    if (this->last_char.has_value() && this->last_char.value() == L'.')
+    if (this->last_char.has_value() && *this->last_char == L'.')
     {
-        return this->parse_floating_remainder(num_str);
+        return this->parse_floating_remainder(num_str, position);
     }
     else
     {
         auto value = std::stoull(num_str.c_str(), 0);
-        return Token(TokenType::INT, value, this->token_position);
+        return Token(TokenType::INT, value, position);
     }
 }
 
-Token Lexer::parse_operator()
+Token Lexer::parse_operator(const Position &position)
 {
-    auto node = this->char_nodes.at(this->last_char.value());
+    auto node = this->char_nodes.at(this->last_char->character);
     TokenType return_type;
     for (auto next_char = this->peek_char();;
          this->get_new_char(), next_char = this->peek_char())
     {
-        if (next_char.has_value() && node.children.contains(next_char.value()))
+        if (next_char.has_value() &&
+            node.children.contains(next_char->character))
         {
-            node = node.children.at(next_char.value());
+            node = node.children.at(next_char->character);
         }
         else
         {
@@ -188,10 +190,11 @@ Token Lexer::parse_operator()
             }
         }
     }
-    return Token(return_type, this->token_position);
+    return Token(return_type, position);
 }
 
-std::optional<Token> Lexer::parse_possible_slash_token()
+std::optional<Token> Lexer::parse_possible_slash_token(
+    const Position &position)
 {
     this->get_new_char();
     if (this->last_char.has_value())
@@ -212,15 +215,15 @@ std::optional<Token> Lexer::parse_possible_slash_token()
         {
             this->get_new_char();
             return std::optional<Token>(
-                Token(TokenType::ASSIGN_SLASH, this->token_position));
+                Token(TokenType::ASSIGN_SLASH, position));
         }
     }
-    return std::optional<Token>(Token(TokenType::SLASH, this->token_position));
+    return std::optional<Token>(Token(TokenType::SLASH, position));
 }
 
-std::optional<Token> Lexer::parse_slash()
+std::optional<Token> Lexer::parse_slash(const Position &position)
 {
-    auto result = this->parse_possible_slash_token();
+    auto result = this->parse_possible_slash_token(position);
     if (result)
         return *result;
     else
@@ -264,38 +267,41 @@ LexerPtr Lexer::from_file(const std::string &path)
     return std::make_unique<Lexer>(reader);
 }
 
-Token Lexer::parse_underscore()
+Token Lexer::parse_underscore(const Position &position)
 {
     auto next = this->reader->peek();
-    if (next.has_value() && std::isalnum(next.value(), this->locale))
+    if (next.has_value() && std::isalnum(next->character, this->locale))
     {
-        return this->parse_alpha_token();
+        return this->parse_alpha_token(position);
     }
     else
     {
         this->get_new_char();
-        return Token(TokenType::PLACEHOLDER, this->token_position);
+        return Token(TokenType::PLACEHOLDER, position);
     }
 }
 
 std::optional<Token> Lexer::get_token()
 {
     this->get_nonempty_char();
-    this->token_position = this->reader->get_position();
     if (this->last_char == std::nullopt)
         return std::nullopt;
-    else if (this->is_a_number_char())
-        return this->parse_number_token();
-    else if (this->last_char == std::make_optional<wchar_t>(L'_'))
-        return this->parse_underscore();
-    else if (this->is_identifier_char())
-        return this->parse_alpha_token();
-    else if (this->last_char.value() == L'/')
-        return this->parse_slash();
-    else if (this->is_an_operator_char())
-        return this->parse_operator();
     else
-        return this->report_error(L"invalid char");
+    {
+        auto position = this->last_char->position;
+        if (this->is_a_number_char())
+            return this->parse_number_token(position);
+        else if (this->last_char == L'_')
+            return this->parse_underscore(position);
+        else if (this->is_identifier_char())
+            return this->parse_alpha_token(position);
+        else if (this->last_char == L'/')
+            return this->parse_slash(position);
+        else if (this->is_an_operator_char())
+            return this->parse_operator(position);
+        else
+            return this->report_error(L"invalid char");
+    }
 }
 
 // the Lexer::is_*() functions below are called with an assumption, that
@@ -303,32 +309,43 @@ std::optional<Token> Lexer::get_token()
 
 bool Lexer::is_a_number_char() const
 {
-    return std::isdigit(this->last_char.value(), this->locale) ||
-           (this->last_char.value() == L'.' && this->peek_char().has_value() &&
-            std::isdigit(this->peek_char().value(), this->locale));
+    auto character = this->last_char.value().character;
+    auto next_char = this->peek_char();
+    return std::isdigit(character, this->locale) ||
+           (character == L'.' && next_char.has_value() &&
+            std::isdigit(next_char.value().character, this->locale));
 }
 
 bool Lexer::is_identifier_char() const
 {
-    return std::isalpha(this->last_char.value(), this->locale) ||
-           this->last_char.value() == L'_';
+    auto character = this->last_char.value().character;
+    return std::isalpha(character, this->locale) || character == L'_';
 }
 
 bool Lexer::is_an_operator_char() const
 {
-    return this->char_nodes.contains(this->last_char.value());
+    return this->char_nodes.contains(this->last_char.value().character);
 }
 
-std::optional<wchar_t> Lexer::peek_char() const
+std::optional<IndexedChar> Lexer::peek_char() const
 {
     return this->reader->peek();
 }
 
 std::nullopt_t Lexer::report_error(const std::wstring &msg)
 {
-    auto error_text = build_wstring(
-        L"[ERROR] Lexer error at [", this->reader->get_position().line, ",",
-        this->reader->get_position().column, "]: ", msg, ".");
+    std::wstring position_text;
+    if (this->last_char)
+    {
+        auto position = this->last_char->position;
+        position_text = build_wstring(position.line, ",", position.column);
+    }
+    else
+    {
+        position_text = L"EOF";
+    }
+    auto error_text = build_wstring(L"[ERROR] Lexer error at [", position_text,
+                                    "]: ", msg, ".");
     auto log_msg = LogMessage(error_text, LogLevel::ERROR);
     for (auto logger : this->loggers)
     {

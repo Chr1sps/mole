@@ -20,6 +20,9 @@ struct IndexedChar
         : character(character), position(position)
     {
     }
+
+    friend bool operator==(const IndexedChar &first, const wchar_t &other);
+    friend bool operator!=(const IndexedChar &first, const wchar_t &other);
 };
 
 class Reader
@@ -39,26 +42,8 @@ class Reader
     }
 
   public:
-    std::optional<IndexedChar> peek()
-    {
-        auto result_char = this->peek_raw();
-        if (static_cast<std::wint_t>(result_char) == WEOF)
-            return std::nullopt;
-        return IndexedChar(result_char, this->current_position);
-    }
-
-    std::optional<IndexedChar> get()
-    {
-        auto result_char = this->get_raw();
-        if (this->eof())
-            return std::nullopt;
-        else
-        {
-            auto result = IndexedChar(result_char, this->current_position);
-            this->update_position(result_char);
-            return result;
-        }
-    }
+    std::optional<IndexedChar> peek();
+    std::optional<IndexedChar> get();
 
     const std::locale &get_locale() const
     {
@@ -138,15 +123,7 @@ class FileReader : public IStreamReader<std::wifstream>
   public:
     FileReader(const FileReader &) = delete;
 
-    FileReader(const std::filesystem::path &path, const std::locale &locale)
-        : IStreamReader<std::wifstream>(locale), file_path(path)
-    {
-        this->driver.open(path);
-        this->driver.imbue(locale);
-        if (!this->driver.good())
-            throw std::ios_base::failure(
-                build_string("File not found: ", this->file_path));
-    }
+    FileReader(const std::filesystem::path &path, const std::locale &locale);
 
     FileReader(const std::string &file_name)
         : FileReader(file_name, std::locale())

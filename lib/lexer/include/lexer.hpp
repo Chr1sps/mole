@@ -23,8 +23,7 @@ class Lexer
 {
     ReaderPtr reader;
 
-    std::optional<wchar_t> last_char;
-    Position token_position;
+    std::optional<IndexedChar> last_char;
 
     std::locale locale;
 
@@ -33,35 +32,33 @@ class Lexer
     static const std::map<std::wstring, TokenType> keywords;
     static const std::map<wchar_t, CharNode> char_nodes;
 
-    std::optional<wchar_t> get_new_char();
-    std::optional<wchar_t> get_nonempty_char();
-
-    Token parse_alpha_token();
+    std::optional<IndexedChar> get_new_char();
+    std::optional<IndexedChar> get_nonempty_char();
 
     std::string parse_digits();
-    Token parse_floating_remainder(std::string &num_str);
-    Token parse_number_token();
+    Token parse_floating_remainder(std::string &num_str,
+                                   const Position &position);
 
-    Token parse_operator();
-
-    std::optional<Token> parse_possible_slash_token();
-    std::optional<Token> parse_slash();
-
-    Token parse_underscore();
+    Token parse_number_token(const Position &position);
+    Token parse_underscore(const Position &position);
+    Token parse_alpha_token(const Position &position);
+    std::optional<Token> parse_slash(const Position &position);
+    Token parse_operator(const Position &position);
 
     void skip_line_comment();
     void skip_block_comment();
 
+    std::optional<Token> parse_possible_slash_token(const Position &position);
     bool is_a_number_char() const;
     bool is_identifier_char() const;
     bool is_an_operator_char() const;
 
-    std::optional<wchar_t> peek_char() const;
+    std::optional<IndexedChar> peek_char() const;
     std::nullopt_t report_error(const std::wstring &msg);
 
   public:
     Lexer(ReaderPtr &reader)
-        : reader(std::move(reader)), last_char(L' '), token_position()
+        : reader(std::move(reader)), last_char(std::nullopt)
     {
         this->locale = this->reader->get_locale();
     }
