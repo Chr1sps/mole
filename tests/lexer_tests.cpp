@@ -211,8 +211,31 @@ TEST_CASE("Invalid signs.", "[ERR]")
 
 TEST_CASE("Chars.", "[CHAR]")
 {
-    COMPARE(L"''", LIST(V(CHAR, L'\0', 1, 1)));
-    COMPARE(L"'a'", LIST(V(CHAR, L'a', 1, 1)));
+    SECTION("Empty char.")
+    {
+        COMPARE(L"''", LIST(V(CHAR, L'\0', 1, 1)));
+    }
+    SECTION("Normal chars.")
+    {
+        COMPARE(L"'a'", LIST(V(CHAR, L'a', 1, 1)));
+        COMPARE(L"'ą'", LIST(V(CHAR, L'ą', 1, 1)));
+        COMPARE(L"'😊'", LIST(V(CHAR, L'😊', 1, 1)));
+    }
+    SECTION("Non-hex escape sequences.")
+    {
+        COMPARE(L"'\\\\'", LIST(V(CHAR, L'\\', 1, 1)));
+        COMPARE(L"'\\n'", LIST(V(CHAR, L'\n', 1, 1)));
+        COMPARE(L"'\\t'", LIST(V(CHAR, L'\t', 1, 1)));
+        COMPARE(L"'\\r'", LIST(V(CHAR, L'\r', 1, 1)));
+        COMPARE(L"'\\\''", LIST(V(CHAR, L'\'', 1, 1)));
+        COMPARE(L"'\\\"'", LIST(V(CHAR, L'\"', 1, 1)));
+        COMPARE(L"'\\0'", LIST(V(CHAR, L'\0', 1, 1)));
+    }
+    SECTION("Hex escape sequences.")
+    {
+        COMPARE(L"'\\{0a}'", LIST(V(CHAR, L'\n', 1, 1)));
+        COMPARE(L"'\\{07}'", LIST(V(CHAR, L'\a', 1, 1)));
+    }
 }
 
 TEST_CASE("Strings.", "[STR]")
