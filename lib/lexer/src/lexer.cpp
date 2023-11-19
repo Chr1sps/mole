@@ -121,7 +121,8 @@ Token Lexer::parse_alpha_token(const Position &position)
         this->get_new_char();
     } while (this->last_char &&
              (std::isalnum(this->last_char->character, this->locale) ||
-              this->last_char == L'_'));
+              this->last_char == L'_') &&
+             name.length() <= Lexer::MAX_VAR_NAME_SIZE);
     if (this->keywords.contains(name))
         return Token(this->keywords.at(name), position);
     return Token(TokenType::IDENTIFIER, name, position);
