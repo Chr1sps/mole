@@ -57,10 +57,14 @@ class Lexer
     std::nullopt_t report_error(const std::wstring &msg);
 
   public:
-    Lexer(ReaderPtr &reader)
-        : reader(std::move(reader)), last_char(std::nullopt)
+    Lexer(ReaderPtr &reader) : reader(std::move(reader))
     {
         this->locale = this->reader->get_locale();
+
+        // this loads the first character into the lexer so that when we run
+        // the get_nonempty_char() function it doesn't immediately return
+        // a nullopt and stop the lexer
+        this->get_new_char();
     }
 
     static LexerPtr from_wstring(const std::wstring &source);
