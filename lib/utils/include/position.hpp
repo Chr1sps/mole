@@ -11,13 +11,9 @@ struct Position
     {
     }
 
-    Position() : Position(1, 1)
-    {
-    }
-
-    Position(const Position &) = default;
-    Position(Position &&) = default;
-    Position &operator=(const Position &other) = default;
+    // Position(const Position &) = default;
+    // Position(Position &&) = default;
+    // Position &operator=(const Position &other) = default;
 
     friend bool operator==(const Position &first, const Position &other);
 };

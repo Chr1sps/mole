@@ -11,6 +11,17 @@
 #include <optional>
 #include <sstream>
 
+struct IndexedChar
+{
+    wchar_t character;
+    Position position;
+
+    IndexedChar(const wchar_t character, const Position &position)
+        : character(character), position(position)
+    {
+    }
+};
+
 class Reader
 {
     Position current_position;
@@ -19,35 +30,32 @@ class Reader
     std::locale locale;
 
     void update_position(const wchar_t &ch);
+
     virtual wchar_t get_raw() = 0;
     virtual wchar_t peek_raw() = 0;
 
-    Reader(const std::locale &locale) : locale(locale)
+    Reader(const std::locale &locale) : current_position(1, 1), locale(locale)
     {
     }
 
   public:
-    const Position &get_position() const noexcept
+    std::optional<IndexedChar> peek()
     {
-        return this->current_position;
-    };
-
-    std::optional<wchar_t> peek()
-    {
-        auto result = this->peek_raw();
-        if (static_cast<std::wint_t>(result) == WEOF)
+        auto result_char = this->peek_raw();
+        if (static_cast<std::wint_t>(result_char) == WEOF)
             return std::nullopt;
-        return result;
+        return IndexedChar(result_char, this->current_position);
     }
 
-    std::optional<wchar_t> get()
+    std::optional<IndexedChar> get()
     {
-        auto result = this->get_raw();
+        auto result_char = this->get_raw();
         if (this->eof())
             return std::nullopt;
         else
         {
-            this->update_position(result);
+            auto result = IndexedChar(result_char, this->current_position);
+            this->update_position(result_char);
             return result;
         }
     }

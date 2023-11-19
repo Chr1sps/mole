@@ -3,76 +3,49 @@
 
 using namespace std;
 
-std::vector<unsigned> line_lengths(const std::wstring &input)
-{
-    std::vector<unsigned> result;
-    std::wistringstream istream(input);
-    std::wstring line;
-
-    while (std::getline(istream, line))
-        result.push_back(line.size() + 1);
-
-    return result;
-}
-
-void get_and_check(Reader &reader, const Position &pos,
-                   const std::optional<wchar_t> &value, const bool eof = false)
+void get_and_check(Reader &reader, const wchar_t &value, const Position &pos)
 {
     auto result = reader.get();
-    REQUIRE(reader.get_position() == pos);
-    REQUIRE(result == value);
-    REQUIRE(reader.eof() == eof);
+    REQUIRE(result.has_value());
+    REQUIRE(result->character == value);
+    REQUIRE(result->position == pos);
 }
 
-void test_reader_sequence(std::wstring &&str)
+void get_and_check_eof(Reader &reader)
 {
-    std::optional<wchar_t> result;
-    auto reader = StringReader(str);
-    auto lengths = line_lengths(str);
-
-    for (unsigned i = 0, line = 0, col = 1;
-         i < str.size() && (col != lengths[line] || line != lengths.size());
-         ++i)
-    {
-        REQUIRE(reader.get_position() == Position(line + 1, col));
-        if (col == lengths[line] && line != lengths.size() - 1)
-        {
-            ++line;
-            col = 0;
-        }
-        ++col;
-        get_and_check(reader, Position(line + 1, col), {str[i]});
-    }
-    result = reader.get();
-    if (lengths.size())
-    {
-        REQUIRE(reader.get_position() ==
-                Position(lengths.size(), lengths[lengths.size() - 1]));
-    }
-    else
-    {
-        REQUIRE(reader.get_position() == Position(1u, 1u));
-    }
-    REQUIRE_FALSE(result.has_value());
-    REQUIRE(reader.eof());
+    auto result = reader.get();
+    REQUIRE(!result.has_value());
 }
 
 TEST_CASE("Empty source.")
 {
-    test_reader_sequence(L"");
+    auto reader = StringReader(L"");
+    get_and_check_eof(reader);
 }
 
-TEST_CASE("One line.")
+TEST_CASE("Single line.")
 {
-    test_reader_sequence(L"one two three four");
+    auto reader = StringReader(L"A");
+    get_and_check(reader, L'A', Position(1, 1));
+    get_and_check_eof(reader);
 }
 
-TEST_CASE("Multiple lines.")
+TEST_CASE("Two lines.")
 {
-    test_reader_sequence(L"one\ntwo\nthree\nfour");
+    auto reader = StringReader(L"A\nB");
+    get_and_check(reader, L'A', Position(1, 1));
+    get_and_check(reader, L'\n', Position(1, 2));
+    get_and_check(reader, L'B', Position(2, 1));
+    get_and_check_eof(reader);
 }
 
 TEST_CASE("UTF-8")
 {
-    test_reader_sequence(L"ąęó");
+    auto reader = StringReader(L"ąęó😊ł");
+    get_and_check(reader, L'ą', Position(1, 1));
+    get_and_check(reader, L'ę', Position(1, 2));
+    get_and_check(reader, L'ó', Position(1, 3));
+    get_and_check(reader, L'😊', Position(1, 4));
+    get_and_check(reader, L'ł', Position(1, 5));
+    get_and_check_eof(reader);
 }
