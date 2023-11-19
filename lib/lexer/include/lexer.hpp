@@ -21,14 +21,15 @@ using LexerPtr = std::unique_ptr<Lexer>;
 
 class Lexer
 {
+    static const std::map<std::wstring, TokenType> keywords;
+    static const std::map<wchar_t, CharNode> char_nodes;
+    static const unsigned long long MAX_STR_SIZE = (1 << 16) - 1;
+    static const unsigned long long MAX_VAR_NAME_SIZE = (1 << 8) - 1;
+
     ReaderPtr reader;
     std::optional<IndexedChar> last_char;
     std::locale locale;
     std::vector<LoggerPtr> loggers;
-
-    static const std::map<std::wstring, TokenType> keywords;
-    static const std::map<wchar_t, CharNode> char_nodes;
-    static const unsigned long long MAX_STR_SIZE = 255;
 
     std::optional<IndexedChar> get_new_char();
     std::optional<IndexedChar> peek_char() const;

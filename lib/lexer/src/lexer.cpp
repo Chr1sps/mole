@@ -119,9 +119,9 @@ Token Lexer::parse_alpha_token(const Position &position)
     {
         name += this->last_char->character;
         this->get_new_char();
-    } while (this->last_char.has_value() &&
+    } while (this->last_char &&
              (std::isalnum(this->last_char->character, this->locale) ||
-              *this->last_char == L'_'));
+              this->last_char == L'_'));
     if (this->keywords.contains(name))
         return Token(this->keywords.at(name), position);
     return Token(TokenType::IDENTIFIER, name, position);
@@ -295,6 +295,8 @@ std::optional<wchar_t> Lexer::parse_hex_escape_sequence()
             buffer += this->last_char->character;
             this->get_new_char();
         }
+        else if (this->last_char == L'}' && i == 0)
+            return std::nullopt;
         else
             break;
     }
@@ -302,6 +304,8 @@ std::optional<wchar_t> Lexer::parse_hex_escape_sequence()
     if (this->last_char != L'}')
         return std::nullopt;
     this->get_new_char();
+    if (buffer.empty())
+        return std::nullopt;
     return static_cast<wchar_t>(std::stoi(buffer, nullptr, 16));
 }
 
@@ -382,7 +386,7 @@ Token Lexer::parse_char(const Position &position)
 
     if (this->last_char != L'\'')
         return this->report_error(L"invalid char in a char literal");
-
+    this->get_new_char();
     return Token(TokenType::CHAR, value, position);
 }
 
@@ -404,6 +408,7 @@ Token Lexer::parse_str(const Position &position)
     }
     if (this->last_char != L'\"')
         return this->report_error(L"str literal isn't enclosed");
+    this->get_new_char();
     return Token(TokenType::STRING, out_stream.str(), position);
 }
 

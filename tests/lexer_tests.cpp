@@ -33,6 +33,20 @@ bool check_lexer(const std::wstring &code, const std::vector<Token> &tokens,
            (check_log_levels(logger->get_messages(), log_levels));
 }
 
+void throws_logs(const std::wstring &code)
+{
+    auto logger = std::make_shared<DebugLogger>();
+    auto locale = Locale("C.utf8");
+    auto lexer = Lexer::from_wstring(code);
+    lexer->add_logger(logger);
+
+    for (; lexer->get_token();)
+    {
+    }
+
+    REQUIRE_FALSE(logger->get_messages().empty());
+}
+
 bool compare_tokens(const std::wstring &code, const vector<Token> &tokens)
 {
     return check_lexer(code, tokens, {});
@@ -235,13 +249,26 @@ TEST_CASE("Chars.", "[CHAR]")
     {
         COMPARE(L"'\\{0a}'", LIST(V(CHAR, L'\n', 1, 1)));
         COMPARE(L"'\\{07}'", LIST(V(CHAR, L'\a', 1, 1)));
+        COMPARE(L"'\\{0001f60A}'", LIST(V(CHAR, L'😊', 1, 1)));
+    }
+    SECTION("Invalid chars.")
+    {
+        throws_logs(L"'");
+        throws_logs(L"'''");
+        throws_logs(L"'\\'");
+        throws_logs(L"'\\{}'");
+        throws_logs(L"'\\{aaaaaaaaa}'");
     }
 }
 
 TEST_CASE("Strings.", "[STR]")
 {
-    COMPARE(L"\"\"", LIST(V(STRING, L"", 1, 1)));
-    COMPARE(L"\"test123\"", LIST(V(STRING, L"test123", 1, 1)));
+    SECTION("Normal strings.")
+    {
+        COMPARE(L"\"\"", LIST(V(STRING, L"", 1, 1)));
+        COMPARE(L"\"test123\"", LIST(V(STRING, L"test123", 1, 1)));
+        COMPARE(L"\"\"\"\"", LIST(V(STRING, L"", 1, 1), V(STRING, L"", 1, 3)));
+    }
 }
 
 TEST_CASE("Assignments.", "[ASGN][KW][ID][OP]")
