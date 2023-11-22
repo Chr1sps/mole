@@ -36,7 +36,7 @@ std::optional<IndexedChar> Reader::peek()
 std::optional<IndexedChar> Reader::get()
 {
     auto result_char = this->get_raw();
-    if (this->eof())
+    if (static_cast<std::wint_t>(result_char) == WEOF)
         return std::nullopt;
 
     // converting Windows newline to Unix newline
