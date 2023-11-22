@@ -33,12 +33,17 @@ std::optional<IndexedChar> Reader::get()
     auto result_char = this->get_raw();
     if (this->eof())
         return std::nullopt;
-    else
+
+    // converting Windows newline to Unix newline
+    if (result_char == '\r' && this->peek_raw() == L'\n')
     {
-        auto result = IndexedChar(result_char, this->current_position);
-        this->update_position(result_char);
-        return result;
+        result_char = '\n';
+        this->get_raw();
     }
+
+    auto result = IndexedChar(result_char, this->current_position);
+    this->update_position(result_char);
+    return result;
 }
 
 FileReader::FileReader(const std::filesystem::path &path,
