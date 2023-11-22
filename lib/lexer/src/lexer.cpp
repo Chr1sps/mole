@@ -113,20 +113,23 @@ std::optional<IndexedChar> Lexer::get_nonempty_char()
     return this->last_char;
 }
 
-Token Lexer::parse_alpha_token(const Position &position)
+std::optional<Token> Lexer::parse_alpha_token(const Position &position)
 {
     std::wstring name;
     do
     {
         name += this->last_char->character;
         this->get_new_char();
-    } while (this->last_char &&
-             (std::isalnum(this->last_char->character, this->locale) ||
-              this->last_char == L'_') &&
-             name.length() < this->max_var_name_size);
+    } while (this->is_alpha_char() && name.length() < this->max_var_name_size);
+
     if (auto name_iter = this->keywords.find(name);
         name_iter != this->keywords.end())
         return Token(name_iter->second, position);
+
+    if (name.length() == this->max_var_name_size && this->is_alpha_char())
+    {
+        return this->report_error(L"variable name length is too long");
+    }
     return Token(TokenType::IDENTIFIER, name, position);
 }
 
@@ -264,10 +267,26 @@ Token Lexer::parse_block_comment(const Position &position)
     return Token(TokenType::COMMENT, position);
 }
 
+LexerPtr Lexer::from_wstring(const std::wstring &source,
+                             const unsigned long long &max_var_name_size,
+                             const unsigned long long &max_str_length)
+{
+    ReaderPtr reader = std::make_unique<StringReader>(source);
+    return std::make_unique<Lexer>(reader, max_var_name_size, max_str_length);
+}
+
 LexerPtr Lexer::from_wstring(const std::wstring &source)
 {
     ReaderPtr reader = std::make_unique<StringReader>(source);
     return std::make_unique<Lexer>(reader);
+}
+
+LexerPtr Lexer::from_file(const std::string &path,
+                          const unsigned long long &max_var_name_size,
+                          const unsigned long long &max_str_length)
+{
+    ReaderPtr reader = std::make_unique<FileReader>(path, std::locale());
+    return std::make_unique<Lexer>(reader, max_var_name_size, max_str_length);
 }
 
 LexerPtr Lexer::from_file(const std::string &path)
@@ -276,7 +295,7 @@ LexerPtr Lexer::from_file(const std::string &path)
     return std::make_unique<Lexer>(reader);
 }
 
-Token Lexer::parse_underscore(const Position &position)
+std::optional<Token> Lexer::parse_underscore(const Position &position)
 {
     auto next = this->reader->peek();
     if (next.has_value() && std::isalnum(next->character, this->locale))
@@ -477,6 +496,12 @@ bool Lexer::is_identifier_char() const
 bool Lexer::is_an_operator_char() const
 {
     return this->char_nodes.contains(this->last_char.value().character);
+}
+
+bool Lexer::is_alpha_char() const
+{
+    return this->last_char && (std::iswalnum(this->last_char->character) ||
+                               this->last_char == L'_');
 }
 
 std::optional<IndexedChar> Lexer::peek_char() const

@@ -42,9 +42,9 @@ class Lexer
 
     std::optional<Token> parse_number_token(const Position &position);
 
-    Token parse_underscore(const Position &position);
+    std::optional<Token> parse_underscore(const Position &position);
     std::optional<wchar_t> parse_hex_escape_sequence();
-    Token parse_alpha_token(const Position &position);
+    std::optional<Token> parse_alpha_token(const Position &position);
     Token parse_comment_or_operator(const Position &position);
     std::optional<Token> parse_operator(const Position &position);
     Token parse_char(const Position &position);
@@ -63,6 +63,7 @@ class Lexer
     bool is_a_number_char() const;
     bool is_identifier_char() const;
     bool is_an_operator_char() const;
+    bool is_alpha_char() const;
 
     Token report_error(const std::wstring &msg);
     Token report_and_consume(const std::wstring &msg);
@@ -88,7 +89,13 @@ class Lexer
     }
 
     static LexerPtr from_wstring(const std::wstring &source);
+    static LexerPtr from_wstring(const std::wstring &source,
+                                 const unsigned long long &max_var_name_size,
+                                 const unsigned long long &max_str_length);
     static LexerPtr from_file(const std::string &path);
+    static LexerPtr from_file(const std::string &path,
+                              const unsigned long long &max_var_name_size,
+                              const unsigned long long &max_str_length);
 
     std::optional<Token> get_token();
 

@@ -344,3 +344,27 @@ TEST_CASE("Function definitions", "[FN][KW][ID][OP]")
              T(TYPE_I32, 1, 27), T(L_BRACKET, 1, 31),
              V(IDENTIFIER, L"i", 1, 32), T(R_BRACKET, 1, 33)));
 }
+
+TEST_CASE("Variable and string limits.")
+{
+    auto logger = std::make_shared<DebugLogger>();
+    auto locale = Locale("C.utf8");
+    SECTION("Variable limits.")
+    {
+        auto lexer = Lexer::from_wstring(L"aaaaa", 2, 2);
+        lexer->add_logger(logger.get());
+        while (lexer->get_token())
+        {
+        }
+        REQUIRE(!logger->get_messages().empty());
+    }
+    SECTION("String limits.")
+    {
+        auto lexer = Lexer::from_wstring(L"\"aaaaa\"", 2, 2);
+        lexer->add_logger(logger.get());
+        while (lexer->get_token())
+        {
+        }
+        REQUIRE(!logger->get_messages().empty());
+    }
+}
