@@ -37,7 +37,11 @@ class Lexer
 
     std::optional<IndexedChar> get_nonempty_char();
 
-    Token parse_number_token(const Position &position);
+    std::optional<unsigned long long> parse_integral();
+    std::optional<double> parse_floating();
+
+    std::optional<Token> parse_number_token(const Position &position);
+
     Token parse_underscore(const Position &position);
     std::optional<wchar_t> parse_hex_escape_sequence();
     Token parse_alpha_token(const Position &position);

@@ -3,6 +3,7 @@
 #include "reader.hpp"
 #include "string_builder.hpp"
 #include <algorithm>
+#include <limits>
 #include <string>
 
 #define KEYWORD(wstr, token_type)                                             \
@@ -129,41 +130,63 @@ Token Lexer::parse_alpha_token(const Position &position)
     return Token(TokenType::IDENTIFIER, name, position);
 }
 
-std::string Lexer::parse_digits()
+unsigned int convert_to_int(const wchar_t &chr)
 {
-    std::string num_str;
-    while (this->last_char.has_value() &&
-           std::isdigit(this->last_char->character, this->locale))
+    return chr - L'0';
+}
+
+std::optional<unsigned long long> Lexer::parse_integral()
+{
+    unsigned long long result = 0;
+    for (; this->last_char.has_value() &&
+           std::iswdigit(this->last_char->character);
+         this->get_new_char())
     {
-        num_str += this->last_char->character;
+        if (result >= std::numeric_limits<uint32_t>::max() / 10)
+            return std::nullopt;
+        result *= 10;
+
+        auto digit = convert_to_int(this->last_char->character);
+        if (result >= std::numeric_limits<uint32_t>::max() - digit)
+            return std::nullopt;
+        result += digit;
+    }
+    return result;
+}
+
+std::optional<double> Lexer::parse_floating()
+{
+    double result = 0;
+    for (double shift = 0.1; this->last_char.has_value() &&
+                             std::iswdigit(this->last_char->character);
+         this->get_new_char(), shift /= 10)
+    {
+        auto digit = convert_to_int(this->last_char->character);
+        auto shifted_digit = digit * shift;
+        result += shifted_digit;
+    }
+    return result;
+}
+
+std::optional<Token> Lexer::parse_number_token(const Position &position)
+{
+    auto integral = this->parse_integral();
+    if (this->last_char == L'.')
+    {
         this->get_new_char();
-    }
-    return num_str;
-}
+        auto floating = this->parse_floating();
 
-Token Lexer::parse_floating_remainder(std::string &num_str,
-                                      const Position &position)
-{
-    num_str += '.';
-    this->get_new_char();
-    num_str += this->parse_digits();
-    double value = std::strtod(num_str.c_str(), 0);
-    return Token(TokenType::DOUBLE, value, position);
-}
+        if (!floating.has_value())
+            this->report_error(L"the floating part couldn't be parsed");
 
-Token Lexer::parse_number_token(const Position &position)
-{
-    std::string num_str;
-    num_str += this->parse_digits();
-    if (this->last_char.has_value() && *this->last_char == L'.')
-    {
-        return this->parse_floating_remainder(num_str, position);
+        if (integral.has_value())
+            *floating += *integral;
+
+        return Token(TokenType::DOUBLE, *floating, position);
     }
-    else
-    {
-        auto value = std::stoull(num_str.c_str(), 0);
-        return Token(TokenType::INT, value, position);
-    }
+    if (!integral.has_value())
+        return this->report_error(L"the integral part exceeds the u32 limit");
+    return Token(TokenType::INT, *integral, position);
 }
 
 std::optional<Token> Lexer::parse_operator(const Position &position)
