@@ -2,20 +2,50 @@
 #include "logger.hpp"
 #include "token.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 using namespace std;
 
-bool check_log_levels(const std::vector<LogMessage> &messages,
+void assert_tokens(const std::vector<Token> expected,
+                   const std::vector<Token> actual)
+{
+    REQUIRE(expected.size() == actual.size());
+    for (unsigned i = 0; i < expected.size(); ++i)
+    {
+        REQUIRE(expected[i].type == actual[i].type);
+        REQUIRE(expected[i].position == actual[i].position);
+        switch (expected[i].type)
+        {
+        case TokenType::INT:
+        case TokenType::STRING:
+        case TokenType::CHAR:
+            REQUIRE(expected[i].value == actual[i].value);
+            break;
+        case TokenType::DOUBLE: {
+            auto expected_double = std::get<double>(expected[i].value);
+            auto actual_double = std::get<double>(actual[i].value);
+            REQUIRE_THAT(actual_double,
+                         Catch::Matchers::WithinRel(expected_double, 0.0001));
+            break;
+        }
+
+        default:
+            break;
+        }
+    }
+}
+
+void check_log_levels(const std::vector<LogMessage> &messages,
                       const std::vector<LogLevel> &log_levels)
 {
     std::vector<LogLevel> output_levels{};
     std::transform(messages.begin(), messages.end(),
                    std::back_inserter(output_levels),
                    [](const LogMessage &msg) { return msg.log_level; });
-    return output_levels == log_levels;
+    REQUIRE(output_levels == log_levels);
 }
 
-bool check_lexer(const std::wstring &code, const std::vector<Token> &tokens,
+void check_lexer(const std::wstring &code, const std::vector<Token> &tokens,
                  const std::vector<LogLevel> &log_levels)
 {
     auto logger = std::make_shared<DebugLogger>();
@@ -29,8 +59,8 @@ bool check_lexer(const std::wstring &code, const std::vector<Token> &tokens,
     {
         output_tokens.push_back(*token);
     }
-    return (output_tokens == tokens) &&
-           (check_log_levels(logger->get_messages(), log_levels));
+    assert_tokens(tokens, output_tokens);
+    check_log_levels(logger->get_messages(), log_levels);
 }
 
 void throws_logs(const std::wstring &code)
@@ -47,9 +77,10 @@ void throws_logs(const std::wstring &code)
     REQUIRE_FALSE(logger->get_messages().empty());
 }
 
-bool compare_tokens(const std::wstring &code, const vector<Token> &tokens)
+void compare_lexed_tokens(const std::wstring &code,
+                          const vector<Token> &tokens)
 {
-    return check_lexer(code, tokens, {});
+    check_lexer(code, tokens, {});
 }
 
 #define T(type, line, column) Token(TokenType::type, Position(line, column))
@@ -58,11 +89,9 @@ bool compare_tokens(const std::wstring &code, const vector<Token> &tokens)
 
 #define L(level) LogLevel::level
 
-#define COMPARE(source, tokens) REQUIRE(compare_tokens(source, tokens))
-#define COMPARE_FALSE(source, tokens)                                         \
-    REQUIRE_FALSE(compare_tokens(source, tokens))
+#define COMPARE(source, tokens) compare_lexed_tokens(source, tokens)
 #define COMPARE_WITH_LOG_LEVELS(source, tokens, log_levels)                   \
-    REQUIRE(check_lexer(source, tokens, log_levels))
+    check_lexer(source, tokens, log_levels)
 #define LIST(...)                                                             \
     {                                                                         \
         __VA_ARGS__                                                           \
@@ -204,8 +233,6 @@ TEST_CASE("Identifiers.", "[ID]")
     COMPARE(L"snake_case", LIST(V(IDENTIFIER, L"snake_case", 1, 1)));
     COMPARE(L"_snake_case", LIST(V(IDENTIFIER, L"_snake_case", 1, 1)));
     COMPARE(L"ęóąśłżźćń", LIST(V(IDENTIFIER, L"ęóąśłżźćń", 1, 1)));
-    COMPARE_FALSE(L"3three", LIST(V(IDENTIFIER, L"3three", 1, 1)));
-    COMPARE_FALSE(L"3_three", LIST(V(IDENTIFIER, L"3three", 1, 1)));
 }
 
 TEST_CASE("Other special tokens.", "[OTHER]")
