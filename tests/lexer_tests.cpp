@@ -21,7 +21,7 @@ bool check_lexer(const std::wstring &code, const std::vector<Token> &tokens,
     auto logger = std::make_shared<DebugLogger>();
     auto locale = Locale("C.utf8");
     auto lexer = Lexer::from_wstring(code);
-    lexer->add_logger(logger);
+    lexer->add_logger(logger.get());
 
     std::vector<Token> output_tokens;
     for (auto token = lexer->get_token(); token.has_value();
@@ -38,7 +38,7 @@ void throws_logs(const std::wstring &code)
     auto logger = std::make_shared<DebugLogger>();
     auto locale = Locale("C.utf8");
     auto lexer = Lexer::from_wstring(code);
-    lexer->add_logger(logger);
+    lexer->add_logger(logger.get());
 
     for (; lexer->get_token();)
     {

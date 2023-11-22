@@ -492,12 +492,12 @@ Token Lexer::report_and_consume(const std::wstring &msg)
     return result;
 }
 
-void Lexer::add_logger(const LoggerPtr &logger)
+void Lexer::add_logger(Logger *logger)
 {
     this->loggers.push_back(logger);
 }
 
-void Lexer::remove_logger(const LoggerPtr &logger)
+void Lexer::remove_logger(Logger *logger)
 {
     std::erase(this->loggers, logger);
 }

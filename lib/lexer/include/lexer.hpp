@@ -30,7 +30,7 @@ class Lexer
 
     std::optional<IndexedChar> last_char;
     std::locale locale;
-    std::vector<LoggerPtr> loggers;
+    std::vector<Logger *> loggers;
 
     std::optional<IndexedChar> get_new_char();
     std::optional<IndexedChar> peek_char() const;
@@ -88,8 +88,8 @@ class Lexer
 
     std::optional<Token> get_token();
 
-    void add_logger(const LoggerPtr &logger);
-    void remove_logger(const LoggerPtr &logger);
+    void add_logger(Logger *logger);
+    void remove_logger(Logger *logger);
 };
 
 #endif
