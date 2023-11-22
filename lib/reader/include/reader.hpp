@@ -41,6 +41,8 @@ class Reader
     {
     }
 
+    virtual bool eof() = 0;
+
   public:
     std::optional<IndexedChar> peek();
     std::optional<IndexedChar> get();
@@ -50,7 +52,6 @@ class Reader
         return this->locale;
     }
 
-    virtual bool eof() = 0;
     virtual ~Reader() = default;
 };
 
@@ -79,7 +80,6 @@ template <DerivedFromWistream T> class IStreamReader : public Reader
     {
     }
 
-  public:
     bool eof() override
     {
         return this->driver.eof();
@@ -99,6 +99,11 @@ class ConsoleReader : public Reader
         return std::wcin.peek();
     }
 
+    bool eof() override
+    {
+        return std::wcin.eof();
+    }
+
   public:
     ConsoleReader(const ConsoleReader &) = delete;
 
@@ -108,11 +113,6 @@ class ConsoleReader : public Reader
 
     ConsoleReader() : ConsoleReader(std::locale())
     {
-    }
-
-    bool eof() override
-    {
-        return std::wcin.eof();
     }
 };
 
