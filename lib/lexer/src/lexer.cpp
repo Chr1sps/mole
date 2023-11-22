@@ -122,7 +122,7 @@ Token Lexer::parse_alpha_token(const Position &position)
     } while (this->last_char &&
              (std::isalnum(this->last_char->character, this->locale) ||
               this->last_char == L'_') &&
-             name.length() <= Lexer::MAX_VAR_NAME_SIZE);
+             name.length() < Lexer::MAX_VAR_NAME_SIZE);
     if (auto name_iter = this->keywords.find(name);
         name_iter != this->keywords.end())
         return Token(name_iter->second, position);
@@ -169,7 +169,6 @@ Token Lexer::parse_number_token(const Position &position)
 std::optional<Token> Lexer::parse_operator(const Position &position)
 {
     auto node = this->char_nodes.at(this->last_char->character);
-    TokenType return_type;
     std::optional<Token> result;
     for (auto next_char = this->peek_char();;
          this->get_new_char(), next_char = this->peek_char())
@@ -182,15 +181,11 @@ std::optional<Token> Lexer::parse_operator(const Position &position)
 
         else
         {
-            try
-            {
-                return_type = node.type.value();
-                result = Token(return_type, position);
-            }
-            catch (const std::bad_optional_access &e)
-            {
+            if (node.type.has_value())
+                result = Token(*node.type, position);
+            else
                 result = this->report_error(L"this operator is not supported");
-            }
+
             this->get_new_char();
             break;
         }
@@ -237,7 +232,7 @@ std::optional<Token> Lexer::parse_slash(const Position &position)
 
 void Lexer::skip_line_comment()
 {
-    while (!this->reader->eof() && this->last_char.value() != L'\n' &&
+    while (this->last_char.has_value() && this->last_char.value() != L'\n' &&
            this->last_char.value() != L'\r')
     {
         this->get_new_char();
@@ -246,17 +241,14 @@ void Lexer::skip_line_comment()
 
 void Lexer::skip_block_comment()
 {
-    for (;;)
+    for (; this->last_char.has_value(); this->get_new_char())
     {
-        while (!this->reader->eof() && this->last_char.value() != L'*')
-            this->get_new_char();
-        if (this->peek_char() == L'/')
+        if (this->last_char == L'*' && this->peek_char() == L'/')
         {
             this->get_new_char();
             this->get_new_char();
             return;
         }
-        this->get_new_char();
     }
 }
 
