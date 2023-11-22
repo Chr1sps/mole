@@ -49,3 +49,10 @@ TEST_CASE("UTF-8")
     get_and_check(reader, L'ł', Position(1, 5));
     get_and_check_eof(reader);
 }
+
+TEST_CASE("")
+{
+    auto reader = StringReader(L"");
+    get_and_check_eof(reader);
+    get_and_check_eof(reader);
+}

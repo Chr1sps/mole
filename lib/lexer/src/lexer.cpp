@@ -123,8 +123,9 @@ Token Lexer::parse_alpha_token(const Position &position)
              (std::isalnum(this->last_char->character, this->locale) ||
               this->last_char == L'_') &&
              name.length() <= Lexer::MAX_VAR_NAME_SIZE);
-    if (this->keywords.contains(name))
-        return Token(this->keywords.at(name), position);
+    if (auto name_iter = this->keywords.find(name);
+        name_iter != this->keywords.end())
+        return Token(name_iter->second, position);
     return Token(TokenType::IDENTIFIER, name, position);
 }
 
@@ -173,11 +174,12 @@ std::optional<Token> Lexer::parse_operator(const Position &position)
     for (auto next_char = this->peek_char();;
          this->get_new_char(), next_char = this->peek_char())
     {
-        if (next_char.has_value() &&
-            node.children.contains(next_char->character))
-        {
-            node = node.children.at(next_char->character);
-        }
+        if (decltype(node.children)::iterator child_iter;
+            next_char.has_value() &&
+            (child_iter = node.children.find(next_char->character)) !=
+                node.children.end())
+            node = child_iter->second;
+
         else
         {
             try
