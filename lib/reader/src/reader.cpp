@@ -10,22 +10,27 @@ bool operator!=(const IndexedChar &first, const wchar_t &other)
     return first.character != other;
 }
 
-std::optional<IndexedChar> Reader::peek()
-{
-    auto result_char = this->peek_raw();
-    if (static_cast<std::wint_t>(result_char) == WEOF)
-        return std::nullopt;
-    return IndexedChar(result_char, this->current_position);
-}
-
 void Reader::update_position(const wchar_t &ch)
 {
-    if (ch == L'\n')
+    if (ch == '\n')
     {
         ++this->current_position.line;
         this->current_position.column = 0;
     }
     ++this->current_position.column;
+}
+
+std::optional<IndexedChar> Reader::peek()
+{
+    auto result_char = this->peek_raw();
+    if (static_cast<std::wint_t>(result_char) == WEOF)
+        return std::nullopt;
+
+    if (result_char == '\r' && this->peek_second_raw() == L'\n')
+    {
+        result_char = '\n';
+    }
+    return IndexedChar(result_char, this->current_position);
 }
 
 std::optional<IndexedChar> Reader::get()

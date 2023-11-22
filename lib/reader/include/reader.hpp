@@ -36,6 +36,7 @@ class Reader
 
     virtual wchar_t get_raw() = 0;
     virtual wchar_t peek_raw() = 0;
+    virtual wchar_t peek_second_raw() = 0;
 
     Reader(const std::locale &locale) : current_position(1, 1), locale(locale)
     {
@@ -76,6 +77,14 @@ template <DerivedFromWistream T> class IStreamReader : public Reader
         return this->driver.peek();
     }
 
+    wchar_t peek_second_raw() override
+    {
+        this->driver.ignore();
+        auto result = this->driver.peek();
+        this->driver.unget();
+        return result;
+    }
+
     IStreamReader(const std::locale &locale) : Reader(locale)
     {
     }
@@ -97,6 +106,14 @@ class ConsoleReader : public Reader
     wchar_t peek_raw() override
     {
         return std::wcin.peek();
+    }
+
+    wchar_t peek_second_raw() override
+    {
+        std::wcin.ignore();
+        auto result = std::wcin.peek();
+        std::wcin.unget();
+        return result;
     }
 
     bool eof() override

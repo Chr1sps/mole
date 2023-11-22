@@ -218,8 +218,7 @@ Token Lexer::parse_comment_or_operator(const Position &position)
 
 Token Lexer::parse_line_comment(const Position &position)
 {
-    while (this->last_char.has_value() && this->last_char.value() != L'\n' &&
-           this->last_char.value() != L'\r')
+    while (this->last_char.has_value() && this->last_char.value() != L'\n')
     {
         this->get_new_char();
     }
