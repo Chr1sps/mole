@@ -122,7 +122,7 @@ Token Lexer::parse_alpha_token(const Position &position)
     } while (this->last_char &&
              (std::isalnum(this->last_char->character, this->locale) ||
               this->last_char == L'_') &&
-             name.length() < Lexer::MAX_VAR_NAME_SIZE);
+             name.length() < this->max_var_name_size);
     if (auto name_iter = this->keywords.find(name);
         name_iter != this->keywords.end())
         return Token(name_iter->second, position);
@@ -389,7 +389,7 @@ Token Lexer::parse_str(const Position &position)
 {
     this->get_new_char();
     std::wstringstream out_stream(L"");
-    for (unsigned long long i = 0; i <= Lexer::MAX_STR_SIZE; ++i)
+    for (unsigned long long i = 0; i <= this->max_str_length; ++i)
     {
         if (this->last_char == L'\'')
         {

@@ -23,10 +23,11 @@ class Lexer
 {
     static const std::map<std::wstring, TokenType> keywords;
     static const std::map<wchar_t, CharNode> char_nodes;
-    static const unsigned long long MAX_STR_SIZE = (1 << 16) - 1;
-    static const unsigned long long MAX_VAR_NAME_SIZE = (1 << 8) - 1;
 
     ReaderPtr reader;
+    const unsigned long long max_var_name_size;
+    const unsigned long long max_str_length;
+
     std::optional<IndexedChar> last_char;
     std::locale locale;
     std::vector<LoggerPtr> loggers;
@@ -65,7 +66,10 @@ class Lexer
     Token report_and_consume(const std::wstring &msg);
 
   public:
-    Lexer(ReaderPtr &reader) : reader(std::move(reader))
+    Lexer(ReaderPtr &reader, const unsigned long long &max_var_name_size,
+          const unsigned long long &max_str_length)
+        : reader(std::move(reader)), max_var_name_size(max_var_name_size),
+          max_str_length(max_str_length)
     {
         // getting the locale from the reader instead of loading it some other
         // way prevents locale mismatch
@@ -75,6 +79,10 @@ class Lexer
         // the get_nonempty_char() function at the very first get_token() call
         // it doesn't immediately return a nullopt and stop the lexer
         this->get_new_char();
+    }
+
+    Lexer(ReaderPtr &reader) : Lexer(reader, (1 << 8) - 1, (1 << 16) - 1)
+    {
     }
 
     static LexerPtr from_wstring(const std::wstring &source);
