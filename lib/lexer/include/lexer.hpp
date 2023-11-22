@@ -41,7 +41,7 @@ class Lexer
     Token parse_underscore(const Position &position);
     std::optional<wchar_t> parse_hex_escape_sequence();
     Token parse_alpha_token(const Position &position);
-    std::optional<Token> parse_slash(const Position &position);
+    Token parse_comment_or_operator(const Position &position);
     std::optional<Token> parse_operator(const Position &position);
     Token parse_char(const Position &position);
     Token parse_str(const Position &position);
@@ -50,13 +50,11 @@ class Lexer
     Token parse_floating_remainder(std::string &num_str,
                                    const Position &position);
 
-    std::optional<Token> parse_possible_slash_token(const Position &position);
-
     std::optional<wchar_t> parse_escape_sequence();
     std::optional<wchar_t> parse_language_char();
 
-    void skip_line_comment();
-    void skip_block_comment();
+    Token parse_line_comment(const Position &position);
+    Token parse_block_comment(const Position &position);
 
     bool is_a_number_char() const;
     bool is_identifier_char() const;

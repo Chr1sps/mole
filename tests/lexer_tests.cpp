@@ -141,11 +141,11 @@ TEST_CASE("Combined operators.")
 
 TEST_CASE("Comments.", "[COMM]")
 {
-    COMPARE(L"//", LIST());
-    COMPARE(L"// one 2 _three four\n", LIST());
-    COMPARE(L"/* fn extern main */", LIST());
-    COMPARE(L"/*\n*/", LIST());
-    COMPARE(L"/***/", LIST());
+    COMPARE(L"//", LIST(T(COMMENT, 1, 1)));
+    COMPARE(L"// one 2 _three four\n", LIST(T(COMMENT, 1, 1)));
+    COMPARE(L"/* fn extern main */", LIST(T(COMMENT, 1, 1)));
+    COMPARE(L"/*\n*/", LIST(T(COMMENT, 1, 1)));
+    COMPARE(L"/***/", LIST(T(COMMENT, 1, 1)));
 }
 
 TEST_CASE("Numericals.", "[NUMS]")

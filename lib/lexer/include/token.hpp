@@ -85,11 +85,6 @@ enum class TokenType
     KW_BREAK,    // "break"
     KW_AS,       // "as"
 
-    INT,    // holds a u32 value
-    DOUBLE, // holds a f64 value
-    STRING, // holds a str value
-    CHAR,   // holds a char value
-
     TYPE_BOOL, // "bool"
 
     TYPE_U32, // "u32"
@@ -98,6 +93,13 @@ enum class TokenType
 
     TYPE_CHAR, // "char"
     TYPE_STR,  // "str"
+
+    INT,    // holds a u32 value
+    DOUBLE, // holds a f64 value
+    STRING, // holds a str value
+    CHAR,   // holds a char value
+
+    COMMENT, // represents a comment, doesn't hold the string of the comment
 
     // Token used as a placeholder for invalid values; it is used as a means of
     // distinguishing between when a lexer output an invalid value (by

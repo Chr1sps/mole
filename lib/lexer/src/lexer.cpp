@@ -193,53 +193,40 @@ std::optional<Token> Lexer::parse_operator(const Position &position)
     return result;
 }
 
-std::optional<Token> Lexer::parse_possible_slash_token(
-    const Position &position)
+Token Lexer::parse_comment_or_operator(const Position &position)
 {
     this->get_new_char();
     if (this->last_char.has_value())
     {
-        if (this->last_char.value() == L'/')
+        auto char_value = this->last_char->character;
+        this->get_new_char();
+        switch (char_value)
         {
-            this->get_new_char();
-            this->skip_line_comment();
-            return std::optional<Token>();
-        }
-        else if (this->last_char.value() == L'*')
-        {
-            this->get_new_char();
-            this->skip_block_comment();
-            return std::optional<Token>();
-        }
-        else if (this->last_char.value() == L'=')
-        {
-            this->get_new_char();
-            return std::optional<Token>(
-                Token(TokenType::ASSIGN_SLASH, position));
+        case L'/':
+            return this->parse_line_comment(position);
+            break;
+        case L'*':
+            return this->parse_block_comment(position);
+            break;
+        case L'=':
+            return Token(TokenType::ASSIGN_SLASH, position);
+            break;
         }
     }
-    return std::optional<Token>(Token(TokenType::SLASH, position));
+    return Token(TokenType::SLASH, position);
 }
 
-std::optional<Token> Lexer::parse_slash(const Position &position)
-{
-    auto result = this->parse_possible_slash_token(position);
-    if (result)
-        return *result;
-    else
-        return this->get_token();
-}
-
-void Lexer::skip_line_comment()
+Token Lexer::parse_line_comment(const Position &position)
 {
     while (this->last_char.has_value() && this->last_char.value() != L'\n' &&
            this->last_char.value() != L'\r')
     {
         this->get_new_char();
     }
+    return Token(TokenType::COMMENT, position);
 }
 
-void Lexer::skip_block_comment()
+Token Lexer::parse_block_comment(const Position &position)
 {
     for (; this->last_char.has_value(); this->get_new_char())
     {
@@ -247,9 +234,12 @@ void Lexer::skip_block_comment()
         {
             this->get_new_char();
             this->get_new_char();
-            return;
+            // not returning here because Werror screams that there is no
+            // return in the main function scope
+            break;
         }
     }
+    return Token(TokenType::COMMENT, position);
 }
 
 LexerPtr Lexer::from_wstring(const std::wstring &source)
@@ -421,7 +411,7 @@ std::optional<Token> Lexer::get_token()
             return this->parse_underscore(position);
             break;
         case L'/':
-            return this->parse_slash(position);
+            return this->parse_comment_or_operator(position);
             break;
         case L'\'':
             return this->parse_char(position);
