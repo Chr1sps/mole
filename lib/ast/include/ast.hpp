@@ -1,6 +1,5 @@
 #ifndef __AST_HPP__
 #define __AST_HPP__
-#include "operators.hpp"
 #include "position.hpp"
 #include "types.hpp"
 #include "visitor.hpp"
@@ -50,12 +49,48 @@ struct VariableExpr : public ExprNode
     }
 };
 
+enum class BinOpEnum
+{
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    MOD,
+    EXP,
+
+    EQ,
+    NEQ,
+    GT,
+    GE,
+    LT,
+    LE,
+
+    AND,
+    OR,
+
+    BIT_AND,
+    BIT_OR,
+    BIT_XOR,
+
+    SHL,
+    SHR,
+};
+
+enum class UnaryOpEnum
+{
+    INC,
+    DEC,
+
+    NEG,
+    BIT_NEG,
+};
+
 struct BinaryExpr : public ExprNode
 {
     ExprNodePtr lhs, rhs;
-    BinaryPtr op;
+    BinOpEnum op;
 
-    BinaryExpr(ExprNodePtr &lhs, ExprNodePtr &rhs, const BinaryPtr &op,
+    BinaryExpr(ExprNodePtr &lhs, ExprNodePtr &rhs, const BinOpEnum &op,
                const Position &position)
         : ExprNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
     {
@@ -70,9 +105,10 @@ struct BinaryExpr : public ExprNode
 struct UnaryExpr : public ExprNode
 {
     ExprNodePtr expr;
-    UnaryPtr op;
+    UnaryOpEnum op;
 
-    UnaryExpr(ExprNodePtr &expr, UnaryPtr op, const Position &position)
+    UnaryExpr(ExprNodePtr &expr, const UnaryOpEnum &op,
+              const Position &position)
         : ExprNode(position), expr(std::move(expr)), op(op)
     {
     }

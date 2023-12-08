@@ -1,6 +1,5 @@
 set(LIB_HEADERS
     "ast.hpp"
-    "operators.hpp"
     "types.hpp"
     "visitor.hpp"
 )

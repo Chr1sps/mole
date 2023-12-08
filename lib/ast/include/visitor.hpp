@@ -35,13 +35,6 @@ class TypeVisitor : public Visitor
     virtual void visit(const FunctionType &type) = 0;
 };
 
-class BinOpVisitor : public Visitor
-{
-  public:
-    virtual void visit(const BuiltInBinOp &op) = 0;
-    virtual void visit(const BuiltInUnaryOp &op) = 0;
-};
-
 class AstVisitor : public Visitor
 {
   public:

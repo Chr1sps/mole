@@ -2,7 +2,6 @@
 #define __PARSER_HPP__
 #include "ast.hpp"
 #include "lexer.hpp"
-#include "operators.hpp"
 #include "token.hpp"
 #include <map>
 

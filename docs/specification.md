@@ -141,25 +141,25 @@ Shown below is the list of escape sequences used in Mole:
 Mole has two constructs that define control flow in a program:
 
 - the `if` statement takes a boolean value in the parentheses and executes the
-following statement(s) if the condition evaluates to `true`; the statement can
-be followed with the `else` section that executes when the condition is
-evaluated as `false`
+  following statement(s) if the condition evaluates to `true`; the statement
+  can be followed with the `else` section that executes when the condition is
+  evaluated as `false`
 
-```txt
-// ...
+  ```txt
+  // ...
 
-if (condition) {
+  if (condition) {
 
-    // do something if condition is true
+      // do something if condition is true
 
-} else { 
+  } else { 
 
-    // do something if condition is false
+      // do something if condition is false
 
-}
+  }
 
-// ...
-```
+  // ...
+  ```
 
 - the `while` loop takes a boolean value in the parentheses and continues
   evaluating the statement(s) associated with the loop as long as the condition
@@ -276,6 +276,10 @@ they obey the rules of accessing outside variables.
 
 *In-place lambdas* are inpired by function currying from functional
 programming. It's a syntactic sugar of partially applying function arguments.
+Using the `@` symbol we can indicate to the compiler that we want to only apply
+the arguments to the function, NOT call it. The `_` sign acts as a placeholder
+\- any parameter with the placeholder argument will be one of the parameters
+required in the created function.
 
 ```txt
 fn foo(a: i32, b: i32, c: i32, d: i32) => i32 {
@@ -283,18 +287,16 @@ fn foo(a: i32, b: i32, c: i32, d: i32) => i32 {
 }
 
 fn main() {
-    let a: fn(i32,i32,i32) => i32 = foo(1, ...);
-    let b: fn(i32) => i32 = foo(1, _, 3, 4);
+    // The type definitions below are meant to show the resulting type of the
+    // lambda expression. They do NOT change of coerce the type of the
+    // expression itself - they are for demonstration purposes only.
+    let a: fn(i32, i32) => i32 = @foo(1, _, 3, _);
+    let b: fn(i32) => i32 = @a(2, _);
 
-    // useful for delaying function execution, for example in a button handler
-    let c: fn() => i32 = foo(1, 2, 3, 4, ...); 
-
-    //both styles can be mixed...
-    let d: fn(i32,i32,i32) => i32 = foo(_, 2, ...); 
-
-    //...provided the `_` token isn't next to the `...` token
-    // this doesn't work
-    let e = foo(1, _, ...);
+    // This applies all the required arguments and returns a function that can
+    // be called later when needed.
+    let c: fn() => i32 = @foo(1, 2, 3, 4); 
+    // the result of calling c() would be 10
 }
 ```
 
@@ -306,17 +308,22 @@ non-referenced types:
 ```txt
 let value = 5;
 match value {
-    0 => {value = 1;}           // matches 0
-    1 | 2 => {value = 0;}       // matches 1 or 2
-    _ => {value = 3;}           // matches any value leftover
+    0 => {value = 1;}                   // matches 0
+    1 | 2 => {value = 0;}               // matches 1 or 2
+    if (value > 4) => {value = 2;}      // matches any value bigger than 4
+    _ => {value = 3;}                   // matches any value leftover
 };
 ```
 
-The example above shows all 3 possible scenarios of patterns:
+The example above shows all 4 possible scenarios of patterns:
 
 - comparing against a single literal
 - comparing against multiple literals joined by the `|` sign
+- using the `if` guard, which matches if the expression inside evaluates to
+  `true`
 - matching against all values left with the dummy `_` pattern.
+
+The `if` guard accepts any expression that resolves to a boolean value.
 
 Pattern matching only works against compile-time literals and expressions that
 are based on them.
@@ -330,6 +337,17 @@ let value = 3;
 match value {
     0 => {value = 1;}           
     1 | 2 => {value = 0;}       
+};
+```
+
+The compilator doesn't check if the `if` guards cover all the cases, so the
+code below will also generate an error:
+
+```txt
+let value = 3;
+// code below won't compile
+match value {
+    if (true) => {value = 1;}           
 };
 ```
 
@@ -486,8 +504,8 @@ R_PAREN = ")";
 L_SQ_BRACKET = "[";
 R_SQ_BRACKET = "]";
 
+AT = "@";
 PLACEHOLDER = "_";
-ELLIPSIS = "...";
 LAMBDA_ARROW = "=>";
 
 COLON = ":";
@@ -495,7 +513,7 @@ COMMA = ",";
 SEMICOLON = ";";
 
 ```
-
+<!-- 73 tokens -->
 ### Parser rules
 
 ```ebnf
@@ -508,15 +526,15 @@ TOP_LEVEL_STATEMENT = FUNC_DEF_STMT |
 EXTERN_STMT = KW_EXTERN, FUNC_NAME_AND_PARAMS, SEMICOLON;
 FUNC_DEF_STMT = KW_FN, [KW_CONST], FUNC_NAME_AND_PARAMS, BLOCK;
 
-FUNC_NAME_AND_PARAMS = IDENTIFIER, L_PAREN, PARAMS, R_PAREN, RETURN_TYPE;
+FUNC_NAME_AND_PARAMS = IDENTIFIER, L_PAREN, [PARAMS], R_PAREN, [RETURN_TYPE];
 
-PARAMS = [PARAMETER, {COMMA, PARAMETER}];
+PARAMS = PARAMETER, {COMMA, PARAMETER};
 PARAMETER = IDENTIFIER, TYPE_SPECIFIER;
 TYPE_SPECIFIER = COLON, TYPE_WITH_REF_SPEC;
 TYPE_WITH_REF_SPEC = [REF_SPECIFIER], TYPE;
 REF_SPECIFIER = AMPERSAND, [KW_MUT];
 
-RETURN_TYPE = [LAMBDA_ARROW, TYPE_WITH_REF_SPEC];
+RETURN_TYPE = LAMBDA_ARROW, TYPE_WITH_REF_SPEC;
 
 TYPE = SIMPLE_TYPE |
        FUNCTION_TYPE;
@@ -527,9 +545,9 @@ SIMPLE_TYPE = TYPE_U32 |
               TYPE_BOOL |
               TYPE_CHAR |
               TYPE_STR;
-FUNCTION_TYPE = KW_FN, L_PAREN, TYPES, R_PAREN, [RETURN_TYPE];
+FUNCTION_TYPE = KW_FN, L_PAREN, [TYPES], R_PAREN, [RETURN_TYPE];
 
-TYPES = [TYPE_WITH_REF_SPEC, {COMMA, TYPE_WITH_REF_SPEC}];
+TYPES = TYPE_WITH_REF_SPEC, {COMMA, TYPE_WITH_REF_SPEC};
 
 BLOCK = L_BRACKET, {NON_FUNC_STMT}, R_BRACKET;
 
@@ -551,7 +569,6 @@ ASSIGN_OP = ASSIGN |
             ASSIGN_STAR |
             ASSIGN_SLASH |
             ASSIGN_PERCENT |
-            ASSIGN_EXP |
             ASSIGN_EXP |
             ASSIGN_BIT_NEG |
             ASSIGN_AMPERSAND |
@@ -618,35 +635,34 @@ UNARY_OP = INCREMENT |
            MINUS;
 
 VARIABLE_EXPR = IDENTIFIER;
-CALL_EXPR = EXPRESSION, L_PAREN, ARGS, R_PAREN;
-ARGS = [ARG, {COMMA, ARG}];
-ARG = EXPRESSION;
+CALL_EXPR = EXPRESSION, L_PAREN, [ARGS], R_PAREN;
+ARGS = EXPRESSION, {COMMA, EXPRESSION};
 
-LAMBDA_CALL_EXPR = EXPRESSION, L_PAREN, (LAMBDA_ARGS | ARG_WITH_ELLIPSIS), R_PAREN;
-LAMBDA_ARGS = [LAMBDA_ARG, {COMMA, LAMBDA_ARG}, [COMMA, ARG_WITH_ELLIPSIS]];
-ARG_WITH_ELLIPSIS = ARG, COMMA, ELLIPSIS;
+LAMBDA_CALL_EXPR = AT, EXPRESSION, L_PAREN, [LAMBDA_ARGS], R_PAREN;
+LAMBDA_ARGS = LAMBDA_ARG, {COMMA, LAMBDA_ARG};
 LAMBDA_ARG = EXPRESSION |
              PLACEHOLDER;
 
-INDEX_EXPR = EXPRESSION, "[", U32_EXPR ,"]";
+INDEX_EXPR = EXPRESSION, "[", EXPRESSION ,"]";
 
 PAREN_EXPR = L_PAREN, EXPRESSION, R_PAREN;
 
 IF_STMT = KW_IF, PAREN_EXPR, BLOCK, [ELSE_BLOCK];
 ELSE_BLOCK = KW_ELSE, BLOCK;
 
-WHILE_STMT = KW_WHILE, PAREN_EXPRESSION, LOOP_BLOCK;
+WHILE_STMT = KW_WHILE, PAREN_EXPR, LOOP_BLOCK;
 LOOP_BLOCK = L_BRACKET, LOOP_STMT, R_BRACKET;
 LOOP_STMT = NON_FUNC_STMT |
                LOOP_BLOCK |
             CONTINUE_STMT |
                BREAK_STMT;
 
-MATCH_STMT = KW_MATCH, PAREN_EXPRESSION, L_BRACKET, {MATCH_CASE}, R_BRACKET;
+MATCH_STMT = KW_MATCH, PAREN_EXPR, L_BRACKET, {MATCH_CASE}, R_BRACKET;
 MATCH_CASE = MATCH_SPECIFIER, LAMBDA_ARROW, BLOCK;
-MATCH_SPECIFIER = MATCH_LITERALS | PLACEHOLDER;
+MATCH_SPECIFIER = MATCH_LITERALS | PLACEHOLDER | KW_IF, PAREN_EXPR;
 MATCH_LITERALS = LITERAL, {BIT_OR, LITERAL};
 ```
+<!--  54 rules (for now)-->
 
 ## Compiler structure
 

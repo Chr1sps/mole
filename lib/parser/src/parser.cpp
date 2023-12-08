@@ -1,6 +1,4 @@
 #include "parser.hpp"
-#include "exceptions.hpp"
-#include "operators.hpp"
 #include "string_builder.hpp"
 #include <algorithm>
 #include <optional>
@@ -310,6 +308,8 @@ std::unique_ptr<ExternStmt> Parser::parse_extern()
 // [LAMBDA_ARROW, Type], Block;
 std::unique_ptr<FuncDefStmt> Parser::parse_function()
 {
+    if (this->current_token != TokenType::KW_FN)
+        return nullptr;
     this->push_pos();
     this->get_new_token();
     auto is_const = false;
@@ -320,7 +320,7 @@ std::unique_ptr<FuncDefStmt> Parser::parse_function()
     }
     if (this->current_token != TokenType::IDENTIFIER)
         this->report_error(L"not a function identifier");
-    auto name = std::get<std::wstring>(this->current_token.value);
+    auto name = std::get<std::wstring>((*this->current_token).value);
     this->assert_next_token(
         TokenType::L_PAREN,
         L"left parenthesis missing in a function definition");
@@ -696,22 +696,14 @@ ProgramPtr Parser::parse()
     std::vector<std::unique_ptr<FuncDefStmt>> functions;
     std::vector<std::unique_ptr<ExternStmt>> externs;
 
-    for (this->get_new_token(); this->current_token != TokenType::END;)
+    while (this->current_token)
     {
-        switch (this->current_token.type)
-        {
-        case TokenType::KW_FN:
-            functions.push_back(this->parse_function());
-            break;
-        case TokenType::KW_EXTERN:
-            externs.push_back(this->parse_extern());
-            break;
-        case TokenType::KW_LET:
-            globals.push_back(this->parse_variable_declaration());
-            break;
-        default:
-            this->report_error(L"unrecognized token");
-        }
+        if (auto func = this->parse_function())
+            functions.push_back(func);
+        if (auto ext = this->parse_extern())
+            externs.push_back(ext);
+        if (auto var = this->parse_variable_declaration())
+            globals.push_back(var);
     }
     return std::make_unique<Program>(globals, functions, externs);
 }
