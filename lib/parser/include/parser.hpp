@@ -53,8 +53,8 @@ class Parser
 
     std::unique_ptr<Block> parse_else_block();
 
-    std::optional<TypePtr> parse_var_type();
-    std::optional<ExprNodePtr> parse_var_value();
+    TypePtr parse_type_specifier();
+    ExprNodePtr parse_initial_value();
     std::unique_ptr<ReturnStmt> parse_return_stmt();
     std::unique_ptr<AssignStmt> parse_assign_statement();
     std::unique_ptr<Statement> parse_non_func_stmt();
@@ -94,13 +94,13 @@ class Parser
     std::unique_ptr<CharExpr> parse_char_expr();
     std::unique_ptr<BoolExpr> parse_bool_expr();
 
-    std::unique_ptr<ExprNodePtr> parse_paren_expr();
+    ExprNodePtr parse_paren_expr();
 
-    std::unique_ptr<ExprNodePtr> parse_factor();
-    std::unique_ptr<ExprNodePtr> parse_index_lambda_or_call();
-    std::unique_ptr<ExprNodePtr> parse_unary_expr();
-    std::unique_ptr<ExprNodePtr> parse_cast_expr();
-    std::unique_ptr<ExprNodePtr> parse_binary_expr();
+    ExprNodePtr parse_factor();
+    ExprNodePtr parse_index_lambda_or_call();
+    ExprNodePtr parse_unary_expr();
+    ExprNodePtr parse_cast_expr();
+    ExprNodePtr parse_binary_expr();
 
     void report_error(const std::wstring &error_msg);
 

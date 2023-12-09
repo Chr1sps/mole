@@ -176,7 +176,19 @@ struct LambdaCallExpr : public ExprNode
     }
 };
 
+struct CastExpr : public ExprNode
+{
+    ExprNodePtr expr;
+    TypePtr type;
+
+    CastExpr(ExprNodePtr &expr, TypePtr &type, const Position &position)
+        : ExprNode(position), expr(std::move(expr)), type(std::move(type))
+    {
+    }
+};
+
 struct ConstNode : public ExprNode
+
 {
   protected:
     ConstNode(const Position &position) : ExprNode(position)

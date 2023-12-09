@@ -2,6 +2,7 @@
 #include "string_builder.hpp"
 #include <algorithm>
 #include <optional>
+#include <stack>
 #include <tuple>
 
 #define BINOP(token_type, precedence, bin_op_type, is_right)                  \
@@ -105,35 +106,16 @@ void Parser::assert_next_token(TokenType type, const std::wstring &error_msg)
         this->report_error(error_msg);
 }
 
-std::optional<TypePtr> Parser::parse_var_type()
-{
-    std::optional<TypePtr> type = {};
-    this->next_token();
-    if (this->current_token == TokenType::COLON)
-    {
-        this->next_token();
-        type = this->parse_type();
-    }
-    return type;
-}
-
-std::optional<ExprNodePtr> Parser::parse_var_value()
-{
-    std::optional<ExprNodePtr> value = {};
-    if (this->current_token == TokenType::ASSIGN)
-    {
-        this->next_token();
-        value = this->parse_expression();
-    }
-    return value;
-}
-
 void Parser::report_error(const std::wstring &msg)
 {
     auto error_msg = build_wstring(
         L"[ERROR] Parser error at [", this->current_token->position.line, ",",
         this->current_token->position.column, "]: ", msg, ".");
-    throw std::exception();
+    auto log_msg = LogMessage(error_msg, LogLevel::ERROR);
+    for (auto logger : this->loggers)
+    {
+        logger->log(log_msg);
+    }
 }
 
 //
@@ -173,7 +155,8 @@ std::unique_ptr<ExternStmt> Parser::parse_extern_stmt()
     return std::make_unique<ExternStmt>(name, params, return_type, position);
 }
 
-// VarDeclStmt = KW_LET, IDENTIFIER, [COLON, Type], [ASSIGN, Expression];
+// VAR_DECL_STMT = KW_LET, [KW_MUT], IDENTIFIER, [TYPE_SPECIFIER],
+// [INITIAL_VALUE];
 std::unique_ptr<VarDeclStmt> Parser::parse_var_decl_stmt()
 {
     if (this->current_token != TokenType::KW_LET)
@@ -194,14 +177,38 @@ std::unique_ptr<VarDeclStmt> Parser::parse_var_decl_stmt()
 
     auto name = std::get<std::wstring>(this->current_token->value);
 
-    auto type = this->parse_var_type();
-    auto initial_value = this->parse_var_value();
+    auto type = this->parse_type_specifier();
+    auto initial_value = this->parse_initial_value();
 
     this->assert_current_and_eat(
         TokenType::SEMICOLON, L"no semicolon found in a variable declaration");
 
     return std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut,
                                          position);
+}
+
+// TYPE_SPECIFIER = COLON, TYPE;
+TypePtr Parser::parse_type_specifier()
+{
+    TypePtr type = nullptr;
+    if (this->current_token == TokenType::COLON)
+    {
+        this->next_token();
+        type = this->parse_type();
+    }
+    return type;
+}
+
+// INITIAL_VALUE = ASSIGN, BINARY_EXPR;
+ExprNodePtr Parser::parse_initial_value()
+{
+    ExprNodePtr value = nullptr;
+    if (this->current_token == TokenType::ASSIGN)
+    {
+        this->next_token();
+        value = this->parse_binary_expr();
+    }
+    return value;
 }
 
 // FUNC_DEF_STMT = KW_FN, [KW_CONST], FUNC_NAME_AND_PARAMS, Block;
@@ -420,7 +427,7 @@ std::unique_ptr<Statement> Parser::parse_non_func_stmt()
     return nullptr;
 }
 
-// RETURN_STMT = KW_RETURN, [EXPRESSION], SEMICOLON;
+// RETURN_STMT = KW_RETURN, [BINARY_EXPR], SEMICOLON;
 std::unique_ptr<ReturnStmt> Parser::parse_return_stmt()
 {
     auto position = this->current_token->position;
@@ -430,12 +437,13 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_stmt()
         this->next_token();
         return std::make_unique<ReturnStmt>(position);
     }
-    auto expr = this->parse_expression();
+    auto expr = this->parse_binary_expr();
     this->assert_current_and_eat(TokenType::SEMICOLON,
                                  L"no semicolon found in a return statement");
     return std::make_unique<ReturnStmt>(expr, position);
 }
 
+// CONTINUE_STMT = KW_CONTINUE, SEMICOLON;
 std::unique_ptr<ContinueStmt> Parser::parse_continue_stmt()
 {
     if (this->current_token != TokenType::KW_CONTINUE)
@@ -447,6 +455,7 @@ std::unique_ptr<ContinueStmt> Parser::parse_continue_stmt()
     return std::make_unique<ContinueStmt>(position);
 }
 
+// BREAK_STMT = KW_BREAK, SEMICOLON;
 std::unique_ptr<BreakStmt> Parser::parse_break_stmt()
 {
     if (this->current_token != TokenType::KW_BREAK)
@@ -458,6 +467,7 @@ std::unique_ptr<BreakStmt> Parser::parse_break_stmt()
     return std::make_unique<BreakStmt>(position);
 }
 
+// IF_STMT = KW_IF, PAREN_EXPR, BLOCK, [ELSE_BLOCK];
 std::unique_ptr<IfStmt> Parser::parse_if_stmt()
 {
     if (this->current_token != TokenType::KW_IF)
@@ -680,28 +690,186 @@ std::unique_ptr<BoolExpr> Parser::parse_bool_expr()
         return nullptr;
 }
 
-std::unique_ptr<ExprNodePtr> Parser::parse_binary_expr()
+bool join_into_binary_op(std::stack<ExprNodePtr> &values,
+                         std::stack<BinOpData> &ops)
 {
-    auto lhs = this->parse_cast_expr();
-    if (this->current_token.has_value() &&
-        this->binary_map.contains(this->current_token->type))
+    auto op = ops.top().type;
+    ops.pop();
+    if (values.size() < 2)
     {
-
-        // TODO: shunting yard
+        return false;
     }
     else
     {
-        return lhs;
+        // moving the nodes out of the values stack - the pointers
+        // stored in it must release the ownership
+        auto rhs = std::make_unique<ExprNode>(values.top().release());
+        values.pop();
+
+        auto lhs = std::make_unique<ExprNode>(values.top().release());
+        values.pop();
+
+        auto position = lhs->position;
+        auto new_expr = std::make_unique<BinaryExpr>(
+            std::move(lhs), std::move(rhs), op, position);
+        values.push(std::move(new_expr));
+        return true;
     }
 }
 
-std::unique_ptr<ExprNodePtr> Parser::parse_cast_expr()
+// BINARY_EXPR = CAST_EXPR, {BINARY_OP, CAST_EXPR};
+ExprNodePtr Parser::parse_binary_expr()
+{
+    std::stack<ExprNodePtr> values;
+    std::stack<BinOpData> ops;
+    decltype(this->binary_map)::iterator iter;
+    while (true)
+    {
+        if (auto expr = this->parse_cast_expr())
+        {
+            values.push(expr);
+        }
+        else if (this->current_token.has_value() &&
+                 (iter = this->binary_map.find(this->current_token->type)) !=
+                     this->binary_map.end())
+        {
+            while (!ops.empty() &&
+                   (iter->second.precedence < ops.top().precedence ||
+                    (iter->second.precedence == ops.top().precedence &&
+                     !iter->second.is_right_assoc)))
+            {
+                if (!join_into_binary_op(values, ops))
+                {
+                    this->report_error(
+                        L"no right-hand side found in a binary expression");
+                }
+            }
+            ops.push(iter->second);
+        }
+        else
+            break;
+    }
+    while (!ops.empty())
+    {
+        if (!join_into_binary_op(values, ops))
+        {
+            this->report_error(
+                L"no right-hand side found in a binary expression");
+        }
+    }
+    if (values.size() > 1)
+    {
+        this->report_error(L"binary expression doesn't have an operand");
+        return nullptr;
+    }
+    return std::make_unique<ExprNode>(values.top().release());
+}
+
+// CAST_EXPR = UNARY_EXPR , {KW_AS, SIMPLE_TYPE};
+ExprNodePtr Parser::parse_cast_expr()
 {
     auto lhs = this->parse_unary_expr();
-    if (this->current_token == TokenType::KW_AS)
+    while (this->current_token == TokenType::KW_AS)
     {
+        auto position = lhs->position;
         this->next_token();
+        if (auto type = this->parse_simple_type())
+        {
+            lhs = std::make_unique<CastExpr>(std::move(lhs), std::move(type),
+                                             position);
+        }
+        else
+        {
+            this->report_error(L"no type name given in a cast expression");
+        }
     }
+    return lhs;
+}
+
+// UNARY_EXPR = {UNARY_OP}, (INDEX_LAMBDA_OR_CALL);
+ExprNodePtr Parser::parse_unary_expr()
+{
+    std::stack<UnaryOpEnum> ops;
+    std::optional<Position> position;
+    decltype(this->unary_map)::iterator op_iter;
+    while (this->current_token.has_value() &&
+           (op_iter = this->unary_map.find(this->current_token->type)) !=
+               this->unary_map.end())
+    {
+        if (!position.has_value())
+            position = this->current_token->position;
+        ops.push(op_iter->second);
+    }
+    if (auto inner = this->parse_index_lambda_or_call())
+    {
+        if (!position.has_value())
+            position = inner->position;
+        inner = std::make_unique<UnaryExpr>(std::move(inner), ops.top(),
+                                            *position);
+    }
+    else if (!ops.empty())
+    {
+        this->report_error(L"no inner expression found in a unary expression");
+    }
+    return nullptr;
+}
+
+// INDEX_LAMBDA_OR_CALL = FACTOR, {CALL_PART | LAMBDA_CALL_PART | INDEX_PART};
+ExprNodePtr Parser::parse_index_lambda_or_call()
+{
+    auto result = this->parse_factor();
+    while (true)
+    {
+        if (this->parse_call_part())
+        {
+        }
+        else if (this->parse_lambda_call_part())
+        {
+        }
+        else if (this->parse_index_part())
+        {
+        }
+        else
+            break;
+    }
+    return result;
+}
+
+// FACTOR = PAREN_EXPR | U32_EXPR | F64_EXPR | STRING_EXPR | CHAR_EXPR |
+// BOOL_EXPR;
+ExprNodePtr Parser::parse_factor()
+{
+    if (auto result = this->parse_u32_expr())
+        return result;
+    else if (auto result = this->parse_f64_expr())
+        return result;
+    else if (auto result = this->parse_string_expr())
+        return result;
+    else if (auto result = this->parse_char_expr())
+        return result;
+    else if (auto result = this->parse_bool_expr())
+        return result;
+    else if (auto result = this->parse_paren_expr())
+        return result;
+    return nullptr;
+}
+
+// PAREN_EXPR = L_PAREN, BINARY_EXPR, R_PAREN;
+ExprNodePtr Parser::parse_paren_expr()
+{
+    if (this->current_token != TokenType::L_PAREN)
+        return nullptr;
+    auto position = this->current_token->position;
+    this->next_token();
+
+    auto result = this->parse_binary_expr();
+
+    this->assert_current_and_eat(
+        TokenType::R_PAREN,
+        L"expected a right bracket in a parenthesis expression");
+
+    result->position = position;
+    return result;
 }
 
 void Parser::add_logger(Logger *logger)
