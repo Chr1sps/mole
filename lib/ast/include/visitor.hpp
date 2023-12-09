@@ -4,6 +4,9 @@
 struct VariableExpr;
 struct I32Expr;
 struct F64Expr;
+struct StringExpr;
+struct CharExpr;
+struct BoolExpr;
 struct BinaryExpr;
 struct UnaryExpr;
 struct CallExpr;
@@ -29,9 +32,6 @@ struct NeverType;
 struct SimpleType;
 struct FunctionType;
 
-struct BuiltInBinOp;
-struct BuiltInUnaryOp;
-
 class Visitor
 {
 };
@@ -50,6 +50,9 @@ class AstVisitor : public Visitor
     virtual void visit(const VariableExpr &node) = 0;
     virtual void visit(const I32Expr &node) = 0;
     virtual void visit(const F64Expr &node) = 0;
+    virtual void visit(const StringExpr &node) = 0;
+    virtual void visit(const CharExpr &node) = 0;
+    virtual void visit(const BoolExpr &node) = 0;
     virtual void visit(const BinaryExpr &node) = 0;
     virtual void visit(const UnaryExpr &node) = 0;
     virtual void visit(const CallExpr &node) = 0;

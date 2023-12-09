@@ -217,6 +217,8 @@ TEST_CASE("Keywords.", "[KW]")
     compare_lexed_tokens(L"continue", LIST(T(KW_CONTINUE, 1, 1)));
     compare_lexed_tokens(L"break", LIST(T(KW_BREAK, 1, 1)));
     compare_lexed_tokens(L"as", LIST(T(KW_AS, 1, 1)));
+    compare_lexed_tokens(L"true", LIST(T(KW_TRUE, 1, 1)));
+    compare_lexed_tokens(L"false", LIST(T(KW_FALSE, 1, 1)));
 }
 
 TEST_CASE("Type names.", "[TYPE]")

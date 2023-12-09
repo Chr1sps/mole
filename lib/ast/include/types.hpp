@@ -17,6 +17,13 @@ enum class TypeEnum
     STR,
 };
 
+enum class RefSpecifier
+{
+    NON_REF,
+    REF,
+    MUT_REF
+};
+
 struct Type
 {
   protected:
@@ -35,8 +42,10 @@ using TypePtr = std::shared_ptr<Type>;
 struct SimpleType : public Type
 {
     TypeEnum type;
+    RefSpecifier ref_spec;
 
-    SimpleType(const TypeEnum &type) : type(type)
+    SimpleType(const TypeEnum &type, const RefSpecifier &ref_spec)
+        : type(type), ref_spec(ref_spec)
     {
     }
 

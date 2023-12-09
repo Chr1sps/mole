@@ -216,6 +216,54 @@ struct F64Expr : public ConstNode
     }
 };
 
+struct StringExpr : public ConstNode
+{
+    // static const std::shared_ptr<SimpleType> type;
+    std::wstring value;
+
+    StringExpr(const std::wstring &value, const Position &position)
+        : ConstNode(position), value(value)
+    {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
+};
+
+struct CharExpr : public ConstNode
+{
+    // static const std::shared_ptr<SimpleType> type;
+    wchar_t value;
+
+    CharExpr(const wchar_t &value, const Position &position)
+        : ConstNode(position), value(value)
+    {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
+};
+
+struct BoolExpr : public ConstNode
+{
+    // static const std::shared_ptr<SimpleType> type;
+    bool value;
+
+    BoolExpr(const bool &value, const Position &position)
+        : ConstNode(position), value(value)
+    {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
+};
+
 struct Statement : public AstNode
 {
   protected:

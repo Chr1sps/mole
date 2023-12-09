@@ -4,6 +4,7 @@
 #include "lexer.hpp"
 #include "token.hpp"
 #include <map>
+#include <unordered_set>
 
 struct BinOpData
 {
@@ -20,13 +21,15 @@ struct BinOpData
 
 class Parser
 {
-    LexerPtr lexer;
-    std::optional<Token> current_token;
     static std::map<TokenType, BinOpData> binary_map;
     static std::map<TokenType, UnaryOpEnum> unary_map;
     static std::map<TokenType, TypeEnum> type_map;
     static std::map<TokenType, TypeEnum> type_value_map;
     static std::map<TokenType, AssignType> assign_map;
+
+    LexerPtr lexer;
+    std::optional<Token> current_token;
+    std::unordered_set<Logger *> loggers;
 
     void next_token();
 
@@ -83,29 +86,21 @@ class Parser
 
     std::unique_ptr<BlockPtr> parse_match_arm_block();
 
-    void check_next_op_and_parse(std::unique_ptr<ExprNode> &lhs,
-                                 std::unique_ptr<ExprNode> &rhs,
-                                 const std::shared_ptr<BuiltInBinOp> &op);
-    void push_expr(std::vector<ExprNodePtr> &args,
-                   std::vector<std::optional<ExprNodePtr>> &lambda_args,
-                   const bool &is_lambda);
-
-    bool eat_comma_or_rparen();
-
     // expressions
 
-    std::unique_ptr<I32Expr> parse_i32();
-    std::unique_ptr<F64Expr> parse_f64();
-    std::unique_ptr<ExprNode> parse_paren_expr();
-    std::unique_ptr<ExprNode> parse_unary_expression();
-    std::unique_ptr<ExprNode> parse_call_or_lambda(ExprNodePtr &expr);
-    std::unique_ptr<ExprNode> parse_identifier_expression();
-    std::unique_ptr<ExprNode> parse_const_expression();
-    std::vector<std::unique_ptr<ExprNode>> parse_call_args();
-    std::unique_ptr<ExprNode> parse_lhs();
-    std::unique_ptr<ExprNode> parse_op_and_rhs(const unsigned &precedence,
-                                               std::unique_ptr<ExprNode> &lhs);
-    std::unique_ptr<ExprNode> parse_expression();
+    std::unique_ptr<I32Expr> parse_u32_expr();
+    std::unique_ptr<F64Expr> parse_f64_expr();
+    std::unique_ptr<StringExpr> parse_string_expr();
+    std::unique_ptr<CharExpr> parse_char_expr();
+    std::unique_ptr<BoolExpr> parse_bool_expr();
+
+    std::unique_ptr<ExprNodePtr> parse_paren_expr();
+
+    std::unique_ptr<ExprNodePtr> parse_factor();
+    std::unique_ptr<ExprNodePtr> parse_index_lambda_or_call();
+    std::unique_ptr<ExprNodePtr> parse_unary_expr();
+    std::unique_ptr<ExprNodePtr> parse_cast_expr();
+    std::unique_ptr<ExprNodePtr> parse_binary_expr();
 
     void report_error(const std::wstring &error_msg);
 
@@ -119,6 +114,9 @@ class Parser
     }
 
     ProgramPtr parse();
+
+    void add_logger(Logger *logger);
+    void remove_logger(Logger *logger);
 };
 
 #endif

@@ -105,26 +105,6 @@ void Parser::assert_next_token(TokenType type, const std::wstring &error_msg)
         this->report_error(error_msg);
 }
 
-// I32 = INT
-std::unique_ptr<I32Expr> Parser::parse_i32()
-{
-    auto result = std::make_unique<I32Expr>(
-        std::get<unsigned long long>(this->current_token->value),
-        this->current_token->position);
-    this->next_token();
-    return result;
-}
-
-// F64 = DOUBLE
-std::unique_ptr<F64Expr> Parser::parse_f64()
-{
-    auto result =
-        std::make_unique<F64Expr>(std::get<double>(this->current_token->value),
-                                  this->current_token->position);
-    this->next_token();
-    return result;
-}
-
 std::optional<TypePtr> Parser::parse_var_type()
 {
     std::optional<TypePtr> type = {};
@@ -146,169 +126,6 @@ std::optional<ExprNodePtr> Parser::parse_var_value()
         value = this->parse_expression();
     }
     return value;
-}
-
-// VarDeclStmt = KW_LET, IDENTIFIER, [COLON, Type], [ASSIGN, Expression];
-std::unique_ptr<VarDeclStmt> Parser::parse_var_decl_stmt()
-{
-    auto position = this->current_token->position;
-    this->next_token();
-    auto is_mut = false;
-    if (this->current_token == TokenType::KW_MUT)
-    {
-        is_mut = true;
-        this->next_token();
-    }
-
-    if (this->current_token != TokenType::IDENTIFIER)
-        this->report_error(
-            L"expected an identifier in a variable declaration");
-
-    auto name = std::get<std::wstring>(this->current_token->value);
-    auto type = this->parse_var_type();
-    auto initial_value = this->parse_var_value();
-
-    this->assert_current_and_eat(
-        TokenType::SEMICOLON, L"no semicolon found in a variable declaration");
-
-    return std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut,
-                                         position);
-}
-
-std::unique_ptr<AssignStmt> Parser::parse_assign_statement()
-{
-    auto position = this->current_token->position;
-    auto name = std::get<std::wstring>(this->current_token->value);
-    this->next_token();
-    if (!this->assign_map.contains(this->current_token->type))
-        this->report_error(L"invalid assignment operator");
-    auto assign_type = this->assign_map.at(this->current_token->type);
-    this->next_token();
-    auto value = this->parse_expression();
-    this->assert_current_and_eat(
-        TokenType::SEMICOLON,
-        L"no semicolon found in an assignment statement");
-    return std::make_unique<AssignStmt>(name, assign_type, value, position);
-}
-
-std::unique_ptr<ExprNode> Parser::parse_paren_expr()
-{
-    this->next_token();
-    auto expr = this->parse_expression();
-    this->assert_current_and_eat(
-        TokenType::R_PAREN, L"expected a right parenthesis in the expression");
-
-    if (this->current_token != TokenType::L_PAREN)
-        return expr;
-
-    return this->parse_call_or_lambda(expr);
-}
-
-std::unique_ptr<ExprNode> Parser::parse_unary_expression()
-{
-    auto position = this->current_token->position;
-    auto op = this->unary_map.at(this->current_token->type);
-    this->next_token();
-    auto expr = this->parse_lhs();
-    return std::make_unique<UnaryExpr>(expr, op, position);
-}
-
-std::unique_ptr<ExprNode> Parser::parse_const_expression()
-{
-    switch (this->current_token->type)
-    {
-    case TokenType::INT:
-        return this->parse_i32();
-    case TokenType::DOUBLE:
-        return this->parse_f64();
-    default:
-        this->report_error(L"type token expected");
-        return nullptr;
-    }
-}
-
-std::vector<std::unique_ptr<ExprNode>> Parser::parse_call_args()
-{
-
-    std::vector<std::unique_ptr<ExprNode>> args;
-    this->next_token();
-    if (this->current_token != TokenType::R_PAREN)
-    {
-        for (;;)
-        {
-            args.push_back(this->parse_expression());
-            if (this->current_token == TokenType::R_PAREN)
-            {
-                this->next_token();
-                break;
-            }
-            this->assert_current_and_eat(
-                TokenType::COMMA, L"expected ')' or ',' in argument list");
-        }
-    }
-    return args;
-}
-
-bool Parser::eat_comma_or_rparen()
-{
-    if (this->current_token == TokenType::R_PAREN)
-    {
-        this->next_token();
-        return true;
-    }
-    this->assert_current_and_eat(TokenType::COMMA,
-                                 L"expected ')' or ',' in argument list");
-    return false;
-}
-
-void Parser::push_expr(std::vector<ExprNodePtr> &args,
-                       std::vector<std::optional<ExprNodePtr>> &lambda_args,
-                       const bool &is_lambda)
-{
-    if (is_lambda)
-        lambda_args.push_back(this->parse_expression());
-    else
-        args.push_back(this->parse_expression());
-}
-
-std::unique_ptr<ExprNode> Parser::parse_identifier_expression()
-{
-    auto name = std::get<std::wstring>(this->current_token->value);
-    auto position = this->current_token->position;
-    this->next_token();
-    ExprNodePtr expr = std::make_unique<VariableExpr>(name, position);
-
-    if (this->current_token != TokenType::L_PAREN)
-    {
-        return expr;
-    }
-
-    return this->parse_call_or_lambda(expr);
-}
-
-std::unique_ptr<ExprNode> Parser::parse_lhs()
-{
-    if (this->current_token == TokenType::IDENTIFIER)
-        return this->parse_identifier_expression();
-    else if (this->current_token == TokenType::L_PAREN)
-        return this->parse_paren_expr();
-    else if (this->unary_map.contains(this->current_token->type))
-        return this->parse_unary_expression();
-    else if (this->type_value_map.contains(this->current_token->type))
-        return this->parse_const_expression();
-    else
-    {
-        this->report_error(L"unknown token when expecting an expression");
-        return nullptr;
-    }
-}
-
-std::unique_ptr<ExprNode> Parser::parse_expression()
-{
-    auto lhs = this->parse_lhs();
-    if (this->binary_map.contains(this->current_token->type))
-        return this->parse_op_and_rhs(0, lhs);
-    return lhs;
 }
 
 void Parser::report_error(const std::wstring &msg)
@@ -356,7 +173,38 @@ std::unique_ptr<ExternStmt> Parser::parse_extern_stmt()
     return std::make_unique<ExternStmt>(name, params, return_type, position);
 }
 
-// @brief FUNC_DEF_STMT = KW_FN, [KW_CONST], FUNC_NAME_AND_PARAMS, Block;
+// VarDeclStmt = KW_LET, IDENTIFIER, [COLON, Type], [ASSIGN, Expression];
+std::unique_ptr<VarDeclStmt> Parser::parse_var_decl_stmt()
+{
+    if (this->current_token != TokenType::KW_LET)
+        return nullptr;
+    auto position = this->current_token->position;
+    this->next_token();
+
+    auto is_mut = false;
+    if (this->current_token == TokenType::KW_MUT)
+    {
+        is_mut = true;
+        this->next_token();
+    }
+
+    if (this->current_token != TokenType::IDENTIFIER)
+        this->report_error(
+            L"expected an identifier in a variable declaration");
+
+    auto name = std::get<std::wstring>(this->current_token->value);
+
+    auto type = this->parse_var_type();
+    auto initial_value = this->parse_var_value();
+
+    this->assert_current_and_eat(
+        TokenType::SEMICOLON, L"no semicolon found in a variable declaration");
+
+    return std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut,
+                                         position);
+}
+
+// FUNC_DEF_STMT = KW_FN, [KW_CONST], FUNC_NAME_AND_PARAMS, Block;
 std::unique_ptr<FuncDefStmt> Parser::parse_func_def_stmt()
 {
     if (this->current_token != TokenType::KW_FN)
@@ -429,10 +277,22 @@ ParamPtr Parser::parse_parameter()
 
 // TODO: TYPE_SPECIFIER
 // TODO: TYPE_WITH_REF_SPEC
+
+// TYPE = FUNCTION_TYPE | [REF_SPECIFIER], SIMPLE_TYPE
+// TODO
+TypePtr Parser::parse_type()
+{
+    if (auto type = this->parse_function_type())
+        return type;
+    else if (auto type = this->parse_simple_type())
+        return type;
+    this->report_error(L"invalid type syntax");
+    return nullptr;
+}
+
 // TODO: REF_SPECIFIER
 
-// RETURN_TYPE = LAMBDA_ARROW, TYPE_WITH_REF_SPEC
-// TODO
+// RETURN_TYPE = LAMBDA_ARROW, TYPE
 TypePtr Parser::parse_return_type()
 {
     TypePtr return_type = nullptr;
@@ -444,28 +304,30 @@ TypePtr Parser::parse_return_type()
     return return_type;
 }
 
-// TYPE = FUNCTION_TYPE | SIMPLE_TYPE
-TypePtr Parser::parse_type()
-{
-    if (auto type = this->parse_function_type())
-        return type;
-    else if (auto type = this->parse_simple_type())
-        return type;
-    this->report_error(L"invalid type syntax");
-    return nullptr;
-}
-
 // SIMPLE_TYPE = TYPE_U32 | TYPE_I32 | TYPE_F64 | TYPE_BOOL | TYPE_CHAR |
 // TYPE_STR;
 TypePtr Parser::parse_simple_type()
 {
+    auto ref_spec = RefSpecifier::NON_REF;
+    if (this->current_token == TokenType::AMPERSAND)
+    {
+        ref_spec = RefSpecifier::REF;
+        this->next_token();
+        if (this->current_token == TokenType::KW_MUT)
+        {
+            ref_spec = RefSpecifier::MUT_REF;
+            this->next_token();
+        }
+    }
     if (this->type_map.contains(this->current_token->type))
     {
         auto result = std::make_unique<SimpleType>(
-            this->type_map[this->current_token->type]);
+            this->type_map[this->current_token->type], ref_spec);
         this->next_token();
         return result;
     }
+    else if (ref_spec != RefSpecifier::NON_REF)
+        this->report_error(L"type name not found after a reference specifier");
     return nullptr;
 }
 
@@ -692,6 +554,28 @@ std::vector<ExprNodePtr> Parser::parse_literal_condition()
 // CHAR_EXPR;
 ExprNodePtr Parser::parse_literal_pattern()
 {
+    if (this->current_token == TokenType::MINUS)
+    {
+    }
+    else
+    {
+        if (auto expr = this->parse_u32_expr())
+            return expr;
+        else if (auto expr = this->parse_f64_expr())
+            return expr;
+        else if (auto expr = this->parse_string_expr())
+            return expr;
+        else if (auto expr = this->parse_char_expr())
+            return expr;
+        else if (auto expr = this->parse_bool_expr())
+            return expr;
+        else
+        {
+            this->report_error(
+                L"literal pattern not found in a literal match arm");
+            return nullptr;
+        }
+    }
 }
 
 // GUARD_ARM = GUARD_CONDITION, MATCH_ARM_BLOCK;
@@ -730,4 +614,102 @@ std::unique_ptr<BlockPtr> Parser::parse_match_arm_block()
         this->report_error(L"no match case block found after the condition");
         return nullptr;
     }
+}
+
+// F64 = DOUBLE;
+std::unique_ptr<F64Expr> Parser::parse_f64_expr()
+{
+    if (this->current_token != TokenType::DOUBLE)
+        return nullptr;
+    auto result =
+        std::make_unique<F64Expr>(std::get<double>(this->current_token->value),
+                                  this->current_token->position);
+    this->next_token();
+    return result;
+}
+
+// U32_EXPR = INT;
+std::unique_ptr<I32Expr> Parser::parse_u32_expr()
+{
+    if (this->current_token != TokenType::INT)
+        return nullptr;
+    auto result = std::make_unique<I32Expr>(
+        std::get<unsigned long long>(this->current_token->value),
+        this->current_token->position);
+    this->next_token();
+    return result;
+}
+
+// STRING_EXPR = STRING;
+std::unique_ptr<StringExpr> Parser::parse_string_expr()
+{
+    if (this->current_token != TokenType::STRING)
+        return nullptr;
+    auto result = std::make_unique<StringExpr>(
+        std::get<std::wstring>(this->current_token->value),
+        this->current_token->position);
+    this->next_token();
+    return result;
+}
+
+// CHAR_EXPR = CHAR;
+std::unique_ptr<CharExpr> Parser::parse_char_expr()
+{
+    if (this->current_token != TokenType::CHAR)
+        return nullptr;
+    auto result = std::make_unique<CharExpr>(
+        std::get<wchar_t>(this->current_token->value),
+        this->current_token->position);
+    this->next_token();
+    return result;
+}
+
+// BOOL_EXPR = KW_FALSE | KW_TRUE;
+std::unique_ptr<BoolExpr> Parser::parse_bool_expr()
+{
+    if (this->current_token == TokenType::KW_TRUE ||
+        this->current_token == TokenType::KW_FALSE)
+    {
+        auto value = this->current_token == TokenType::KW_TRUE;
+        auto position = this->current_token->position;
+        auto result = std::make_unique<BoolExpr>(value, position);
+        this->next_token();
+        return result;
+    }
+    else
+        return nullptr;
+}
+
+std::unique_ptr<ExprNodePtr> Parser::parse_binary_expr()
+{
+    auto lhs = this->parse_cast_expr();
+    if (this->current_token.has_value() &&
+        this->binary_map.contains(this->current_token->type))
+    {
+
+        // TODO: shunting yard
+    }
+    else
+    {
+        return lhs;
+    }
+}
+
+std::unique_ptr<ExprNodePtr> Parser::parse_cast_expr()
+{
+    auto lhs = this->parse_unary_expr();
+    if (this->current_token == TokenType::KW_AS)
+    {
+        this->next_token();
+    }
+}
+
+void Parser::add_logger(Logger *logger)
+{
+    this->loggers.insert(logger);
+}
+
+void Parser::remove_logger(Logger *logger)
+{
+    this->loggers.erase(logger);
 }

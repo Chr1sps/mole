@@ -84,6 +84,8 @@ enum class TokenType
     KW_CONTINUE, // "continue"
     KW_BREAK,    // "break"
     KW_AS,       // "as"
+    KW_TRUE,     // "true"
+    KW_FALSE,    // "false"
 
     TYPE_BOOL, // "bool"
 
@@ -111,19 +113,12 @@ enum class TokenType
 struct Token
 {
     TokenType type;
-    std::variant<std::wstring, wchar_t, double, long long, unsigned long long>
-        value;
+    std::variant<std::wstring, wchar_t, double, unsigned long long> value;
     Position position;
     Token() = default;
 
     Token(const TokenType &type, const Position &position)
         : type(type), value(0ull), position(position)
-    {
-    }
-
-    Token(const TokenType &type, const long long &num,
-          const Position &position)
-        : type(type), value(num), position(position)
     {
     }
 

@@ -25,6 +25,8 @@ const std::map<std::wstring, TokenType> Lexer::keywords{
     KEYWORD(L"continue", KW_CONTINUE),
     KEYWORD(L"break", KW_BREAK),
     KEYWORD(L"as", KW_AS),
+    KEYWORD(L"true", KW_TRUE),
+    KEYWORD(L"false", KW_FALSE),
 
     // type names
 
