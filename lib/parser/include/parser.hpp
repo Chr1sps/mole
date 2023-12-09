@@ -28,7 +28,7 @@ class Parser
     static std::map<TokenType, TypeEnum> type_value_map;
     static std::map<TokenType, AssignType> assign_map;
 
-    std::optional<Token> get_new_token();
+    void next_token();
 
     void assert_current_and_eat(TokenType type, const std::wstring &error_msg);
     void assert_next_token(TokenType type, const std::wstring &error_msg);
@@ -48,12 +48,19 @@ class Parser
 
     // statements
 
+    std::unique_ptr<Block> parse_else_block();
+
     std::optional<TypePtr> parse_var_type();
     std::optional<ExprNodePtr> parse_var_value();
     std::unique_ptr<ReturnStmt> parse_return_stmt();
     std::unique_ptr<AssignStmt> parse_assign_statement();
     std::unique_ptr<Statement> parse_non_func_stmt();
     std::unique_ptr<Block> parse_block();
+    std::unique_ptr<ContinueStmt> parse_continue_stmt();
+    std::unique_ptr<BreakStmt> parse_break_stmt();
+    std::unique_ptr<WhileStmt> parse_while_stmt();
+    std::unique_ptr<IfStmt> parse_if_stmt();
+    std::unique_ptr<MatchStmt> parse_match_stmt();
     std::unique_ptr<VarDeclStmt> parse_var_decl_stmt();
     std::unique_ptr<FuncDefStmt> parse_func_def_stmt();
     std::unique_ptr<ExternStmt> parse_extern_stmt();
@@ -75,7 +82,7 @@ class Parser
 
     std::unique_ptr<I32Expr> parse_i32();
     std::unique_ptr<F64Expr> parse_f64();
-    std::unique_ptr<ExprNode> parse_paren_expression();
+    std::unique_ptr<ExprNode> parse_paren_expr();
     std::unique_ptr<ExprNode> parse_unary_expression();
     std::unique_ptr<ExprNode> parse_call_or_lambda(ExprNodePtr &expr);
     std::unique_ptr<ExprNode> parse_identifier_expression();

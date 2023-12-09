@@ -13,12 +13,18 @@
 struct AstNode
 {
 
-  public:
+    Position position;
+
     virtual ~AstNode()
     {
     }
 
     virtual void accept(AstVisitor &visitor) const = 0;
+
+  protected:
+    AstNode(const Position &position) : position(position)
+    {
+    }
 };
 
 using AstNodePtr = std::unique_ptr<AstNode>;
@@ -26,9 +32,7 @@ using AstNodePtr = std::unique_ptr<AstNode>;
 struct ExprNode : public AstNode
 {
   protected:
-    Position position;
-
-    ExprNode(const Position &position) : position(position)
+    ExprNode(const Position &position) : AstNode(position)
     {
     }
 };
@@ -215,9 +219,9 @@ struct F64Expr : public ConstNode
 struct Statement : public AstNode
 {
   protected:
-    Position position;
+    // Position position;
 
-    Statement(const Position &position) : position(position)
+    Statement(const Position &position) : AstNode(position)
     {
     }
 };
@@ -362,12 +366,41 @@ struct IfStmt : public Statement
     }
 };
 
+struct MatchCase : public AstNode
+{
+    BlockPtr block;
+
+    MatchCase(BlockPtr &block, const Position &position)
+        : AstNode(position), block(std::move(block))
+    {
+    }
+};
+
+using MatchCasePtr = std::unique_ptr<MatchCase>;
+
+struct PlaceholderCase : public MatchCase
+{
+    PlaceholderCase(BlockPtr &block, const Position &position)
+        : MatchCase(block, position)
+    {
+    }
+};
+
+struct GuardCase : public MatchCase
+{
+    ExprNodePtr condition_expr;
+
+    GuardCase(ExprNodePtr &condition_expr, BlockPtr &block,
+              const Position &position)
+        : MatchCase(block, position), condition_expr(std::move(condition_expr))
+    {
+    }
+};
+
 struct MatchStmt : public Statement
 {
     ExprNodePtr matched_expr;
-    std::unordered_map<ExprNodePtr, BlockPtr> literal_cases;
-    std::unordered_map<ExprNodePtr, BlockPtr> guard_cases;
-    BlockPtr placeholder_case;
+    std::vector<MatchCasePtr> match_cases;
 };
 
 struct Parameter : public AstNode
@@ -375,8 +408,9 @@ struct Parameter : public AstNode
     std::wstring name;
     TypePtr type;
 
-    Parameter(const std::wstring name, TypePtr &&type)
-        : name(name), type(std::move(type))
+    Parameter(const std::wstring name, TypePtr &&type,
+              const Position &position)
+        : AstNode(position), name(name), type(std::move(type))
     {
     }
 
@@ -457,8 +491,8 @@ struct Program : public AstNode
     Program(std::vector<std::unique_ptr<VarDeclStmt>> &globals,
             std::vector<std::unique_ptr<FuncDefStmt>> &functions,
             std::vector<std::unique_ptr<ExternStmt>> &externs)
-        : globals(std::move(globals)), functions(std::move(functions)),
-          externs(std::move(externs))
+        : AstNode(Position(1, 1)), globals(std::move(globals)),
+          functions(std::move(functions)), externs(std::move(externs))
     {
     }
 

@@ -85,9 +85,9 @@ std::map<TokenType, AssignType> Parser::assign_map{
 };
 #undef ASSIGN_TYPE
 
-std::optional<Token> Parser::get_new_token()
+void Parser::next_token()
 {
-    return this->current_token = this->lexer->get_token();
+    this->current_token = this->lexer->get_token();
 }
 
 void Parser::assert_current_and_eat(TokenType type,
@@ -95,13 +95,13 @@ void Parser::assert_current_and_eat(TokenType type,
 {
     if (this->current_token != type)
         this->report_error(error_msg);
-    this->get_new_token();
+    this->next_token();
 }
 
 void Parser::assert_next_token(TokenType type, const std::wstring &error_msg)
 {
-    auto new_token = this->get_new_token();
-    if (new_token != type)
+    this->next_token();
+    if (this->current_token != type)
         this->report_error(error_msg);
 }
 
@@ -111,7 +111,7 @@ std::unique_ptr<I32Expr> Parser::parse_i32()
     auto result = std::make_unique<I32Expr>(
         std::get<unsigned long long>(this->current_token->value),
         this->current_token->position);
-    this->get_new_token();
+    this->next_token();
     return result;
 }
 
@@ -121,16 +121,16 @@ std::unique_ptr<F64Expr> Parser::parse_f64()
     auto result =
         std::make_unique<F64Expr>(std::get<double>(this->current_token->value),
                                   this->current_token->position);
-    this->get_new_token();
+    this->next_token();
     return result;
 }
 
 std::optional<TypePtr> Parser::parse_var_type()
 {
     std::optional<TypePtr> type = {};
-    if (this->get_new_token() == TokenType::COLON)
+    if (this->next_token() == TokenType::COLON)
     {
-        this->get_new_token();
+        this->next_token();
         type = this->parse_type();
     }
     return type;
@@ -141,7 +141,7 @@ std::optional<ExprNodePtr> Parser::parse_var_value()
     std::optional<ExprNodePtr> value = {};
     if (this->current_token == TokenType::ASSIGN)
     {
-        this->get_new_token();
+        this->next_token();
         value = this->parse_expression();
     }
     return value;
@@ -151,12 +151,12 @@ std::optional<ExprNodePtr> Parser::parse_var_value()
 std::unique_ptr<VarDeclStmt> Parser::parse_var_decl_stmt()
 {
     auto position = this->current_token->position;
-    this->get_new_token();
+    this->next_token();
     auto is_mut = false;
     if (this->current_token == TokenType::KW_MUT)
     {
         is_mut = true;
-        this->get_new_token();
+        this->next_token();
     }
 
     if (this->current_token != TokenType::IDENTIFIER)
@@ -178,11 +178,11 @@ std::unique_ptr<AssignStmt> Parser::parse_assign_statement()
 {
     auto position = this->current_token->position;
     auto name = std::get<std::wstring>(this->current_token->value);
-    this->get_new_token();
+    this->next_token();
     if (!this->assign_map.contains(this->current_token->type))
         this->report_error(L"invalid assignment operator");
     auto assign_type = this->assign_map.at(this->current_token->type);
-    this->get_new_token();
+    this->next_token();
     auto value = this->parse_expression();
     this->assert_current_and_eat(
         TokenType::SEMICOLON,
@@ -190,9 +190,9 @@ std::unique_ptr<AssignStmt> Parser::parse_assign_statement()
     return std::make_unique<AssignStmt>(name, assign_type, value, position);
 }
 
-std::unique_ptr<ExprNode> Parser::parse_paren_expression()
+std::unique_ptr<ExprNode> Parser::parse_paren_expr()
 {
-    this->get_new_token();
+    this->next_token();
     auto expr = this->parse_expression();
     this->assert_current_and_eat(
         TokenType::R_PAREN, L"expected a right parenthesis in the expression");
@@ -207,7 +207,7 @@ std::unique_ptr<ExprNode> Parser::parse_unary_expression()
 {
     auto position = this->current_token->position;
     auto op = this->unary_map.at(this->current_token->type);
-    this->get_new_token();
+    this->next_token();
     auto expr = this->parse_lhs();
     return std::make_unique<UnaryExpr>(expr, op, position);
 }
@@ -229,14 +229,14 @@ std::vector<std::unique_ptr<ExprNode>> Parser::parse_call_args()
 {
 
     std::vector<std::unique_ptr<ExprNode>> args;
-    if (this->get_new_token() != TokenType::R_PAREN)
+    if (this->next_token() != TokenType::R_PAREN)
     {
         for (;;)
         {
             args.push_back(this->parse_expression());
             if (this->current_token == TokenType::R_PAREN)
             {
-                this->get_new_token();
+                this->next_token();
                 break;
             }
             this->assert_current_and_eat(
@@ -250,7 +250,7 @@ bool Parser::eat_comma_or_rparen()
 {
     if (this->current_token == TokenType::R_PAREN)
     {
-        this->get_new_token();
+        this->next_token();
         return true;
     }
     this->assert_current_and_eat(TokenType::COMMA,
@@ -272,7 +272,7 @@ std::unique_ptr<ExprNode> Parser::parse_identifier_expression()
 {
     auto name = std::get<std::wstring>(this->current_token->value);
     auto position = this->current_token->position;
-    this->get_new_token();
+    this->next_token();
     ExprNodePtr expr = std::make_unique<VariableExpr>(name, position);
 
     if (this->current_token != TokenType::L_PAREN)
@@ -288,7 +288,7 @@ std::unique_ptr<ExprNode> Parser::parse_lhs()
     if (this->current_token == TokenType::IDENTIFIER)
         return this->parse_identifier_expression();
     else if (this->current_token == TokenType::L_PAREN)
-        return this->parse_paren_expression();
+        return this->parse_paren_expr();
     else if (this->unary_map.contains(this->current_token->type))
         return this->parse_unary_expression();
     else if (this->type_value_map.contains(this->current_token->type))
@@ -360,13 +360,13 @@ std::unique_ptr<FuncDefStmt> Parser::parse_func_def_stmt()
         return nullptr;
 
     auto position = this->current_token->position;
-    this->get_new_token();
+    this->next_token();
 
     auto is_const = false;
     if (this->current_token == TokenType::KW_CONST)
     {
         is_const = true;
-        this->get_new_token();
+        this->next_token();
     }
 
     auto [name, params, return_type] = this->parse_func_name_and_params();
@@ -402,12 +402,12 @@ std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr> Parser::
 std::vector<ParamPtr> Parser::parse_params()
 {
     std::vector<ParamPtr> params;
-    for (this->get_new_token(); this->current_token == TokenType::IDENTIFIER;)
+    for (this->next_token(); this->current_token == TokenType::IDENTIFIER;)
     {
         auto parameter = this->parse_parameter();
         params.push_back(std::move(parameter));
         if (this->current_token == TokenType::COMMA)
-            this->get_new_token();
+            this->next_token();
     }
     return params;
 }
@@ -419,7 +419,7 @@ ParamPtr Parser::parse_parameter()
     auto name = std::get<std::wstring>(this->current_token->value);
     this->assert_next_token(TokenType::COLON,
                             L"not a colon in a parameter expression");
-    this->get_new_token();
+    this->next_token();
     auto param_type = this->parse_type();
     return std::make_unique<Parameter>(name, std::move(param_type));
 }
@@ -435,7 +435,7 @@ TypePtr Parser::parse_return_type()
     TypePtr return_type = nullptr;
     if (this->current_token == TokenType::LAMBDA_ARROW)
     {
-        this->get_new_token();
+        this->next_token();
         return_type = this->parse_type();
     }
     return return_type;
@@ -459,7 +459,7 @@ TypePtr Parser::parse_simple_type()
     {
         auto result = std::make_unique<SimpleType>(
             this->type_map[this->current_token->type]);
-        this->get_new_token();
+        this->next_token();
         return result;
     }
     return nullptr;
@@ -471,11 +471,11 @@ std::unique_ptr<FunctionType> Parser::parse_function_type()
     if (this->current_token != TokenType::KW_FN)
         return nullptr;
     auto is_const = false;
-    this->get_new_token();
+    this->next_token();
     if (this->current_token == TokenType::KW_CONST)
     {
         is_const = true;
-        this->get_new_token();
+        this->next_token();
     }
     this->assert_current_and_eat(
         TokenType::L_PAREN,
@@ -496,7 +496,7 @@ std::unique_ptr<FunctionType> Parser::parse_function_type()
 std::vector<TypePtr> Parser::parse_types()
 {
     std::vector<TypePtr> types;
-    for (; this->current_token != TokenType::R_PAREN; this->get_new_token())
+    for (; this->current_token != TokenType::R_PAREN; this->next_token())
     {
         auto type = this->parse_type();
         types.push_back(std::move(type));
@@ -512,7 +512,7 @@ std::unique_ptr<Block> Parser::parse_block()
     if (this->current_token != TokenType::L_BRACKET)
         return nullptr;
     auto position = this->current_token->position;
-    this->get_new_token();
+    this->next_token();
 
     std::vector<std::unique_ptr<Statement>> statements;
     while (true)
@@ -557,14 +557,105 @@ std::unique_ptr<Statement> Parser::parse_non_func_stmt()
 std::unique_ptr<ReturnStmt> Parser::parse_return_stmt()
 {
     auto position = this->current_token->position;
-    this->get_new_token();
+    this->next_token();
     if (this->current_token == TokenType::SEMICOLON)
     {
-        this->get_new_token();
+        this->next_token();
         return std::make_unique<ReturnStmt>(position);
     }
     auto expr = this->parse_expression();
     this->assert_current_and_eat(TokenType::SEMICOLON,
                                  L"no semicolon found in a return statement");
     return std::make_unique<ReturnStmt>(expr, position);
+}
+
+std::unique_ptr<ContinueStmt> Parser::parse_continue_stmt()
+{
+    if (this->current_token != TokenType::KW_CONTINUE)
+        return nullptr;
+    auto position = this->current_token->position;
+    this->next_token();
+    this->assert_current_and_eat(
+        TokenType::SEMICOLON, L"no semicolon found in a continue statement");
+    return std::make_unique<ContinueStmt>(position);
+}
+
+std::unique_ptr<BreakStmt> Parser::parse_break_stmt()
+{
+    if (this->current_token != TokenType::KW_BREAK)
+        return nullptr;
+    auto position = this->current_token->position;
+    this->next_token();
+    this->assert_current_and_eat(
+        TokenType::SEMICOLON, L"no semicolon found in a continue statement");
+    return std::make_unique<BreakStmt>(position);
+}
+
+std::unique_ptr<IfStmt> Parser::parse_if_stmt()
+{
+    if (this->current_token != TokenType::KW_IF)
+        return nullptr;
+    auto position = this->current_token->position;
+    this->next_token();
+
+    auto condition_expr = this->parse_paren_expr();
+    auto then_block = this->parse_block();
+    auto else_block = this->parse_else_block();
+    return std::make_unique<IfStmt>(condition_expr, then_block, else_block,
+                                    position);
+}
+
+// ELSE_BLOCK = KW_ELSE, BLOCK;
+std::unique_ptr<Block> Parser::parse_else_block()
+{
+    if (this->current_token != TokenType::KW_ELSE)
+        return nullptr;
+    this->next_token();
+    auto result = this->parse_block();
+    if (!result)
+        this->report_error(L"no block present after else");
+    return result;
+}
+
+// WHILE_STMT = KW_WHILE, PAREN_EXPR, BLOCK;
+std::unique_ptr<WhileStmt> Parser::parse_while_stmt()
+{
+    if (this->current_token != TokenType::KW_WHILE)
+        return nullptr;
+    auto position = this->current_token->position;
+    this->next_token();
+    auto condition_expr = this->parse_paren_expr();
+    auto block = this->parse_block();
+    return std::make_unique<WhileStmt>(condition_expr, block, position);
+}
+
+// MATCH_STMT = KW_MATCH, PAREN_EXPR, L_BRACKET, {MATCH_CASE}, R_BRACKET;
+std::unique_ptr<MatchStmt> Parser::parse_match_stmt()
+{
+    if (this->current_token != TokenType::KW_MATCH)
+        return nullptr;
+    auto position = this->current_token->position;
+    this->next_token();
+    auto matched_expr = this->parse_paren_expr();
+    this->assert_current_and_eat(TokenType::L_BRACKET,
+                                 L"no left bracket in a match statement");
+    std::vector<MatchCase> match_cases;
+    while (true)
+    {
+        if (auto match_case = this->parse_match_case())
+        {
+            match_cases.push_back(std::move(match_case));
+        }
+        else
+        {
+            break;
+        }
+    }
+    this->assert_current_and_eat(TokenType::R_BRACKET,
+                                 L"no left bracket in a match statement");
+}
+
+// MATCH_CASE = MATCH_SPECIFIER, LAMBDA_ARROW, BLOCK;
+std::unique_ptr<MatchCase> Parser::parse_match_case()
+{
 }
