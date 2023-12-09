@@ -274,12 +274,13 @@ std::vector<ParamPtr> Parser::parse_params()
 // TODO
 ParamPtr Parser::parse_parameter()
 {
+    if (this->current_token != TokenType::IDENTIFIER)
+        return nullptr;
     auto name = std::get<std::wstring>(this->current_token->value);
-    this->assert_next_token(TokenType::COLON,
-                            L"not a colon in a parameter expression");
+    auto position = this->current_token->position;
     this->next_token();
-    auto param_type = this->parse_type();
-    return std::make_unique<Parameter>(name, std::move(param_type));
+    auto type = this->parse_type_specifier();
+    return std::make_unique<Parameter>(name, std::move(type), position);
 }
 
 // TODO: TYPE_SPECIFIER
@@ -530,8 +531,7 @@ std::unique_ptr<MatchStmt> Parser::parse_match_stmt()
     }
     this->assert_current_and_eat(TokenType::R_BRACKET,
                                  L"no left bracket in a match statement");
-    return std::make_unique<MatchStmt>(matched_expr, std::move(match_cases),
-                                       position);
+    return std::make_unique<MatchStmt>(matched_expr, match_cases, position);
 }
 
 // MATCH_CASE = MATCH_SPECIFIER, LAMBDA_ARROW, BLOCK;
@@ -556,45 +556,45 @@ std::unique_ptr<LiteralArm> Parser::parse_literal_arm()
 }
 
 // LITERAL_CONDITION = LITERAL_PATTERN, {BIT_OR, LITERAL_PATTERN};
-std::vector<ExprNodePtr> Parser::parse_literal_condition()
-{
-}
+// std::vector<ExprNodePtr> Parser::parse_literal_condition()
+// {
+// }
 
 // LITERAL_PATTERN = [MINUS], U32_EXPR | [MINUS], F64_EXPR | STRING_EXPR |
 // CHAR_EXPR;
-ExprNodePtr Parser::parse_literal_pattern()
-{
-    if (this->current_token == TokenType::MINUS)
-    {
-    }
-    else
-    {
-        if (auto expr = this->parse_u32_expr())
-            return expr;
-        else if (auto expr = this->parse_f64_expr())
-            return expr;
-        else if (auto expr = this->parse_string_expr())
-            return expr;
-        else if (auto expr = this->parse_char_expr())
-            return expr;
-        else if (auto expr = this->parse_bool_expr())
-            return expr;
-        else
-        {
-            this->report_error(
-                L"literal pattern not found in a literal match arm");
-            return nullptr;
-        }
-    }
-}
+// ExprNodePtr Parser::parse_literal_pattern()
+// {
+//     if (this->current_token == TokenType::MINUS)
+//     {
+//     }
+//     else
+//     {
+//         if (auto expr = this->parse_u32_expr())
+//             return expr;
+//         else if (auto expr = this->parse_f64_expr())
+//             return expr;
+//         else if (auto expr = this->parse_string_expr())
+//             return expr;
+//         else if (auto expr = this->parse_char_expr())
+//             return expr;
+//         else if (auto expr = this->parse_bool_expr())
+//             return expr;
+//         else
+//         {
+//             this->report_error(
+//                 L"literal pattern not found in a literal match arm");
+//             return nullptr;
+//         }
+//     }
+// }
 
 // GUARD_ARM = GUARD_CONDITION, MATCH_ARM_BLOCK;
-std::unique_ptr<GuardArm> Parser::parse_guard_arm()
-{
+// std::unique_ptr<GuardArm> Parser::parse_guard_arm()
+// {
 
-    auto guard = this->parse_guard_condition();
-    auto block = this->parse_match_arm_block();
-}
+//     auto guard = this->parse_guard_condition();
+//     auto block = this->parse_match_arm_block();
+// }
 
 // GUARD_CONDITION = KW_IF, PAREN_EXPR;
 ExprNodePtr Parser::parse_guard_condition()
@@ -617,14 +617,14 @@ std::unique_ptr<PlaceholderArm> Parser::parse_placeholder_arm()
 }
 
 // MATCH_ARM_BLOCK = LAMBDA_ARROW, BLOCK;
-std::unique_ptr<BlockPtr> Parser::parse_match_arm_block()
-{
-    if (this->current_token != TokenType::LAMBDA_ARROW)
-    {
-        this->report_error(L"no match case block found after the condition");
-        return nullptr;
-    }
-}
+// std::unique_ptr<BlockPtr> Parser::parse_match_arm_block()
+// {
+//     if (this->current_token != TokenType::LAMBDA_ARROW)
+//     {
+//         this->report_error(L"no match case block found after the
+//         condition"); return nullptr;
+//     }
+// }
 
 // F64 = DOUBLE;
 std::unique_ptr<F64Expr> Parser::parse_f64_expr()
@@ -703,15 +703,14 @@ bool join_into_binary_op(std::stack<ExprNodePtr> &values,
     {
         // moving the nodes out of the values stack - the pointers
         // stored in it must release the ownership
-        auto rhs = std::make_unique<ExprNode>(values.top().release());
+        auto rhs = std::move(values.top());
         values.pop();
 
-        auto lhs = std::make_unique<ExprNode>(values.top().release());
+        auto lhs = std::move(values.top());
         values.pop();
 
         auto position = lhs->position;
-        auto new_expr = std::make_unique<BinaryExpr>(
-            std::move(lhs), std::move(rhs), op, position);
+        auto new_expr = std::make_unique<BinaryExpr>(lhs, rhs, op, position);
         values.push(std::move(new_expr));
         return true;
     }
@@ -727,7 +726,7 @@ ExprNodePtr Parser::parse_binary_expr()
     {
         if (auto expr = this->parse_cast_expr())
         {
-            values.push(expr);
+            values.push(std::move(expr));
         }
         else if (this->current_token.has_value() &&
                  (iter = this->binary_map.find(this->current_token->type)) !=
@@ -762,7 +761,7 @@ ExprNodePtr Parser::parse_binary_expr()
         this->report_error(L"binary expression doesn't have an operand");
         return nullptr;
     }
-    return std::make_unique<ExprNode>(values.top().release());
+    return std::move(values.top());
 }
 
 // CAST_EXPR = UNARY_EXPR , {KW_AS, SIMPLE_TYPE};
@@ -775,8 +774,7 @@ ExprNodePtr Parser::parse_cast_expr()
         this->next_token();
         if (auto type = this->parse_simple_type())
         {
-            lhs = std::make_unique<CastExpr>(std::move(lhs), std::move(type),
-                                             position);
+            lhs = std::make_unique<CastExpr>(lhs, type, position);
         }
         else
         {
@@ -804,8 +802,7 @@ ExprNodePtr Parser::parse_unary_expr()
     {
         if (!position.has_value())
             position = inner->position;
-        inner = std::make_unique<UnaryExpr>(std::move(inner), ops.top(),
-                                            *position);
+        inner = std::make_unique<UnaryExpr>(inner, ops.top(), *position);
     }
     else if (!ops.empty())
     {
@@ -820,18 +817,129 @@ ExprNodePtr Parser::parse_index_lambda_or_call()
     auto result = this->parse_factor();
     while (true)
     {
-        if (this->parse_call_part())
+        if (auto params = this->parse_call_part())
         {
+            result =
+                std::make_unique<CallExpr>(result, *params, result->position);
         }
-        else if (this->parse_lambda_call_part())
+        else if (auto params = this->parse_lambda_call_part())
         {
+            result = std::make_unique<LambdaCallExpr>(result, *params,
+                                                      result->position);
         }
-        else if (this->parse_index_part())
+        else if (auto param = this->parse_index_part())
         {
+            result =
+                std::make_unique<IndexExpr>(result, param, result->position);
         }
         else
             break;
     }
+    return result;
+}
+
+// CALL_PART = L_PAREN, [ARGS], R_PAREN;
+std::optional<std::vector<ExprNodePtr>> Parser::parse_call_part()
+{
+    if (this->current_token != TokenType::L_PAREN)
+        return std::nullopt;
+    this->next_token();
+    auto args = this->parse_args();
+    this->assert_current_and_eat(
+        TokenType::R_PAREN, L"expected right parenthesis in call expression");
+    return args;
+}
+
+// ARGS = BINARY_EXPR, {COMMA, BINARY_EXPR};
+std::vector<ExprNodePtr> Parser::parse_args()
+{
+    ExprNodePtr arg;
+    std::vector<ExprNodePtr> args;
+    if ((arg = this->parse_binary_expr()))
+    {
+        args.push_back(std::move(arg));
+        while (this->current_token == TokenType::COMMA)
+        {
+            this->next_token();
+            if ((arg = this->parse_binary_expr()))
+            {
+                args.push_back(std::move(arg));
+            }
+            else
+            {
+                this->report_error(L"argument expected after a comma in a "
+                                   L"function call argument list");
+            }
+        }
+    }
+    return args;
+}
+
+// LAMBDA_CALL_PART = AT, L_PAREN, [LAMBDA_ARGS], R_PAREN;
+std::optional<std::vector<ExprNodePtr>> Parser::parse_lambda_call_part()
+{
+    if (this->current_token != TokenType::AT)
+        return std::nullopt;
+    this->assert_current_and_eat(
+        TokenType::L_PAREN,
+        L"expected left parenthesis in lambda call expression");
+    this->next_token();
+    auto args = this->parse_args();
+    this->assert_current_and_eat(
+        TokenType::R_PAREN,
+        L"expected right parenthesis in lambda call expression");
+    return args;
+}
+
+// LAMBDA_ARGS = LAMBDA_ARG, {COMMA, LAMBDA_ARG};
+std::vector<ExprNodePtr> Parser::parse_lambda_args()
+{
+    std::optional<ExprNodePtr> arg;
+    std::vector<ExprNodePtr> args;
+    if ((arg = this->parse_lambda_arg()))
+    {
+        args.push_back(std::move(*arg));
+        while (this->current_token == TokenType::COMMA)
+        {
+            this->next_token();
+            if ((arg = this->parse_binary_expr()))
+            {
+                args.push_back(std::move(*arg));
+            }
+            else
+            {
+                this->report_error(
+                    L"argument or placeholder expected after a comma in a "
+                    L"lambda call argument list");
+            }
+        }
+    }
+    return args;
+}
+
+// LAMBDA_ARG = BINARY_EXPR | PLACEHOLDER;
+std::optional<ExprNodePtr> Parser::parse_lambda_arg()
+{
+    if (auto arg = this->parse_binary_expr())
+        return arg;
+    else if (this->current_token == TokenType::PLACEHOLDER)
+    {
+        this->next_token();
+        return nullptr;
+    }
+    else
+        return std::nullopt;
+}
+
+// INDEX_PART = L_SQ_BRACKET, BINARY_EXPR, R_SQ_BRACKET;
+ExprNodePtr Parser::parse_index_part()
+{
+    if (this->current_token != TokenType::L_SQ_BRACKET)
+        return nullptr;
+    auto result = this->parse_binary_expr();
+    this->assert_current_and_eat(
+        TokenType::R_SQ_BRACKET,
+        L"expected right square bracket in an index expression");
     return result;
 }
 

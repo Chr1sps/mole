@@ -152,10 +152,9 @@ struct CallExpr : public ExprNode
 struct LambdaCallExpr : public ExprNode
 {
     ExprNodePtr callable;
-    std::vector<std::optional<ExprNodePtr>> args;
+    std::vector<ExprNodePtr> args;
 
-    LambdaCallExpr(ExprNodePtr &callable,
-                   std::vector<std::optional<ExprNodePtr>> &args,
+    LambdaCallExpr(ExprNodePtr &callable, std::vector<ExprNodePtr> &args,
                    const Position &position)
         : ExprNode(position), callable(std::move(callable)),
           args(std::move(args))
@@ -163,10 +162,26 @@ struct LambdaCallExpr : public ExprNode
     }
 
     LambdaCallExpr(std::unique_ptr<VariableExpr> &callable,
-                   std::vector<std::optional<ExprNodePtr>> &args,
-                   const Position &position)
+                   std::vector<ExprNodePtr> &args, const Position &position)
         : ExprNode(position), callable(std::move(callable)),
           args(std::move(args))
+    {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
+};
+
+struct IndexExpr : public ExprNode
+{
+    ExprNodePtr expr, index_value;
+
+    IndexExpr(ExprNodePtr &expr, ExprNodePtr &index_value,
+              const Position &position)
+        : ExprNode(position), expr(std::move(expr)),
+          index_value(std::move(index_value))
     {
     }
 
@@ -184,6 +199,11 @@ struct CastExpr : public ExprNode
     CastExpr(ExprNodePtr &expr, TypePtr &type, const Position &position)
         : ExprNode(position), expr(std::move(expr)), type(std::move(type))
     {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
     }
 };
 
@@ -352,13 +372,12 @@ struct BreakStmt : public Statement
 struct VarDeclStmt : public Statement
 {
     std::wstring name;
-    std::optional<TypePtr> type;
-    std::optional<ExprNodePtr> initial_value;
+    TypePtr type;
+    ExprNodePtr initial_value;
     bool is_mut;
 
-    VarDeclStmt(const std::wstring &name, std::optional<TypePtr> &type,
-                std::optional<ExprNodePtr> &value, const bool &is_mut,
-                const Position &position)
+    VarDeclStmt(const std::wstring &name, TypePtr &type, ExprNodePtr &value,
+                const bool &is_mut, const Position &position)
         : Statement(position), name(name), type(std::move(type)),
           initial_value(std::move(value)), is_mut(is_mut)
     {
@@ -431,10 +450,10 @@ struct IfStmt : public Statement
 {
     ExprNodePtr condition_expr;
     BlockPtr then_block;
-    std::optional<BlockPtr> else_block;
+    BlockPtr else_block;
 
     IfStmt(ExprNodePtr &condition_expr, BlockPtr &then_block,
-           std::optional<BlockPtr> &else_block, const Position &position)
+           BlockPtr &else_block, const Position &position)
         : Statement(position), condition_expr(std::move(condition_expr)),
           then_block(std::move(then_block)), else_block(std::move(else_block))
     {

@@ -11,6 +11,8 @@ struct BinaryExpr;
 struct UnaryExpr;
 struct CallExpr;
 struct LambdaCallExpr;
+struct IndexExpr;
+struct CastExpr;
 struct Block;
 struct IfStmt;
 struct WhileStmt;
@@ -57,6 +59,8 @@ class AstVisitor : public Visitor
     virtual void visit(const UnaryExpr &node) = 0;
     virtual void visit(const CallExpr &node) = 0;
     virtual void visit(const LambdaCallExpr &node) = 0;
+    virtual void visit(const IndexExpr &node) = 0;
+    virtual void visit(const CastExpr &node) = 0;
     virtual void visit(const Block &node) = 0;
     virtual void visit(const IfStmt &node) = 0;
     virtual void visit(const WhileStmt &node) = 0;

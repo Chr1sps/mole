@@ -84,7 +84,7 @@ class Parser
 
     ExprNodePtr parse_guard_condition();
 
-    std::unique_ptr<BlockPtr> parse_match_arm_block();
+    BlockPtr parse_match_arm_block();
 
     // expressions
 
@@ -101,6 +101,13 @@ class Parser
     ExprNodePtr parse_unary_expr();
     ExprNodePtr parse_cast_expr();
     ExprNodePtr parse_binary_expr();
+
+    std::optional<std::vector<ExprNodePtr>> parse_call_part();
+    std::vector<ExprNodePtr> parse_args();
+    std::optional<std::vector<ExprNodePtr>> parse_lambda_call_part();
+    std::vector<ExprNodePtr> parse_lambda_args();
+    std::optional<ExprNodePtr> parse_lambda_arg();
+    ExprNodePtr parse_index_part();
 
     void report_error(const std::wstring &error_msg);
 
