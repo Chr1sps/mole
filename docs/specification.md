@@ -99,6 +99,7 @@ The expressions in Mole are evaluated in the following order:
 
 |   Operator/expression     |Associativity|
 |:-------------------------:|:-----------:|
+|Parenthesis||
 |Lambda calls, function calls, string indexing||
 |Unary operators `++`,`--`,`!`,`~`,`-`|   |
 |Casting operator `as`      |left-to-right|
@@ -290,12 +291,12 @@ fn main() {
     // The type definitions below are meant to show the resulting type of the
     // lambda expression. They do NOT change of coerce the type of the
     // expression itself - they are for demonstration purposes only.
-    let a: fn(i32, i32) => i32 = @foo(1, _, 3, _);
-    let b: fn(i32) => i32 = @a(2, _);
+    let a: fn(i32, i32) => i32 = foo@(1, _, 3, _);
+    let b: fn(i32) => i32 = a@(2, _);
 
     // This applies all the required arguments and returns a function that can
     // be called later when needed.
-    let c: fn() => i32 = @foo(1, 2, 3, 4); 
+    let c: fn() => i32 = foo@(1, 2, 3, 4); 
     // the result of calling c() would be 10
 }
 ```
@@ -558,6 +559,8 @@ NON_FUNC_STMT = RETURN_STMT |
                 WHILE_STMT |
                 MATCH_STMT |
                 CALL_EXPR |
+            CONTINUE_STMT |
+               BREAK_STMT |
                 BLOCK;
 
 RETURN_STMT = KW_RETURN, [EXPRESSION], SEMICOLON;
@@ -638,7 +641,7 @@ VARIABLE_EXPR = IDENTIFIER;
 CALL_EXPR = EXPRESSION, L_PAREN, [ARGS], R_PAREN;
 ARGS = EXPRESSION, {COMMA, EXPRESSION};
 
-LAMBDA_CALL_EXPR = AT, EXPRESSION, L_PAREN, [LAMBDA_ARGS], R_PAREN;
+LAMBDA_CALL_EXPR = EXPRESSION, AT, L_PAREN, [LAMBDA_ARGS], R_PAREN;
 LAMBDA_ARGS = LAMBDA_ARG, {COMMA, LAMBDA_ARG};
 LAMBDA_ARG = EXPRESSION |
              PLACEHOLDER;
@@ -650,12 +653,7 @@ PAREN_EXPR = L_PAREN, EXPRESSION, R_PAREN;
 IF_STMT = KW_IF, PAREN_EXPR, BLOCK, [ELSE_BLOCK];
 ELSE_BLOCK = KW_ELSE, BLOCK;
 
-WHILE_STMT = KW_WHILE, PAREN_EXPR, LOOP_BLOCK;
-LOOP_BLOCK = L_BRACKET, LOOP_STMT, R_BRACKET;
-LOOP_STMT = NON_FUNC_STMT |
-               LOOP_BLOCK |
-            CONTINUE_STMT |
-               BREAK_STMT;
+WHILE_STMT = KW_WHILE, PAREN_EXPR, BLOCK;
 
 MATCH_STMT = KW_MATCH, PAREN_EXPR, L_BRACKET, {MATCH_CASE}, R_BRACKET;
 MATCH_CASE = MATCH_SPECIFIER, LAMBDA_ARROW, BLOCK;

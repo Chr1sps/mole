@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 struct AstNode
@@ -148,21 +149,20 @@ struct LambdaCallExpr : public ExprNode
 {
     ExprNodePtr callable;
     std::vector<std::optional<ExprNodePtr>> args;
-    bool is_ellipsis;
 
     LambdaCallExpr(ExprNodePtr &callable,
                    std::vector<std::optional<ExprNodePtr>> &args,
-                   const bool &is_ellipsis, const Position &position)
+                   const Position &position)
         : ExprNode(position), callable(std::move(callable)),
-          args(std::move(args)), is_ellipsis(is_ellipsis)
+          args(std::move(args))
     {
     }
 
     LambdaCallExpr(std::unique_ptr<VariableExpr> &callable,
                    std::vector<std::optional<ExprNodePtr>> &args,
-                   const bool &is_ellipsis, const Position &position)
+                   const Position &position)
         : ExprNode(position), callable(std::move(callable)),
-          args(std::move(args)), is_ellipsis(is_ellipsis)
+          args(std::move(args))
     {
     }
 
@@ -261,6 +261,20 @@ struct ReturnStmt : public Statement
     }
 };
 
+struct ContinueStmt : public Statement
+{
+    ContinueStmt(const Position &position) : Statement(position)
+    {
+    }
+};
+
+struct BreakStmt : public Statement
+{
+    BreakStmt(const Position &position) : Statement(position)
+    {
+    }
+};
+
 struct VarDeclStmt : public Statement
 {
     std::wstring name;
@@ -304,13 +318,14 @@ enum class AssignType
 
 struct AssignStmt : public Statement
 {
-    std::wstring name;
+    ExprNodePtr lhs;
     AssignType type;
-    ExprNodePtr value;
+    ExprNodePtr rhs;
 
-    AssignStmt(const std::wstring &name, const AssignType &type,
-               ExprNodePtr &value, const Position &position)
-        : Statement(position), name(name), type(type), value(std::move(value))
+    AssignStmt(ExprNodePtr &lhs, const AssignType &type, ExprNodePtr &rhs,
+               const Position &position)
+        : Statement(position), lhs(std::move(lhs)), type(type),
+          rhs(std::move(rhs))
     {
     }
 
@@ -320,7 +335,42 @@ struct AssignStmt : public Statement
     }
 };
 
-struct Parameter
+struct WhileStmt : public Statement
+{
+    ExprNodePtr condition_expr;
+    BlockPtr block;
+
+    WhileStmt(ExprNodePtr &condition_expr, BlockPtr &block,
+              const Position &position)
+        : Statement(position), condition_expr(std::move(condition_expr)),
+          block(std::move(block))
+    {
+    }
+};
+
+struct IfStmt : public Statement
+{
+    ExprNodePtr condition_expr;
+    BlockPtr then_block;
+    std::optional<BlockPtr> else_block;
+
+    IfStmt(ExprNodePtr &condition_expr, BlockPtr &then_block,
+           std::optional<BlockPtr> &else_block, const Position &position)
+        : Statement(position), condition_expr(std::move(condition_expr)),
+          then_block(std::move(then_block)), else_block(std::move(else_block))
+    {
+    }
+};
+
+struct MatchStmt : public Statement
+{
+    ExprNodePtr matched_expr;
+    std::unordered_map<ExprNodePtr, BlockPtr> literal_cases;
+    std::unordered_map<ExprNodePtr, BlockPtr> guard_cases;
+    BlockPtr placeholder_case;
+};
+
+struct Parameter : public AstNode
 {
     std::wstring name;
     TypePtr type;
@@ -328,6 +378,11 @@ struct Parameter
     Parameter(const std::wstring name, TypePtr &&type)
         : name(name), type(std::move(type))
     {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
     }
 };
 

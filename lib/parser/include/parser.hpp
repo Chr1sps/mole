@@ -5,21 +5,28 @@
 #include "token.hpp"
 #include <map>
 
+struct BinOpData
+{
+    BinOpEnum type;
+    int precedence;
+    bool is_right_assoc;
+
+    BinOpData(const BinOpEnum &type, const int &precedence,
+              const bool &is_right_assoc)
+        : type(type), precedence(precedence), is_right_assoc(is_right_assoc)
+    {
+    }
+};
+
 class Parser
 {
     LexerPtr lexer;
     std::optional<Token> current_token;
-    static std::map<TokenType, std::shared_ptr<BuiltInBinOp>> binary_map;
-    static std::map<TokenType, std::shared_ptr<BuiltInUnaryOp>> unary_map;
+    static std::map<TokenType, BinOpData> binary_map;
+    static std::map<TokenType, UnaryOpEnum> unary_map;
     static std::map<TokenType, TypeEnum> type_map;
     static std::map<TokenType, TypeEnum> type_value_map;
     static std::map<TokenType, AssignType> assign_map;
-
-    std::vector<Position> position_stack;
-
-    void push_pos();
-    Position pop_pos();
-    Position read_pos();
 
     std::optional<Token> get_new_token();
 
@@ -29,27 +36,30 @@ class Parser
     // type names
 
     TypePtr parse_type();
+    TypePtr parse_simple_type();
     std::vector<TypePtr> parse_types();
     TypePtr parse_return_type();
     std::unique_ptr<FunctionType> parse_function_type();
 
     // function parameters
 
-    ParamPtr parse_param();
+    ParamPtr parse_parameter();
     std::vector<ParamPtr> parse_params();
 
     // statements
 
-    std::unique_ptr<FuncDefStmt> parse_function();
     std::optional<TypePtr> parse_var_type();
     std::optional<ExprNodePtr> parse_var_value();
-    std::unique_ptr<ExternStmt> parse_extern();
-    std::unique_ptr<VarDeclStmt> parse_variable_declaration();
-    std::unique_ptr<ReturnStmt> parse_return_statement();
+    std::unique_ptr<ReturnStmt> parse_return_stmt();
     std::unique_ptr<AssignStmt> parse_assign_statement();
-    std::unique_ptr<Statement> parse_block_statement();
+    std::unique_ptr<Statement> parse_non_func_stmt();
     std::unique_ptr<Block> parse_block();
+    std::unique_ptr<VarDeclStmt> parse_var_decl_stmt();
+    std::unique_ptr<FuncDefStmt> parse_func_def_stmt();
+    std::unique_ptr<ExternStmt> parse_extern_stmt();
 
+    std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr>
+    parse_func_name_and_params();
     // helper methods
 
     void check_next_op_and_parse(std::unique_ptr<ExprNode> &lhs,
@@ -59,21 +69,8 @@ class Parser
                    std::vector<std::optional<ExprNodePtr>> &lambda_args,
                    const bool &is_lambda);
 
-    void handle_placeholder(
-        std::vector<ExprNodePtr> &args,
-        std::vector<std::optional<ExprNodePtr>> &lambda_args, bool &is_lambda);
     bool eat_comma_or_rparen();
-    std::unique_ptr<LambdaCallExpr> return_ellipsis_lambda(
-        ExprNodePtr &expr, std::vector<std::unique_ptr<ExprNode>> &args,
-        std::vector<std::optional<std::unique_ptr<ExprNode>>> &lambda_args,
-        bool &is_lambda);
-    std::unique_ptr<LambdaCallExpr> handle_call_and_lambda_args(
-        ExprNodePtr &expr, std::vector<ExprNodePtr> &args,
-        std::vector<std::optional<ExprNodePtr>> &lambda_args, bool &is_lambda);
-    ExprNodePtr return_call_or_lambda(
-        ExprNodePtr &expr, std::vector<ExprNodePtr> &args,
-        std::vector<std::optional<ExprNodePtr>> &lambda_args,
-        const bool &is_lambda);
+
     // expressions
 
     std::unique_ptr<I32Expr> parse_i32();

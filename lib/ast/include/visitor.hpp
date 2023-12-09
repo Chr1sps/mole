@@ -15,6 +15,7 @@ struct AssignStmt;
 struct VarDeclStmt;
 struct ExternStmt;
 struct Program;
+struct Parameter;
 
 struct NeverType;
 struct SimpleType;
@@ -52,5 +53,6 @@ class AstVisitor : public Visitor
     virtual void visit(const VarDeclStmt &node) = 0;
     virtual void visit(const ExternStmt &node) = 0;
     virtual void visit(const Program &node) = 0;
+    virtual void visit(const Parameter &node) = 0;
 };
 #endif

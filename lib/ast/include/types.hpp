@@ -7,20 +7,14 @@ enum class TypeEnum
 {
     BOOL,
 
-    I8,
-    I16,
     I32,
-    I64,
 
-    U8,
-    U16,
     U32,
-    U64,
 
-    F32,
     F64,
 
     CHAR,
+    STR,
 };
 
 struct Type
@@ -45,16 +39,6 @@ struct SimpleType : public Type
     SimpleType(const TypeEnum &type) : type(type)
     {
     }
-
-    void accept(TypeVisitor &visitor) const override
-    {
-        visitor.visit(*this);
-    }
-};
-
-struct NeverType : public Type
-{
-    NeverType() = default;
 
     void accept(TypeVisitor &visitor) const override
     {
