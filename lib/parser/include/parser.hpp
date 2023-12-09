@@ -65,9 +65,23 @@ class Parser
     std::unique_ptr<FuncDefStmt> parse_func_def_stmt();
     std::unique_ptr<ExternStmt> parse_extern_stmt();
 
+    // helper methods
+
     std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr>
     parse_func_name_and_params();
-    // helper methods
+
+    std::unique_ptr<MatchArm> parse_match_arm();
+
+    std::unique_ptr<LiteralArm> parse_literal_arm();
+    std::unique_ptr<GuardArm> parse_guard_arm();
+    std::unique_ptr<PlaceholderArm> parse_placeholder_arm();
+
+    std::vector<ExprNodePtr> parse_literal_condition();
+    ExprNodePtr parse_literal_pattern();
+
+    ExprNodePtr parse_guard_condition();
+
+    std::unique_ptr<BlockPtr> parse_match_arm_block();
 
     void check_next_op_and_parse(std::unique_ptr<ExprNode> &lhs,
                                  std::unique_ptr<ExprNode> &rhs,
@@ -93,7 +107,7 @@ class Parser
                                                std::unique_ptr<ExprNode> &lhs);
     std::unique_ptr<ExprNode> parse_expression();
 
-    std::nullptr_t report_error(const std::wstring &error_msg);
+    void report_error(const std::wstring &error_msg);
 
   public:
     Parser(LexerPtr &lexer) : lexer(std::move(lexer)), current_token()

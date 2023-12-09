@@ -270,12 +270,22 @@ struct ContinueStmt : public Statement
     ContinueStmt(const Position &position) : Statement(position)
     {
     }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
 };
 
 struct BreakStmt : public Statement
 {
     BreakStmt(const Position &position) : Statement(position)
     {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
     }
 };
 
@@ -350,6 +360,11 @@ struct WhileStmt : public Statement
           block(std::move(block))
     {
     }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
 };
 
 struct IfStmt : public Statement
@@ -364,43 +379,86 @@ struct IfStmt : public Statement
           then_block(std::move(then_block)), else_block(std::move(else_block))
     {
     }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
 };
 
-struct MatchCase : public AstNode
+struct MatchArm : public AstNode
 {
     BlockPtr block;
 
-    MatchCase(BlockPtr &block, const Position &position)
+    MatchArm(BlockPtr &block, const Position &position)
         : AstNode(position), block(std::move(block))
     {
     }
 };
 
-using MatchCasePtr = std::unique_ptr<MatchCase>;
+using MatchArmPtr = std::unique_ptr<MatchArm>;
 
-struct PlaceholderCase : public MatchCase
+struct PlaceholderArm : public MatchArm
 {
-    PlaceholderCase(BlockPtr &block, const Position &position)
-        : MatchCase(block, position)
+    PlaceholderArm(BlockPtr &block, const Position &position)
+        : MatchArm(block, position)
     {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
     }
 };
 
-struct GuardCase : public MatchCase
+struct GuardArm : public MatchArm
 {
     ExprNodePtr condition_expr;
 
-    GuardCase(ExprNodePtr &condition_expr, BlockPtr &block,
-              const Position &position)
-        : MatchCase(block, position), condition_expr(std::move(condition_expr))
+    GuardArm(ExprNodePtr &condition_expr, BlockPtr &block,
+             const Position &position)
+        : MatchArm(block, position), condition_expr(std::move(condition_expr))
     {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
+};
+
+struct LiteralArm : public MatchArm
+{
+    std::vector<ExprNodePtr> literals;
+
+    LiteralArm(std::vector<ExprNodePtr> &literals, BlockPtr &block,
+               const Position &position)
+        : MatchArm(block, position), literals(std::move(literals))
+    {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
     }
 };
 
 struct MatchStmt : public Statement
 {
     ExprNodePtr matched_expr;
-    std::vector<MatchCasePtr> match_cases;
+    std::vector<MatchArmPtr> match_arms;
+
+    MatchStmt(ExprNodePtr &matched_expr, std::vector<MatchArmPtr> &match_arms,
+              const Position &position)
+        : Statement(position), matched_expr(std::move(matched_expr)),
+          match_arms(std::move(match_arms))
+    {
+    }
+
+    void accept(AstVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
 };
 
 struct Parameter : public AstNode

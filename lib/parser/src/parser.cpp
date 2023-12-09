@@ -128,7 +128,8 @@ std::unique_ptr<F64Expr> Parser::parse_f64()
 std::optional<TypePtr> Parser::parse_var_type()
 {
     std::optional<TypePtr> type = {};
-    if (this->next_token() == TokenType::COLON)
+    this->next_token();
+    if (this->current_token == TokenType::COLON)
     {
         this->next_token();
         type = this->parse_type();
@@ -221,7 +222,8 @@ std::unique_ptr<ExprNode> Parser::parse_const_expression()
     case TokenType::DOUBLE:
         return this->parse_f64();
     default:
-        return this->report_error(L"type token expected");
+        this->report_error(L"type token expected");
+        return nullptr;
     }
 }
 
@@ -229,7 +231,8 @@ std::vector<std::unique_ptr<ExprNode>> Parser::parse_call_args()
 {
 
     std::vector<std::unique_ptr<ExprNode>> args;
-    if (this->next_token() != TokenType::R_PAREN)
+    this->next_token();
+    if (this->current_token != TokenType::R_PAREN)
     {
         for (;;)
         {
@@ -294,8 +297,10 @@ std::unique_ptr<ExprNode> Parser::parse_lhs()
     else if (this->type_value_map.contains(this->current_token->type))
         return this->parse_const_expression();
     else
-        return this->report_error(
-            L"unknown token when expecting an expression");
+    {
+        this->report_error(L"unknown token when expecting an expression");
+        return nullptr;
+    }
 }
 
 std::unique_ptr<ExprNode> Parser::parse_expression()
@@ -306,14 +311,12 @@ std::unique_ptr<ExprNode> Parser::parse_expression()
     return lhs;
 }
 
-std::nullptr_t Parser::report_error(const std::wstring &msg)
+void Parser::report_error(const std::wstring &msg)
 {
     auto error_msg = build_wstring(
         L"[ERROR] Parser error at [", this->current_token->position.line, ",",
         this->current_token->position.column, "]: ", msg, ".");
     throw std::exception();
-    // throw std::runtime_error(error_msg.c_str());
-    return nullptr;
 }
 
 //
@@ -448,7 +451,8 @@ TypePtr Parser::parse_type()
         return type;
     else if (auto type = this->parse_simple_type())
         return type;
-    return this->report_error(L"invalid type syntax");
+    this->report_error(L"invalid type syntax");
+    return nullptr;
 }
 
 // SIMPLE_TYPE = TYPE_U32 | TYPE_I32 | TYPE_F64 | TYPE_BOOL | TYPE_CHAR |
@@ -518,7 +522,7 @@ std::unique_ptr<Block> Parser::parse_block()
     while (true)
     {
         if (auto stmt = this->parse_non_func_stmt())
-            statements.push_back(stmt);
+            statements.push_back(std::move(stmt));
         else
             break;
     }
@@ -533,24 +537,25 @@ std::unique_ptr<Block> Parser::parse_block()
 std::unique_ptr<Statement> Parser::parse_non_func_stmt()
 {
     std::unique_ptr<Statement> result;
-    if (result = this->parse_return_stmt())
+    if ((result = this->parse_return_stmt()))
         return result;
-    if (result = this->parse_assign_statement())
+    if ((result = this->parse_assign_statement()))
         return result;
-    if (result = this->parse_var_decl_stmt())
+    if ((result = this->parse_var_decl_stmt()))
         return result;
-    if (result = this->parse_if_stmt())
+    if ((result = this->parse_if_stmt()))
         return result;
-    if (result = this->parse_while_stmt())
+    if ((result = this->parse_while_stmt()))
         return result;
-    if (result = this->parse_match_stmt())
+    if ((result = this->parse_match_stmt()))
         return result;
-    if (result = this->parse_continue_stmt())
+    if ((result = this->parse_continue_stmt()))
         return result;
-    if (result = this->parse_break_stmt())
+    if ((result = this->parse_break_stmt()))
         return result;
-    if (result = this->parse_block())
+    if ((result = this->parse_block()))
         return result;
+    return nullptr;
 }
 
 // RETURN_STMT = KW_RETURN, [EXPRESSION], SEMICOLON;
@@ -639,10 +644,10 @@ std::unique_ptr<MatchStmt> Parser::parse_match_stmt()
     auto matched_expr = this->parse_paren_expr();
     this->assert_current_and_eat(TokenType::L_BRACKET,
                                  L"no left bracket in a match statement");
-    std::vector<MatchCase> match_cases;
+    std::vector<MatchArmPtr> match_cases;
     while (true)
     {
-        if (auto match_case = this->parse_match_case())
+        if (auto match_case = this->parse_match_arm())
         {
             match_cases.push_back(std::move(match_case));
         }
@@ -653,9 +658,76 @@ std::unique_ptr<MatchStmt> Parser::parse_match_stmt()
     }
     this->assert_current_and_eat(TokenType::R_BRACKET,
                                  L"no left bracket in a match statement");
+    return std::make_unique<MatchStmt>(matched_expr, std::move(match_cases),
+                                       position);
 }
 
 // MATCH_CASE = MATCH_SPECIFIER, LAMBDA_ARROW, BLOCK;
-std::unique_ptr<MatchCase> Parser::parse_match_case()
+std::unique_ptr<MatchArm> Parser::parse_match_arm()
 {
+    if (auto arm = this->parse_literal_arm())
+        return arm;
+    if (auto arm = this->parse_guard_arm())
+        return arm;
+    if (auto arm = this->parse_placeholder_arm())
+        return arm;
+    return nullptr;
+}
+
+// LITERAL_ARM = LITERAL_CONDITION, MATCH_ARM_BLOCK;
+std::unique_ptr<LiteralArm> Parser::parse_literal_arm()
+{
+    auto position = this->current_token->position;
+    auto literals = this->parse_literal_condition();
+    auto block = this->parse_match_arm_block();
+    return std::make_unique<LiteralArm>(literals, block, position);
+}
+
+// LITERAL_CONDITION = LITERAL_PATTERN, {BIT_OR, LITERAL_PATTERN};
+std::vector<ExprNodePtr> Parser::parse_literal_condition()
+{
+}
+
+// LITERAL_PATTERN = [MINUS], U32_EXPR | [MINUS], F64_EXPR | STRING_EXPR |
+// CHAR_EXPR;
+ExprNodePtr Parser::parse_literal_pattern()
+{
+}
+
+// GUARD_ARM = GUARD_CONDITION, MATCH_ARM_BLOCK;
+std::unique_ptr<GuardArm> Parser::parse_guard_arm()
+{
+
+    auto guard = this->parse_guard_condition();
+    auto block = this->parse_match_arm_block();
+}
+
+// GUARD_CONDITION = KW_IF, PAREN_EXPR;
+ExprNodePtr Parser::parse_guard_condition()
+{
+    if (this->current_token != TokenType::KW_IF)
+        return nullptr;
+    this->next_token();
+    return this->parse_paren_expr();
+}
+
+// PLACEHOLDER_ARM = PLACEHOLDER, MATCH_ARM_BLOCK;
+std::unique_ptr<PlaceholderArm> Parser::parse_placeholder_arm()
+{
+    if (this->current_token != TokenType::PLACEHOLDER)
+        return nullptr;
+    auto position = this->current_token->position;
+    this->next_token();
+    auto block = parse_match_arm_block();
+    return std::make_unique<PlaceholderArm>(block, position);
+}
+
+// MATCH_ARM_BLOCK = LAMBDA_ARROW, BLOCK;
+std::unique_ptr<BlockPtr> Parser::parse_match_arm_block()
+{
+    if (this->current_token != TokenType::LAMBDA_ARROW)
+    {
+        this->report_error(L"no match case block found after the condition");
+        return nullptr;
+    }
 }
