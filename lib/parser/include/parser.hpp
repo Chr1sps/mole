@@ -112,12 +112,14 @@ class Parser
     void report_error(const std::wstring &error_msg);
 
   public:
-    Parser(LexerPtr &lexer) : lexer(std::move(lexer)), current_token()
+    Parser(LexerPtr &lexer) : lexer(std::move(lexer))
     {
+        this->next_token();
     }
 
-    Parser(LexerPtr &&lexer) : lexer(std::move(lexer)), current_token()
+    Parser(LexerPtr &&lexer) : lexer(std::move(lexer))
     {
+        this->next_token();
     }
 
     ProgramPtr parse();

@@ -1,3 +1,5 @@
+#ifndef __EQUATION_VISITORS_HPP__
+#define __EQUATION_VISITORS_HPP__
 #include "ast.hpp"
 #include "visitor.hpp"
 
@@ -18,7 +20,7 @@
 #define FALSE_VISIT(type)                                                     \
     void visit(const type &other) override                                    \
     {                                                                         \
-        value = false;                                                        \
+        this->value = false;                                                  \
     }
 #define GENERATE_FALSE_VISITS(...) FOR_EACH(FALSE_VISIT, __VA_ARGS__)
 
@@ -223,6 +225,11 @@ bool operator==(const ExprNode &first, const ExprNode &second)
     return visitor.value;
 }
 
+bool operator!=(const ExprNode &first, const ExprNode &other)
+{
+    return !(first == other);
+}
+
 GENERATE_VISITOR(
     MatchArmVisitor, LiteralArm,
     {
@@ -263,6 +270,11 @@ bool operator==(const MatchArm &first, const MatchArm &second)
     auto visitor = MatchArmEquationVisitor(first);
     second.accept(visitor);
     return visitor.value;
+}
+
+bool operator!=(const MatchArm &first, const MatchArm &other)
+{
+    return !(first == other);
 }
 
 GENERATE_VISITOR(
@@ -399,10 +411,20 @@ bool operator==(const Statement &first, const Statement &second)
     return visitor.value;
 }
 
+bool operator!=(const Statement &first, const Statement &other)
+{
+    return !(first == other);
+}
+
 bool operator==(const Parameter &first, const Parameter &other)
 {
     return first.name == other.name && *first.type == *other.type &&
            first.position == other.position;
+}
+
+bool operator!=(const Parameter &first, const Parameter &other)
+{
+    return !(first == other);
 }
 
 bool operator==(const Program &first, const Program &other)
@@ -412,3 +434,9 @@ bool operator==(const Program &first, const Program &other)
            compare_ptr_vectors(first.globals, other.globals) &&
            first.position == other.position; // not needed, but whatever
 }
+
+bool operator!=(const Program &first, const Program &other)
+{
+    return !(first == other);
+}
+#endif

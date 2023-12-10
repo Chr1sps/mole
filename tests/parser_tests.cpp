@@ -1,5 +1,6 @@
 #include "equation_visitors.hpp"
 #include "locale.hpp"
+#include "logger.hpp"
 #include "parser.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
@@ -8,12 +9,27 @@ bool check_generated_ast(const std::wstring &source, ProgramPtr &&expected)
 {
     auto locale = Locale("en_US.utf8");
     auto parser = Parser(Lexer::from_wstring(source));
+    auto logger = DebugLogger();
+    parser.add_logger(&logger);
     auto result = parser.parse();
-    return *result == *expected;
+    auto are_same = *result == *expected;
+    auto no_errors = logger.get_messages().empty();
+    return are_same && no_errors;
+}
+
+bool throws_errors(const std::wstring &source)
+{
+    auto locale = Locale("en_US.utf8");
+    auto parser = Parser(Lexer::from_wstring(source));
+    auto logger = DebugLogger();
+    parser.add_logger(&logger);
+    auto result = parser.parse();
+    return !logger.get_messages().empty();
 }
 
 #define COMPARE(source, expected)                                             \
     REQUIRE(check_generated_ast(source, expected))
+#define THROWS_ERRORS(source) REQUIRE(throws_errors(source))
 
 // #define REPR_CHECK(source) REQUIRE(compare_output(source, source))
 // #define CHECK_EXCEPTION(source, exception)
@@ -42,8 +58,26 @@ auto make_uniques_vector(Types &&...args)
 #define FTYPE(arg_types, return_type, is_const)                               \
     std::make_unique<FunctionType>(arg_types, return_type, is_const)
 
+#define VAREXPR(name, position) std::make_unique<VariableExpr>(name, position)
+
 #define I32EXPR(value, position) std::make_unique<I32Expr>(value, position)
 #define F64EXPR(value, position) std::make_unique<F64Expr>(value, position)
+#define STREXPR(value, position) std::make_unique<StringExpr>(value, position)
+#define CHAREXPR(value, position) std::make_unique<CharExpr>(value, position)
+#define BOOLEXPR(value, position) std::make_unique<BoolExpr>(value, position)
+
+#define BINEXPR(lhs, op, rhs, position)                                       \
+    std::make_unique<BinaryExpr>(lhs, rhs, BinOpEnum::op, position)
+#define UNEXPR(expr, op, position)                                            \
+    std::make_unique<UnaryExpr>(expr, UnaryOpEnum::op, position)
+#define CALLEXPR(callable, args, position)                                    \
+    std::make_unique<CallExpr>(callable, args, position)
+#define LAMBDAEXPR(callable, args, position)                                  \
+    std::make_unique<LambdaCallExpr>(callable, args, position)
+#define INDEXEXPR(expr, index, position)                                      \
+    std::make_unique<IndexExpr>(expr, index, position)
+#define CASTEXPR(expr, type, position)                                        \
+    std::make_unique<CastExpr>(expr, type, position)
 
 #define POS(line, col) Position(line, col)
 #define VAR(name, type, initial_value, is_mut, position)                      \
@@ -112,19 +146,19 @@ TEST_CASE("Variables.", "[VARS]")
                 PROGRAM(GLOBALS(VAR(L"var",
                                     FTYPE(TYPES(STYPE(I32, NON_REF),
                                                 STYPE(F64, NON_REF)),
-                                          STYPE(I32, NON_REF), false),
-                                    nullptr, true, POS(1, 1))),
+                                          STYPE(I32, NON_REF), true),
+                                    nullptr, false, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
     }
     SECTION("Value - literals.")
     {
         COMPARE(L"let var=5;",
                 PROGRAM(GLOBALS(VAR(L"var", nullptr, I32EXPR(5, POS(1, 9)),
-                                    true, POS(1, 1))),
+                                    false, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
         COMPARE(L"let var=5.25;",
                 PROGRAM(GLOBALS(VAR(L"var", nullptr, F64EXPR(5.25, POS(1, 9)),
-                                    true, POS(1, 1))),
+                                    false, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
     }
     SECTION("Type and value.")
@@ -133,11 +167,6 @@ TEST_CASE("Variables.", "[VARS]")
                 PROGRAM(GLOBALS(VAR(L"var", STYPE(I32, NON_REF),
                                     I32EXPR(5, POS(1, 15)), false, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
-        COMPARE(
-            L"let var:f64 = 5.25;",
-            PROGRAM(GLOBALS(VAR(L"var", STYPE(I32, NON_REF),
-                                F64EXPR(5.25, POS(1, 15)), false, POS(1, 1))),
-                    FUNCTIONS(), EXTERNS()));
     }
     SECTION("Mutables.")
     {
@@ -169,10 +198,11 @@ TEST_CASE("Variables.", "[VARS]")
                 PROGRAM(GLOBALS(VAR(L"변수", nullptr, I32EXPR(32, POS(1, 8)),
                                     false, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
-        COMPARE(L"let переменная=32;",
-                PROGRAM(GLOBALS(VAR(L"переменная", nullptr,
-                                    I32EXPR(32, POS(1, 8)), false, POS(1, 1))),
-                        FUNCTIONS(), EXTERNS()));
+        COMPARE(
+            L"let переменная=32;",
+            PROGRAM(GLOBALS(VAR(L"переменная", nullptr,
+                                I32EXPR(32, POS(1, 16)), false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
         COMPARE(L"let चर=32;",
                 PROGRAM(GLOBALS(VAR(L"चर", nullptr, I32EXPR(32, POS(1, 8)),
                                     false, POS(1, 1))),
@@ -184,25 +214,108 @@ TEST_CASE("Variables.", "[VARS]")
     }
 }
 
-// TEST_CASE("Binary operators.", "[VARS], [BINOP]")
-// {
-//     COMPARE(L"let var=5+5;", L"let var=(5+5);");
-// }
+TEST_CASE("Binary operators.", "[VARS], [BINOP]")
+{
+    COMPARE(L"let var=5+5;",
+            PROGRAM(GLOBALS(VAR(L"var", nullptr,
+                                BINEXPR(I32EXPR(5, POS(1, 9)), ADD,
+                                        I32EXPR(5, POS(1, 11)), POS(1, 9)),
+                                false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    SECTION("Nested operators.")
+    {
+        COMPARE(
+            L"let var=5+5*5;",
+            PROGRAM(GLOBALS(VAR(
+                        L"var", nullptr,
+                        BINEXPR(I32EXPR(5, POS(1, 9)), ADD,
+                                BINEXPR(I32EXPR(5, POS(1, 11)), MUL,
+                                        I32EXPR(5, POS(1, 13)), POS(1, 11)),
+                                POS(1, 9)),
+                        false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+        COMPARE(
+            L"let var=5+5*5^^5;",
+            PROGRAM(GLOBALS(VAR(
+                        L"var", nullptr,
+                        BINEXPR(I32EXPR(5, POS(1, 9)), ADD,
+                                BINEXPR(I32EXPR(5, POS(1, 11)), MUL,
+                                        BINEXPR(I32EXPR(5, POS(1, 13)), EXP,
+                                                I32EXPR(5, POS(1, 16)),
+                                                POS(1, 13)),
+                                        POS(1, 11)),
+                                POS(1, 9)),
+                        false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+        COMPARE(
+            L"let var=5^^5^^5^^5;",
+            PROGRAM(GLOBALS(VAR(
+                        L"var", nullptr,
+                        BINEXPR(I32EXPR(5, POS(1, 9)), EXP,
+                                BINEXPR(I32EXPR(5, POS(1, 12)), EXP,
+                                        BINEXPR(I32EXPR(5, POS(1, 15)), EXP,
+                                                I32EXPR(5, POS(1, 18)),
+                                                POS(1, 15)),
+                                        POS(1, 12)),
+                                POS(1, 9)),
+                        false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+        COMPARE(
+            L"let var=5*5*5*5;",
+            PROGRAM(
+                GLOBALS(VAR(
+                    L"var", nullptr,
+                    BINEXPR(BINEXPR(BINEXPR(I32EXPR(5, POS(1, 9)), MUL,
+                                            I32EXPR(5, POS(1, 11)), POS(1, 9)),
+                                    MUL, I32EXPR(5, POS(1, 13)), POS(1, 9)),
+                            MUL, I32EXPR(5, POS(1, 15)), POS(1, 9)),
+                    false, POS(1, 1))),
+                FUNCTIONS(), EXTERNS()));
+    }
+    SECTION("Shunting yard errors.")
+    {
+        THROWS_ERRORS(L"let var=5+;");
+        THROWS_ERRORS(L"let var=5+*5;");
+    }
+}
 
-// TEST_CASE("Unary operators.", "[VARS], [UNOP]")
-// {
-//     COMPARE(L"let var=++5;", L"let var=(++5);");
-//     COMPARE(L"let var=--5;", L"let var=(--5);");
-//     COMPARE(L"let var=!5;", L"let var=(!5);");
-//     COMPARE(L"let var=~5;", L"let var=(~5);");
-// }
-
-// TEST_CASE("Nested operators - only binary.")
-// {
-//     COMPARE(L"let var=2*2*2;", L"let var=((2*2)*2);");
-//     COMPARE(L"let var=2+2*2;", L"let var=(2+(2*2));");
-//     COMPARE(L"let var=2*2/2%2;", L"let var=(((2*2)/2)%2);");
-// }
+TEST_CASE("Unary operators.", "[VARS], [UNOP]")
+{
+    COMPARE(L"let var=++5;",
+            PROGRAM(GLOBALS(VAR(L"var", nullptr,
+                                UNEXPR(I32EXPR(5, POS(1, 11)), INC, POS(1, 9)),
+                                false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let var=--5;",
+            PROGRAM(GLOBALS(VAR(L"var", nullptr,
+                                UNEXPR(I32EXPR(5, POS(1, 11)), DEC, POS(1, 9)),
+                                false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let var=!5;",
+            PROGRAM(GLOBALS(VAR(L"var", nullptr,
+                                UNEXPR(I32EXPR(5, POS(1, 10)), NEG, POS(1, 9)),
+                                false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    COMPARE(
+        L"let var=~5;",
+        PROGRAM(GLOBALS(VAR(L"var", nullptr,
+                            UNEXPR(I32EXPR(5, POS(1, 10)), BIT_NEG, POS(1, 9)),
+                            false, POS(1, 1))),
+                FUNCTIONS(), EXTERNS()));
+    SECTION("Nested.")
+    {
+        COMPARE(L"let var=++--~!5;",
+                PROGRAM(GLOBALS(VAR(
+                            L"var", nullptr,
+                            UNEXPR(UNEXPR(UNEXPR(UNEXPR(I32EXPR(5, POS(1, 15)),
+                                                        NEG, POS(1, 14)),
+                                                 BIT_NEG, POS(1, 13)),
+                                          DEC, POS(1, 11)),
+                                   INC, POS(1, 9)),
+                            false, POS(1, 1))),
+                        FUNCTIONS(), EXTERNS()));
+    }
+}
 
 // TEST_CASE("Nested operators - only unary.")
 // {

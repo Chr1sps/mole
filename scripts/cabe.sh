@@ -27,7 +27,7 @@ if ! command -v pmccabe >/dev/null; then
     exit 1
 fi
 
-output=$(pmccabe -c src/*.cpp | sort -nr -k1,1 -k2,2 -k3,3)
+output=$(pmccabe -c lib/*/src/*.cpp | sort -nr -k1,1 -k2,2 -k3,3)
 warning_lines=""
 clear_lines=""
 

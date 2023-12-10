@@ -99,6 +99,12 @@ struct BinaryExpr : public ExprNode
     {
     }
 
+    BinaryExpr(ExprNodePtr &&lhs, ExprNodePtr &&rhs, const BinOpEnum &op,
+               const Position &position)
+        : ExprNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
+    {
+    }
+
     void accept(ExprVisitor &visitor) const override
     {
         visitor.visit(*this);
@@ -111,6 +117,12 @@ struct UnaryExpr : public ExprNode
     UnaryOpEnum op;
 
     UnaryExpr(ExprNodePtr &expr, const UnaryOpEnum &op,
+              const Position &position)
+        : ExprNode(position), expr(std::move(expr)), op(op)
+    {
+    }
+
+    UnaryExpr(ExprNodePtr &&expr, const UnaryOpEnum &op,
               const Position &position)
         : ExprNode(position), expr(std::move(expr)), op(op)
     {

@@ -177,8 +177,8 @@ std::unique_ptr<VarDeclStmt> Parser::parse_var_decl_stmt()
     if (this->current_token != TokenType::IDENTIFIER)
         this->report_error(
             L"expected an identifier in a variable declaration");
-
     auto name = std::get<std::wstring>(this->current_token->value);
+    this->next_token();
 
     auto type = this->parse_type_specifier();
     auto initial_value = this->parse_initial_value();
@@ -747,6 +747,7 @@ ExprNodePtr Parser::parse_binary_expr()
                 }
             }
             ops.push(iter->second);
+            this->next_token();
         }
         else
             break;
@@ -764,7 +765,13 @@ ExprNodePtr Parser::parse_binary_expr()
         this->report_error(L"binary expression doesn't have an operand");
         return nullptr;
     }
-    return std::move(values.top());
+    else if (values.empty())
+    {
+        throw std::exception();
+    }
+    auto result = std::move(values.top());
+    values.pop();
+    return result;
 }
 
 // CAST_EXPR = UNARY_EXPR , {KW_AS, SIMPLE_TYPE};
@@ -791,21 +798,26 @@ ExprNodePtr Parser::parse_cast_expr()
 ExprNodePtr Parser::parse_unary_expr()
 {
     std::stack<UnaryOpEnum> ops;
-    std::optional<Position> position;
+    std::stack<Position> positions;
     decltype(this->unary_map)::iterator op_iter;
     while (this->current_token.has_value() &&
            (op_iter = this->unary_map.find(this->current_token->type)) !=
                this->unary_map.end())
     {
-        if (!position.has_value())
-            position = this->current_token->position;
         ops.push(op_iter->second);
+        positions.push(this->current_token->position);
+        this->next_token();
     }
     if (auto inner = this->parse_index_lambda_or_call())
     {
-        if (!position.has_value())
-            position = inner->position;
-        inner = std::make_unique<UnaryExpr>(inner, ops.top(), *position);
+        while (!ops.empty())
+        {
+            inner =
+                std::make_unique<UnaryExpr>(inner, ops.top(), positions.top());
+            ops.pop();
+            positions.pop();
+        }
+        return inner;
     }
     else if (!ops.empty())
     {

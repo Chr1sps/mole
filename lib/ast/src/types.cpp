@@ -46,9 +46,12 @@ void FunctionTypeVisitor::visit(const FunctionType &other)
         std::equal(this->type.arg_types.begin(), this->type.arg_types.end(),
                    other.arg_types.begin(),
                    [](TypePtr a, TypePtr b) { return *a == *b; });
-    this->value =
-        (are_args_equal && *(this->type.return_type) == *(other.return_type) &&
-         this->type.is_const == other.is_const);
+    this->value = (are_args_equal &&
+                   ((this->type.return_type == nullptr &&
+                     other.return_type == nullptr) ||
+                    (this->type.return_type && other.return_type &&
+                     *(this->type.return_type) == *(other.return_type))) &&
+                   this->type.is_const == other.is_const);
 }
 
 void TypeEquationVisitor::visit(const SimpleType &other)
