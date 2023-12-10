@@ -373,6 +373,13 @@ struct VarDeclStmt : public Statement
     {
     }
 
+    VarDeclStmt(std::wstring &&name, TypePtr &&type, ExprNodePtr &&value,
+                bool &&is_mut, Position &&position)
+        : Statement(position), name(name), type(std::move(type)),
+          initial_value(std::move(value)), is_mut(is_mut)
+    {
+    }
+
     void accept(StmtVisitor &visitor) const override
     {
         visitor.visit(*this);

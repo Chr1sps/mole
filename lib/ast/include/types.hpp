@@ -68,6 +68,13 @@ struct FunctionType : public Type
     {
     }
 
+    FunctionType(std::vector<TypePtr> &&arg_types, TypePtr &&return_type,
+                 const bool &is_const)
+        : arg_types(std::move(arg_types)), return_type(std::move(return_type)),
+          is_const(is_const)
+    {
+    }
+
     void accept(TypeVisitor &visitor) const override
     {
         visitor.visit(*this);
