@@ -46,7 +46,7 @@ class TypeVisitor : public Visitor
     virtual void visit(const FunctionType &type) = 0;
 };
 
-class AstVisitor : public Visitor
+class ExprVisitor : Visitor
 {
   public:
     virtual void visit(const VariableExpr &node) = 0;
@@ -61,13 +61,15 @@ class AstVisitor : public Visitor
     virtual void visit(const LambdaCallExpr &node) = 0;
     virtual void visit(const IndexExpr &node) = 0;
     virtual void visit(const CastExpr &node) = 0;
+};
+
+class StmtVisitor : Visitor
+{
+  public:
     virtual void visit(const Block &node) = 0;
     virtual void visit(const IfStmt &node) = 0;
     virtual void visit(const WhileStmt &node) = 0;
     virtual void visit(const MatchStmt &node) = 0;
-    virtual void visit(const LiteralArm &node) = 0;
-    virtual void visit(const GuardArm &node) = 0;
-    virtual void visit(const PlaceholderArm &node) = 0;
     virtual void visit(const ReturnStmt &node) = 0;
     virtual void visit(const BreakStmt &node) = 0;
     virtual void visit(const ContinueStmt &node) = 0;
@@ -75,7 +77,23 @@ class AstVisitor : public Visitor
     virtual void visit(const AssignStmt &node) = 0;
     virtual void visit(const VarDeclStmt &node) = 0;
     virtual void visit(const ExternStmt &node) = 0;
+};
+
+class MatchArmVisitor : Visitor
+{
+  public:
+    virtual void visit(const LiteralArm &node) = 0;
+    virtual void visit(const GuardArm &node) = 0;
+    virtual void visit(const PlaceholderArm &node) = 0;
+};
+
+class AstVisitor : public ExprVisitor, StmtVisitor, MatchArmVisitor
+{
+  public:
     virtual void visit(const Program &node) = 0;
     virtual void visit(const Parameter &node) = 0;
+    using ExprVisitor::visit;
+    using MatchArmVisitor::visit;
+    using StmtVisitor::visit;
 };
 #endif

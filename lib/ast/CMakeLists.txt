@@ -1,5 +1,6 @@
 set(LIB_HEADERS
     "ast.hpp"
+    "equation_visitors.hpp"
     "types.hpp"
     "visitor.hpp"
 )

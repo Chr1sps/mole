@@ -42,9 +42,13 @@ void FunctionTypeVisitor::visit(const NeverType &other)
 
 void FunctionTypeVisitor::visit(const FunctionType &other)
 {
-    this->value = (this->type.arg_types == other.arg_types &&
-                   *(this->type.return_type) == *(other.return_type) &&
-                   this->type.is_const == other.is_const);
+    auto are_args_equal =
+        std::equal(this->type.arg_types.begin(), this->type.arg_types.end(),
+                   other.arg_types.begin(),
+                   [](TypePtr a, TypePtr b) { return *a == *b; });
+    this->value =
+        (are_args_equal && *(this->type.return_type) == *(other.return_type) &&
+         this->type.is_const == other.is_const);
 }
 
 void TypeEquationVisitor::visit(const SimpleType &other)
