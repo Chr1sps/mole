@@ -1,4 +1,5 @@
 #include "lexer.hpp"
+#include "locale.hpp"
 #include "logger.hpp"
 #include "token.hpp"
 #include <catch2/catch_test_macros.hpp>

@@ -1,6 +1,5 @@
 #ifndef __LEXER_HPP__
 #define __LEXER_HPP__
-#include "locale.hpp"
 #include "logger.hpp"
 #include "reader.hpp"
 #include "token.hpp"
@@ -29,7 +28,6 @@ class Lexer
     const unsigned long long max_str_length;
 
     std::optional<IndexedChar> last_char;
-    std::locale locale;
     std::vector<Logger *> loggers;
 
     std::optional<IndexedChar> get_new_char();
@@ -74,10 +72,6 @@ class Lexer
         : reader(std::move(reader)), max_var_name_size(max_var_name_size),
           max_str_length(max_str_length)
     {
-        // getting the locale from the reader instead of loading it some other
-        // way prevents locale mismatch
-        this->locale = this->reader->get_locale();
-
         // this loads the first character into the lexer so that when we run
         // the get_nonempty_char() function at the very first get_token() call
         // it doesn't immediately return a nullopt and stop the lexer

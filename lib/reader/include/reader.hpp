@@ -1,6 +1,5 @@
 #ifndef __READER_HPP__
 #define __READER_HPP__
-#include "locale.hpp"
 #include "position.hpp"
 #include "string_builder.hpp"
 #include <concepts>

@@ -79,8 +79,8 @@ class Parser
     std::unique_ptr<GuardArm> parse_guard_arm();
     std::unique_ptr<PlaceholderArm> parse_placeholder_arm();
 
-    std::vector<ExprNodePtr> parse_literal_condition();
-    ExprNodePtr parse_literal_pattern();
+    // std::vector<ExprNodePtr> parse_literal_condition();
+    // ExprNodePtr parse_literal_pattern();
 
     ExprNodePtr parse_guard_condition();
 

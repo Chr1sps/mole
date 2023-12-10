@@ -108,7 +108,7 @@ std::optional<IndexedChar> Lexer::get_new_char()
 std::optional<IndexedChar> Lexer::get_nonempty_char()
 {
     while (this->last_char.has_value() &&
-           std::isspace(this->last_char->character, this->locale))
+           std::iswspace(this->last_char->character))
     {
         this->get_new_char();
     }
@@ -287,20 +287,20 @@ LexerPtr Lexer::from_file(const std::string &path,
                           const unsigned long long &max_var_name_size,
                           const unsigned long long &max_str_length)
 {
-    ReaderPtr reader = std::make_unique<FileReader>(path, std::locale());
+    ReaderPtr reader = std::make_unique<FileReader>(path);
     return std::make_unique<Lexer>(reader, max_var_name_size, max_str_length);
 }
 
 LexerPtr Lexer::from_file(const std::string &path)
 {
-    ReaderPtr reader = std::make_unique<FileReader>(path, std::locale());
+    ReaderPtr reader = std::make_unique<FileReader>(path);
     return std::make_unique<Lexer>(reader);
 }
 
 std::optional<Token> Lexer::parse_underscore(const Position &position)
 {
     auto next = this->reader->peek();
-    if (next.has_value() && std::isalnum(next->character, this->locale))
+    if (next.has_value() && std::iswalnum(next->character))
     {
         return this->parse_alpha_token(position);
     }
@@ -484,15 +484,15 @@ bool Lexer::is_a_number_char() const
 {
     auto character = this->last_char.value().character;
     auto next_char = this->peek_char();
-    return std::isdigit(character, this->locale) ||
+    return std::iswdigit(character) ||
            (character == L'.' && next_char.has_value() &&
-            std::isdigit(next_char.value().character, this->locale));
+            std::iswdigit(next_char.value().character));
 }
 
 bool Lexer::is_identifier_char() const
 {
     auto character = this->last_char.value().character;
-    return std::isalpha(character, this->locale) || character == L'_';
+    return std::iswalpha(character) || character == L'_';
 }
 
 bool Lexer::is_an_operator_char() const

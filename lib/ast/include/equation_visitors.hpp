@@ -59,6 +59,21 @@ template <typename T> bool equal_or_null(const T *first, const T *other)
            (first && other && *first == *other);
 }
 
+bool operator==(const ExprNode &first, const ExprNode &second);
+bool operator==(const MatchArm &first, const MatchArm &second);
+bool operator==(const Statement &first, const Statement &second);
+bool operator==(const Parameter &first, const Parameter &other);
+bool operator==(const Program &first, const Program &other);
+
+template <typename T>
+bool compare_ptr_vectors(const std::vector<std::unique_ptr<T>> &first,
+                         const std::vector<std::unique_ptr<T>> &second)
+{
+    return std::equal(first.begin(), first.end(), second.begin(),
+                      [](const std::unique_ptr<T> &a,
+                         const std::unique_ptr<T> &b) { return *a == *b; });
+}
+
 GENERATE_VISITOR(
     ExprVisitor, VariableExpr,
     {
@@ -137,11 +152,9 @@ GENERATE_VISITOR(
 GENERATE_VISITOR(
     ExprVisitor, CallExpr,
     {
-        auto are_args_equal = std::equal(
-            this->expr.args.begin(), this->expr.args.end(), node.args.begin(),
-            [](ExprNodePtr a, ExprNodePtr b) { return *a == *b; });
         this->value = *this->expr.callable == *node.callable &&
-                      are_args_equal && this->expr.position == node.position;
+                      compare_ptr_vectors(this->expr.args, node.args) &&
+                      this->expr.position == node.position;
     },
     I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
     BinaryExpr, LambdaCallExpr, IndexExpr, CastExpr)
@@ -151,7 +164,9 @@ GENERATE_VISITOR(
     {
         auto are_args_equal = std::equal(
             this->expr.args.begin(), this->expr.args.end(), node.args.begin(),
-            [](ExprNodePtr a, ExprNodePtr b) { return equal_or_null(a, b); });
+            [](const ExprNodePtr &a, const ExprNodePtr &b) {
+                return equal_or_null(a, b);
+            });
         this->value = *this->expr.callable == *node.callable &&
                       are_args_equal && this->expr.position == node.position;
     },
@@ -191,7 +206,7 @@ struct ExprEquationVisitor : ExprVisitor
 {
     bool value;
 
-    ExprEquationVisitor(const ExprNode &expr) : expr(expr), value(true)
+    ExprEquationVisitor(const ExprNode &expr) : expr(expr)
     {
     }
     MAKE_EQUATION_VISITS(VariableExpr, I32Expr, F64Expr, StringExpr, CharExpr,
@@ -209,14 +224,53 @@ bool operator==(const ExprNode &first, const ExprNode &second)
 }
 
 GENERATE_VISITOR(
+    MatchArmVisitor, LiteralArm,
+    {
+        this->value =
+            compare_ptr_vectors(this->expr.literals, node.literals) &&
+            this->expr.position == node.position;
+    },
+    GuardArm, PlaceholderArm)
+
+GENERATE_VISITOR(
+    MatchArmVisitor, GuardArm,
+    {
+        this->value = *this->expr.condition_expr == *node.condition_expr &&
+                      this->expr.position == node.position;
+    },
+    LiteralArm, PlaceholderArm)
+
+GENERATE_VISITOR(
+    MatchArmVisitor, PlaceholderArm,
+    { this->value = this->expr.position == node.position; }, LiteralArm,
+    GuardArm)
+
+struct MatchArmEquationVisitor : MatchArmVisitor
+{
+    bool value;
+
+    MatchArmEquationVisitor(const MatchArm &expr) : expr(expr)
+    {
+    }
+
+    MAKE_EQUATION_VISITS(LiteralArm, GuardArm, PlaceholderArm)
+  private:
+    const MatchArm &expr;
+};
+
+bool operator==(const MatchArm &first, const MatchArm &second)
+{
+    auto visitor = MatchArmEquationVisitor(first);
+    second.accept(visitor);
+    return visitor.value;
+}
+
+GENERATE_VISITOR(
     StmtVisitor, Block,
     {
-        auto are_statements_equal = std::equal(
-            this->expr.statements.begin(), this->expr.statements.end(),
-            node.statements.begin(),
-            [](const StmtPtr &a, const StmtPtr &b) { return *a == *b; });
         this->value =
-            are_statements_equal && this->expr.position == node.position;
+            compare_ptr_vectors(this->expr.statements, node.statements) &&
+            this->expr.position == node.position;
     },
     IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
     FuncDefStmt, AssignStmt, VarDeclStmt, ExternStmt)
@@ -226,7 +280,7 @@ GENERATE_VISITOR(
     {
         this->value = *this->expr.condition_expr == *node.condition_expr &&
                       *this->expr.then_block == *node.then_block &&
-                      equal_or_null(this->expr.else_block, other.else_block) &&
+                      equal_or_null(this->expr.else_block, node.else_block) &&
                       this->expr.position == node.position;
     },
     Block, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
@@ -245,14 +299,10 @@ GENERATE_VISITOR(
 GENERATE_VISITOR(
     StmtVisitor, MatchStmt,
     {
-        auto are_arms_equal =
-            std::equal(this->expr.match_arms.begin(),
-                       this->expr.match_arms.end(), node.match_arms.begin(),
-                       [](const MatchArmPtr &a, const MatchArmPtr &b) {
-                           return *a == *b;
-                       });
-        this->value = *this->expr.matched_expr == *node.matched_expr &&
-                      are_arms_equal && this->expr.position == node.position;
+        this->value =
+            *this->expr.matched_expr == *node.matched_expr &&
+            compare_ptr_vectors(this->expr.match_arms, node.match_arms) &&
+            this->expr.position == node.position;
     },
     Block, IfStmt, WhileStmt, ReturnStmt, BreakStmt, ContinueStmt, FuncDefStmt,
     AssignStmt, VarDeclStmt, ExternStmt)
@@ -273,12 +323,6 @@ GENERATE_VISITOR(
     VarDeclStmt, ExternStmt)
 
 GENERATE_VISITOR(
-    StmtVisitor, BreakStmt,
-    { this->value = this->expr.position == node.position; }, Block, IfStmt,
-    WhileStmt, MatchStmt, ReturnStmt, ContinueStmt, FuncDefStmt, AssignStmt,
-    VarDeclStmt, ExternStmt)
-
-GENERATE_VISITOR(
     StmtVisitor, ContinueStmt,
     { this->value = this->expr.position == node.position; }, Block, IfStmt,
     WhileStmt, MatchStmt, ReturnStmt, BreakStmt, FuncDefStmt, AssignStmt,
@@ -287,12 +331,9 @@ GENERATE_VISITOR(
 GENERATE_VISITOR(
     StmtVisitor, FuncDefStmt,
     {
-        auto are_params_equal = std::equal(
-            this->expr.params.begin(), this->expr.params.end(),
-            node.params.begin(),
-            [](const ParamPtr &a, const ParamPtr &b) { return *a == *b; });
         this->value =
-            this->expr.name == node.name && are_params_equal &&
+            this->expr.name == node.name &&
+            compare_ptr_vectors(this->expr.params, node.params) &&
             equal_or_null(this->expr.return_type, node.return_type) &&
             *this->expr.block == *node.block &&
             this->expr.is_const == node.is_const &&
@@ -328,12 +369,9 @@ GENERATE_VISITOR(
 GENERATE_VISITOR(
     StmtVisitor, ExternStmt,
     {
-        auto are_params_equal = std::equal(
-            this->expr.params.begin(), this->expr.params.end(),
-            node.params.begin(),
-            [](const ParamPtr &a, const ParamPtr &b) { return *a == *b; });
         this->value =
-            this->expr.name == node.name && are_params_equal &&
+            this->expr.name == node.name &&
+            compare_ptr_vectors(this->expr.params, node.params) &&
             equal_or_null(this->expr.return_type, node.return_type) &&
             this->expr.position == node.position;
     },
@@ -344,7 +382,7 @@ struct StmtEquationVisitor : StmtVisitor
 {
     bool value;
 
-    StmtEquationVisitor(const Statement &expr) : expr(expr), value(true)
+    StmtEquationVisitor(const Statement &expr) : expr(expr)
     {
     }
     MAKE_EQUATION_VISITS(Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt,
@@ -359,4 +397,18 @@ bool operator==(const Statement &first, const Statement &second)
     auto visitor = StmtEquationVisitor(first);
     second.accept(visitor);
     return visitor.value;
+}
+
+bool operator==(const Parameter &first, const Parameter &other)
+{
+    return first.name == other.name && *first.type == *other.type &&
+           first.position == other.position;
+}
+
+bool operator==(const Program &first, const Program &other)
+{
+    return compare_ptr_vectors(first.externs, other.externs) &&
+           compare_ptr_vectors(first.functions, other.functions) &&
+           compare_ptr_vectors(first.globals, other.globals) &&
+           first.position == other.position; // not needed, but whatever
 }

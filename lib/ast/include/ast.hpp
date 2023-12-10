@@ -625,6 +625,14 @@ struct Program : public AstNode
     {
     }
 
+    Program(std::vector<std::unique_ptr<VarDeclStmt>> &&globals,
+            std::vector<std::unique_ptr<FuncDefStmt>> &&functions,
+            std::vector<std::unique_ptr<ExternStmt>> &&externs)
+        : AstNode(Position(1, 1)), globals(std::move(globals)),
+          functions(std::move(functions)), externs(std::move(externs))
+    {
+    }
+
     void accept(AstVisitor &visitor) const
     {
         visitor.visit(*this);
