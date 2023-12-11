@@ -135,10 +135,16 @@ ProgramPtr Parser::parse()
     {
         if (auto func = this->parse_func_def_stmt())
             functions.push_back(std::move(func));
-        if (auto ext = this->parse_extern_stmt())
+        else if (auto ext = this->parse_extern_stmt())
             externs.push_back(std::move(ext));
-        if (auto var = this->parse_var_decl_stmt())
+        else if (auto var = this->parse_var_decl_stmt())
             globals.push_back(std::move(var));
+        else
+        {
+            this->report_error(L"function definition, extern statement or "
+                               L"variable declaration expected");
+            return nullptr;
+        }
     }
     return std::make_unique<Program>(globals, functions, externs);
 }
@@ -434,6 +440,8 @@ std::unique_ptr<Statement> Parser::parse_non_func_stmt()
 // RETURN_STMT = KW_RETURN, [BINARY_EXPR], SEMICOLON;
 std::unique_ptr<ReturnStmt> Parser::parse_return_stmt()
 {
+    if (this->current_token != TokenType::KW_RETURN)
+        return nullptr;
     auto position = this->current_token->position;
     this->next_token();
     if (this->current_token == TokenType::SEMICOLON)
@@ -629,6 +637,18 @@ std::unique_ptr<WhileStmt> Parser::parse_while_stmt()
 //     }
 // }
 
+// VARIABLE_EXPR = IDENTIFIER;
+std::unique_ptr<VariableExpr> Parser::parse_variable_expr()
+{
+    if (this->current_token != TokenType::IDENTIFIER)
+        return nullptr;
+    auto result = std::make_unique<VariableExpr>(
+        std::get<std::wstring>(this->current_token->value),
+        this->current_token->position);
+    this->next_token();
+    return result;
+}
+
 // F64 = DOUBLE;
 std::unique_ptr<F64Expr> Parser::parse_f64_expr()
 {
@@ -767,7 +787,7 @@ ExprNodePtr Parser::parse_binary_expr()
     }
     else if (values.empty())
     {
-        throw std::exception();
+        return nullptr;
     }
     auto result = std::move(values.top());
     values.pop();
@@ -895,11 +915,11 @@ std::optional<std::vector<ExprNodePtr>> Parser::parse_lambda_call_part()
 {
     if (this->current_token != TokenType::AT)
         return std::nullopt;
+    this->next_token();
     this->assert_current_and_eat(
         TokenType::L_PAREN,
         L"expected left parenthesis in lambda call expression");
-    this->next_token();
-    auto args = this->parse_args();
+    auto args = this->parse_lambda_args();
     this->assert_current_and_eat(
         TokenType::R_PAREN,
         L"expected right parenthesis in lambda call expression");
@@ -917,7 +937,7 @@ std::vector<ExprNodePtr> Parser::parse_lambda_args()
         while (this->current_token == TokenType::COMMA)
         {
             this->next_token();
-            if ((arg = this->parse_binary_expr()))
+            if ((arg = this->parse_lambda_arg()))
             {
                 args.push_back(std::move(*arg));
             }
@@ -973,6 +993,8 @@ ExprNodePtr Parser::parse_factor()
     else if (auto result = this->parse_bool_expr())
         return result;
     else if (auto result = this->parse_paren_expr())
+        return result;
+    else if (auto result = this->parse_variable_expr())
         return result;
     return nullptr;
 }

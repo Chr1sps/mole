@@ -88,6 +88,8 @@ class Parser
 
     // expressions
 
+    std::unique_ptr<VariableExpr> parse_variable_expr();
+
     std::unique_ptr<I32Expr> parse_u32_expr();
     std::unique_ptr<F64Expr> parse_f64_expr();
     std::unique_ptr<StringExpr> parse_string_expr();
@@ -104,9 +106,11 @@ class Parser
 
     std::optional<std::vector<ExprNodePtr>> parse_call_part();
     std::vector<ExprNodePtr> parse_args();
+
     std::optional<std::vector<ExprNodePtr>> parse_lambda_call_part();
     std::vector<ExprNodePtr> parse_lambda_args();
     std::optional<ExprNodePtr> parse_lambda_arg();
+
     ExprNodePtr parse_index_part();
 
     void report_error(const std::wstring &error_msg);

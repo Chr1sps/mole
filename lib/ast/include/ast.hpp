@@ -171,8 +171,8 @@ struct LambdaCallExpr : public ExprNode
     {
     }
 
-    LambdaCallExpr(std::unique_ptr<VariableExpr> &callable,
-                   std::vector<ExprNodePtr> &args, const Position &position)
+    LambdaCallExpr(ExprNodePtr &&callable, std::vector<ExprNodePtr> &&args,
+                   const Position &position)
         : ExprNode(position), callable(std::move(callable)),
           args(std::move(args))
     {
@@ -316,6 +316,11 @@ struct Block : public Statement
     std::vector<StmtPtr> statements;
 
     Block(std::vector<StmtPtr> &statements, const Position &position)
+        : Statement(position), statements(std::move(statements))
+    {
+    }
+
+    Block(std::vector<StmtPtr> &&statements, const Position &position)
         : Statement(position), statements(std::move(statements))
     {
     }
@@ -556,7 +561,7 @@ struct Parameter : public AstNode
     std::wstring name;
     TypePtr type;
 
-    Parameter(const std::wstring name, TypePtr &&type,
+    Parameter(const std::wstring &name, TypePtr &&type,
               const Position &position)
         : AstNode(position), name(name), type(std::move(type))
     {
@@ -580,6 +585,15 @@ struct FuncDefStmt : public Statement
 
     FuncDefStmt(const std::wstring &name, std::vector<ParamPtr> &params,
                 TypePtr &return_type, BlockPtr &block, const bool &is_const,
+                const Position &position)
+        : Statement(position), name(name), params(std::move(params)),
+          return_type(std::move(return_type)), block(std::move(block)),
+          is_const(is_const)
+    {
+    }
+
+    FuncDefStmt(const std::wstring &name, std::vector<ParamPtr> &&params,
+                TypePtr &&return_type, BlockPtr &&block, const bool &is_const,
                 const Position &position)
         : Statement(position), name(name), params(std::move(params)),
           return_type(std::move(return_type)), block(std::move(block)),

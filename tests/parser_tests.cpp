@@ -47,16 +47,26 @@ auto make_uniques_vector(Types &&...args)
     return result;
 }
 
-#define TYPES(...)                                                            \
-    std::vector<TypePtr>                                                      \
-    {                                                                         \
-        __VA_ARGS__                                                           \
-    }
+template <typename... Types>
+std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
+{
+    std::vector<std::optional<ExprNodePtr>> result;
+    (result.emplace_back(std::forward<Types>(args)), ...);
+    return result;
+}
+
+#define POS(line, col) Position(line, col)
 
 #define STYPE(type, ref_spec)                                                 \
     std::make_unique<SimpleType>(TypeEnum::type, RefSpecifier::ref_spec)
 #define FTYPE(arg_types, return_type, is_const)                               \
     std::make_unique<FunctionType>(arg_types, return_type, is_const)
+
+#define TYPES(...)                                                            \
+    std::vector<TypePtr>                                                      \
+    {                                                                         \
+        __VA_ARGS__                                                           \
+    }
 
 #define VAREXPR(name, position) std::make_unique<VariableExpr>(name, position)
 
@@ -79,20 +89,28 @@ auto make_uniques_vector(Types &&...args)
 #define CASTEXPR(expr, type, position)                                        \
     std::make_unique<CastExpr>(expr, type, position)
 
-#define POS(line, col) Position(line, col)
 #define VAR(name, type, initial_value, is_mut, position)                      \
     std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut, position)
+#define FUNC(name, params, return_type, block, is_const, position)            \
+    std::make_unique<FuncDefStmt>(name, params, return_type, block, is_const, \
+                                  position)
+#define BLOCK(statements, position)                                           \
+    std::make_unique<Block>(statements, position)
+
+#define STMTS(...) make_uniques_vector<Statement>(__VA_ARGS__)
+
+#define PARAM(name, type, position)                                           \
+    std::make_unique<Parameter>(name, type, position)
+#define PARAMS(...) make_uniques_vector<Parameter>(__VA_ARGS__)
+
+#define ARGS(...) make_uniques_vector<ExprNode>(__VA_ARGS__)
+#define LAMBDAARGS(...) make_uniques_vector<ExprNode>(__VA_ARGS__)
+#define NOARG nullptr
+
 #define GLOBALS(...) make_uniques_vector<VarDeclStmt>(__VA_ARGS__)
-#define FUNCTIONS(...)                                                        \
-    std::vector<std::unique_ptr<FuncDefStmt>>                                 \
-    {                                                                         \
-        __VA_ARGS__                                                           \
-    }
-#define EXTERNS(...)                                                          \
-    std::vector<std::unique_ptr<ExternStmt>>                                  \
-    {                                                                         \
-        __VA_ARGS__                                                           \
-    }
+#define FUNCTIONS(...) make_uniques_vector<FuncDefStmt>(__VA_ARGS__)
+#define EXTERNS(...) make_uniques_vector<ExternStmt>(__VA_ARGS__)
+
 #define PROGRAM(globals, functions, externs)                                  \
     std::make_unique<Program>(globals, functions, externs)
 
@@ -317,70 +335,125 @@ TEST_CASE("Unary operators.", "[VARS], [UNOP]")
     }
 }
 
-// TEST_CASE("Nested operators - only unary.")
-// {
-//     COMPARE(L"let var=--++!~2;", L"let var=(--(++(!(~2))));");
-// }
+TEST_CASE("Nested operators - mixed.")
+{
+    COMPARE(
+        L"let var=--2+--2;",
+        PROGRAM(
+            GLOBALS(VAR(
+                L"var", nullptr,
+                BINEXPR(UNEXPR(I32EXPR(2, POS(1, 11)), DEC, POS(1, 9)), ADD,
+                        UNEXPR(I32EXPR(2, POS(1, 15)), DEC, POS(1, 13)),
+                        POS(1, 9)),
+                false, POS(1, 1))),
+            FUNCTIONS(), EXTERNS()));
+    // COMPARE(
+    //     L"let var=++1;",
+    //     PROGRAM(
+    //         GLOBALS(VAR(
+    //             L"var", nullptr,
+    //             BINEXPR(UNEXPR(I32EXPR(2, POS(1, 11)), DEC, POS(1, 9)), ADD,
+    //                     UNEXPR(I32EXPR(2, POS(1, 15)), DEC, POS(1, 13)),
+    //                     POS(1, 9)),
+    //             false, POS(1, 1))),
+    //         FUNCTIONS(), EXTERNS()));
+    // COMPARE(L"let var=++1*--2+!3*~4-5>>6;",
+    //         L"let var=(((((++1)*(--2))+((!3)*(~4)))-5)>>6);");
+}
 
-// TEST_CASE("Nested operators - mixed.")
-// {
-//     COMPARE(L"let var=--2+--2;", L"let var=((--2)+(--2));");
-//     COMPARE(L"let var=++1*--2+!3*~4-5>>6;",
-//             L"let var=(((((++1)*(--2))+((!3)*(~4)))-5)>>6);");
-// }
+TEST_CASE("Function definitions.", "[FUNC]")
+{
+    SECTION("No params, no return type.")
+    {
+        COMPARE(L"fn foo(){}",
+                PROGRAM(GLOBALS(),
+                        FUNCTIONS(FUNC(L"foo", PARAMS(), nullptr,
+                                       BLOCK(STMTS(), POS(1, 9)), false,
+                                       POS(1, 1))),
+                        EXTERNS()));
+    }
+    SECTION("Return type.")
+    {
+        COMPARE(L"fn foo()=>i32{}",
+                PROGRAM(GLOBALS(),
+                        FUNCTIONS(FUNC(L"foo", PARAMS(), STYPE(I32, NON_REF),
+                                       BLOCK(STMTS(), POS(1, 14)), false,
+                                       POS(1, 1))),
+                        EXTERNS()));
+        COMPARE(L"fn foo()=>fn(){}",
+                PROGRAM(GLOBALS(),
+                        FUNCTIONS(FUNC(
+                            L"foo", PARAMS(), FTYPE(TYPES(), nullptr, false),
+                            BLOCK(STMTS(), POS(1, 15)), false, POS(1, 1))),
+                        EXTERNS()));
+    }
+    SECTION("Params.")
+    {
+        COMPARE(
+            L"fn foo(x:i32,y:f64){}",
+            PROGRAM(
+                GLOBALS(),
+                FUNCTIONS(FUNC(
+                    L"foo",
+                    PARAMS(PARAM(L"x", STYPE(I32, NON_REF), POS(1, 8)),
+                           PARAM(L"y", STYPE(F64, NON_REF), POS(1, 14))),
+                    nullptr, BLOCK(STMTS(), POS(1, 20)), false, POS(1, 1))),
+                EXTERNS()));
+    }
+    SECTION("Combined.")
+    {
+        COMPARE(
+            L"fn foo(x:i32,y:f64)=>i32{}",
+            PROGRAM(GLOBALS(),
+                    FUNCTIONS(FUNC(
+                        L"foo",
+                        PARAMS(PARAM(L"x", STYPE(I32, NON_REF), POS(1, 8)),
+                               PARAM(L"y", STYPE(F64, NON_REF), POS(1, 14))),
+                        STYPE(I32, NON_REF), BLOCK(STMTS(), POS(1, 25)), false,
+                        POS(1, 1))),
+                    EXTERNS()));
+    }
+    SECTION("Const function.")
+    {
+        COMPARE(
+            L"fn const foo(x:i32,y:f64)=>i32{}",
+            PROGRAM(GLOBALS(),
+                    FUNCTIONS(FUNC(
+                        L"foo",
+                        PARAMS(PARAM(L"x", STYPE(I32, NON_REF), POS(1, 14)),
+                               PARAM(L"y", STYPE(F64, NON_REF), POS(1, 20))),
+                        STYPE(I32, NON_REF), BLOCK(STMTS(), POS(1, 31)), true,
+                        POS(1, 1))),
+                    EXTERNS()));
+    }
+    SECTION("Nested functions.")
+    {
+        THROWS_ERRORS(L"fn foo(){fn boo(){}}");
+    }
+}
 
-// TEST_CASE("Function definitions.", "[FUNC]")
-// {
-//     SECTION("No args, no return type.")
-//     {
-//         COMPARE(L"fn foo(){}", L"fn foo()=>!{}");
-//     }
-//     SECTION("Never return type.")
-//     {
-//         REPR_CHECK(L"fn foo()=>!{}");
-//     }
-//     SECTION("Return type.")
-//     {
-//         REPR_CHECK(L"fn foo()=>i32{}");
-//         COMPARE(L"fn foo() => fn() {}", L"fn foo()=>fn()=>!{}");
-//     }
-//     SECTION("Args.")
-//     {
-//         COMPARE(L"fn foo(x: i32, y: f64) {}", L"fn foo(x:i32,y:f64)=>!{}");
-//     }
-//     SECTION("Combined.")
-//     {
-//         REPR_CHECK(L"fn foo(x:i32,y:f64)=>i32{}");
-//     }
-//     SECTION("Const function.")
-//     {
-//         REPR_CHECK(L"fn const foo(x:i32,y:f64)=>i32{}");
-//     }
-//     SECTION("Nested functions.")
-//     {
-//         CHECK_EXCEPTION(L"fn foo(){fn boo(){}}", ParserException);
-//     }
-// }
-
-// TEST_CASE("In-place lambdas.")
-// {
-//     SECTION("Correct.")
-//     {
-//         REPR_CHECK(L"let foo=boo(1,2,3,4);");
-//         REPR_CHECK(L"let foo=boo(1,_,3,_);");
-//         REPR_CHECK(L"let foo=boo(1,2,...);");
-//         REPR_CHECK(L"let foo=boo(1,_,3,...);");
-//         REPR_CHECK(L"let foo=boo(_,2,...);");
-//     }
-//     SECTION("Exceptions.")
-//     {
-//         CHECK_EXCEPTION(L"let foo=boo(_,...,_);", ParserException);
-//         CHECK_EXCEPTION(L"let foo=boo(1,...,4);", ParserException);
-//         CHECK_EXCEPTION(L"let foo=boo(...,3,4);", ParserException);
-//         CHECK_EXCEPTION(L"let foo=boo(1,_,...);", ParserException);
-//         CHECK_EXCEPTION(L"let foo=boo(...);", ParserException);
-//     }
-// }
+TEST_CASE("In-place lambdas.")
+{
+    COMPARE(L"let foo=boo@(1,2,3,4);",
+            PROGRAM(GLOBALS(VAR(L"foo", nullptr,
+                                LAMBDAEXPR(VAREXPR(L"boo", POS(1, 9)),
+                                           LAMBDAARGS(I32EXPR(1, POS(1, 14)),
+                                                      I32EXPR(2, POS(1, 16)),
+                                                      I32EXPR(3, POS(1, 18)),
+                                                      I32EXPR(4, POS(1, 20))),
+                                           POS(1, 9)),
+                                false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let foo=boo@(1,_,3,_);",
+            PROGRAM(GLOBALS(VAR(
+                        L"foo", nullptr,
+                        LAMBDAEXPR(VAREXPR(L"boo", POS(1, 9)),
+                                   LAMBDAARGS(I32EXPR(1, POS(1, 14)), NOARG,
+                                              I32EXPR(3, POS(1, 18)), NOARG),
+                                   POS(1, 9)),
+                        false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+}
 
 // TEST_CASE("Scopes in functions.", "[SCOPE]")
 // {
