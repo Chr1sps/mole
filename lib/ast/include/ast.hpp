@@ -537,6 +537,12 @@ struct LiteralArm : public MatchArm
     {
     }
 
+    LiteralArm(std::vector<ExprNodePtr> &&literals, BlockPtr &&block,
+               const Position &position)
+        : MatchArm(block, position), literals(std::move(literals))
+    {
+    }
+
     void accept(MatchArmVisitor &visitor) const override
     {
         visitor.visit(*this);
