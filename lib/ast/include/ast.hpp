@@ -86,6 +86,7 @@ enum class UnaryOpEnum
 
     NEG,
     BIT_NEG,
+    MINUS,
 };
 
 struct BinaryExpr : public ExprNode
@@ -146,12 +147,19 @@ struct CallExpr : public ExprNode
     {
     }
 
-    CallExpr(std::unique_ptr<VariableExpr> &callable,
-             std::vector<ExprNodePtr> &args, const Position &position)
+    CallExpr(ExprNodePtr &&callable, std::vector<ExprNodePtr> &&args,
+             const Position &position)
         : ExprNode(position), callable(std::move(callable)),
           args(std::move(args))
     {
     }
+
+    // CallExpr(std::unique_ptr<VariableExpr> &callable,
+    //          std::vector<ExprNodePtr> &args, const Position &position)
+    //     : ExprNode(position), callable(std::move(callable)),
+    //       args(std::move(args))
+    // {
+    // }
 
     void accept(ExprVisitor &visitor) const override
     {
@@ -441,6 +449,13 @@ struct AssignStmt : public Statement
     {
     }
 
+    AssignStmt(ExprNodePtr &&lhs, const AssignType &type, ExprNodePtr &&rhs,
+               const Position &position)
+        : Statement(position), lhs(std::move(lhs)), type(type),
+          rhs(std::move(rhs))
+    {
+    }
+
     void accept(StmtVisitor &visitor) const override
     {
         visitor.visit(*this);
@@ -576,6 +591,13 @@ struct MatchStmt : public Statement
 
     MatchStmt(ExprNodePtr &matched_expr, std::vector<MatchArmPtr> &match_arms,
               const Position &position)
+        : Statement(position), matched_expr(std::move(matched_expr)),
+          match_arms(std::move(match_arms))
+    {
+    }
+
+    MatchStmt(ExprNodePtr &&matched_expr,
+              std::vector<MatchArmPtr> &&match_arms, const Position &position)
         : Statement(position), matched_expr(std::move(matched_expr)),
           match_arms(std::move(match_arms))
     {

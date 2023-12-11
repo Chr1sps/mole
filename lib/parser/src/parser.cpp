@@ -38,10 +38,8 @@ std::map<TokenType, BinOpData> Parser::binary_map{
         TokenType::token_type, UnaryOpEnum::un_op_type                        \
     }
 std::map<TokenType, UnaryOpEnum> Parser::unary_map{
-    UNOP(INCREMENT, INC),
-    UNOP(DECREMENT, DEC),
-    UNOP(NEG, NEG),
-    UNOP(BIT_NEG, BIT_NEG),
+    UNOP(INCREMENT, INC),   UNOP(DECREMENT, DEC), UNOP(NEG, NEG),
+    UNOP(BIT_NEG, BIT_NEG), UNOP(MINUS, MINUS),
 };
 #undef UNOP
 
@@ -457,7 +455,7 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_stmt()
 // ASSIGN_OR_EXPR_STMT = BINARY_STMT, [ASSIGN_PART], SEMICOLON;
 std::unique_ptr<Statement> Parser::parse_assign_or_expr_stmt()
 {
-    StmtPtr result;
+    StmtPtr result = nullptr;
     if (auto lhs = this->parse_binary_expr())
     {
         if (auto op_and_rhs = this->parse_assign_part())
@@ -471,7 +469,7 @@ std::unique_ptr<Statement> Parser::parse_assign_or_expr_stmt()
             TokenType::SEMICOLON,
             L"semicolon expected after an assignment or expression statement");
     }
-    return nullptr;
+    return result;
 }
 
 // ASSIGN_PART = ASSIGN_OP, BINARY_EXPR;
@@ -495,6 +493,7 @@ std::optional<AssignType> Parser::parse_assign_op()
         (iter = this->assign_map.find(this->current_token->type)) !=
             this->assign_map.end())
     {
+        this->next_token();
         return iter->second;
     }
     return std::nullopt;
@@ -571,6 +570,12 @@ std::unique_ptr<MatchStmt> Parser::parse_match_stmt()
     auto position = this->current_token->position;
     this->next_token();
     auto matched_expr = this->parse_paren_expr();
+    if (!matched_expr)
+    {
+        this->report_error(
+            L"no parenthesis expression found in a match statement");
+        return nullptr;
+    }
     this->assert_current_and_eat(TokenType::L_BRACKET,
                                  L"no left bracket in a match statement");
     std::vector<MatchArmPtr> match_cases;
@@ -615,7 +620,7 @@ std::unique_ptr<LiteralArm> Parser::parse_literal_arm()
 }
 
 // LITERAL_CONDITION = UNARY_EXPR, {BIT_OR, UNARY_EXPR};
-std::optional<std::tuple<Position, std::vector<ExprNodePtr> &&>> Parser::
+std::optional<std::tuple<Position, std::vector<ExprNodePtr>>> Parser::
     parse_literal_condition()
 {
     ExprNodePtr expr;
@@ -624,7 +629,7 @@ std::optional<std::tuple<Position, std::vector<ExprNodePtr> &&>> Parser::
         auto position = expr->position;
         std::vector<ExprNodePtr> conditions;
         conditions.push_back(std::move(expr));
-        while (this->current_token == TokenType::COMMA)
+        while (this->current_token == TokenType::BIT_OR)
         {
             this->next_token();
             if ((expr = this->parse_unary_expr()))
@@ -1058,6 +1063,11 @@ ExprNodePtr Parser::parse_paren_expr()
     this->next_token();
 
     auto result = this->parse_binary_expr();
+    if (!result)
+    {
+        this->report_error(L"no expression found after a left parenthesis");
+        return result;
+    }
 
     this->assert_current_and_eat(
         TokenType::R_PAREN,

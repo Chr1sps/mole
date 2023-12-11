@@ -34,6 +34,7 @@ bool throws_errors(const std::wstring &source)
 // Remember to add 9 to any position value
 #define COMPARE_WRAPPED(source, expected)                                     \
     REQUIRE(check_generated_ast(FN_WRAP(source), AST_FN_WRAP(expected)))
+#define THROWS_WRAPPED(source) REQUIRE(throws_errors(FN_WRAP(source)))
 
 // #define REPR_CHECK(source) REQUIRE(compare_output(source, source))
 // #define CHECK_EXCEPTION(source, exception)
@@ -92,9 +93,21 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
 #define CASTEXPR(expr, type, position)                                        \
     std::make_unique<CastExpr>(expr, type, position)
 
+#define LITERALS(...) ARGS(__VA_ARGS__)
+#define LARM(literals, block, position)                                       \
+    std::make_unique<LiteralArm>(literals, block, position)
+#define GARM(condition, block, position)                                      \
+    std::make_unique<GuardArm>(literals, block, position)
+#define PARM(block, position) std::make_unique<PlaceholderArm>(block, position)
+#define ARMS(...) make_uniques_vector<MatchArm>(__VA_ARGS__)
+
+#define MATCH(expr, arms, position)                                           \
+    std::make_unique<MatchStmt>(expr, arms, position)
 #define RETURN(expr, position) std::make_unique<ReturnStmt>(expr, position)
 #define CONTINUE(position) std::make_unique<ContinueStmt>(position)
 #define BREAK(position) std::make_unique<BreakStmt>(position)
+#define ASSIGN(lhs, op, rhs, position)                                        \
+    std::make_unique<AssignStmt>(lhs, AssignType::op, rhs, position)
 #define VAR(name, type, initial_value, is_mut, position)                      \
     std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut, position)
 #define FUNC(name, params, return_type, block, is_const, position)            \
@@ -493,16 +506,30 @@ TEST_CASE("Externs.", "[EXT]")
                         STYPE(I32, NON_REF), POS(1, 1)))));
 }
 
-// TEST_CASE("Assign statements.")
-// {
-//     REPR_STATEMENT(L"x=5;");
-//     REPR_STATEMENT(L"x+=5;");
-//     REPR_STATEMENT(L"x-=5;");
-//     REPR_STATEMENT(L"x*=5;");
-//     REPR_STATEMENT(L"x/=5;");
-//     REPR_STATEMENT(L"x%=5;");
-//     REPR_STATEMENT(L"x^^=5;");
-// }
+TEST_CASE("Assign statements.")
+{
+    COMPARE_WRAPPED(L"x=5;",
+                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), NORMAL,
+                                 I32EXPR(5, POS(1, 12)), POS(1, 10))));
+    COMPARE_WRAPPED(L"x+=5;",
+                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), PLUS,
+                                 I32EXPR(5, POS(1, 13)), POS(1, 10))));
+    COMPARE_WRAPPED(L"x-=5;",
+                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), MINUS,
+                                 I32EXPR(5, POS(1, 13)), POS(1, 10))));
+    COMPARE_WRAPPED(L"x*=5;",
+                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), MUL,
+                                 I32EXPR(5, POS(1, 13)), POS(1, 10))));
+    COMPARE_WRAPPED(L"x/=5;",
+                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), DIV,
+                                 I32EXPR(5, POS(1, 13)), POS(1, 10))));
+    COMPARE_WRAPPED(L"x%=5;",
+                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), MOD,
+                                 I32EXPR(5, POS(1, 13)), POS(1, 10))));
+    COMPARE_WRAPPED(L"x^^=5;",
+                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), EXP,
+                                 I32EXPR(5, POS(1, 14)), POS(1, 10))));
+}
 
 TEST_CASE("Return statements.")
 {
@@ -511,14 +538,66 @@ TEST_CASE("Return statements.")
                     STMTS(RETURN(I32EXPR(8, POS(1, 17)), POS(1, 10))));
 }
 
-// TEST_CASE("Function calls.")
-// {
-//     REPR_STATEMENT(L"let var=foo();");
-//     REPR_STATEMENT(L"let var=foo(1,2);");
-//     COMPARE_STATEMENT(L"let var=(foo)(1,2);", L"let var=foo(1,2);");
-// }
+TEST_CASE("Function calls.")
+{
+    COMPARE(L"let var=foo();",
+            PROGRAM(GLOBALS(VAR(L"var", nullptr,
+                                CALLEXPR(VAREXPR(L"foo", POS(1, 9)), ARGS(),
+                                         POS(1, 9)),
+                                false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let var=foo(1,2);",
+            PROGRAM(GLOBALS(VAR(L"var", nullptr,
+                                CALLEXPR(VAREXPR(L"foo", POS(1, 9)),
+                                         ARGS(I32EXPR(1, POS(1, 13)),
+                                              I32EXPR(2, POS(1, 15))),
+                                         POS(1, 9)),
+                                false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let var=(foo)();",
+            PROGRAM(GLOBALS(VAR(L"var", nullptr,
+                                CALLEXPR(VAREXPR(L"foo", POS(1, 9)), ARGS(),
+                                         POS(1, 9)),
+                                false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+}
 
-// TEST_CASE("Chaining function calls.")
-// {
-//     REPR_STATEMENT(L"let var=foo(1,_)(2);");
-// }
+TEST_CASE("Chaining call/index/lambda call expressions.")
+{
+    // REPR_STATEMENT(L"let var=foo(1,_)(2);");
+}
+
+TEST_CASE("Match statements.")
+{
+    THROWS_WRAPPED(L"match(){}");
+    COMPARE_WRAPPED(L"match(a){}", STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
+                                               ARMS(), POS(1, 10))));
+    SECTION("Literal arms.")
+    {
+        COMPARE_WRAPPED(
+            L"match(a){1=>{}}",
+            STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
+                        ARMS(LARM(LITERALS(I32EXPR(1, POS(1, 19))),
+                                  BLOCK(STMTS(), POS(1, 22)), POS(1, 19))),
+                        POS(1, 10))));
+        COMPARE_WRAPPED(
+            L"match(a){1|2|3=>{}}",
+            STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
+                        ARMS(LARM(LITERALS(I32EXPR(1, POS(1, 19)),
+                                           I32EXPR(2, POS(1, 21)),
+                                           I32EXPR(3, POS(1, 23))),
+                                  BLOCK(STMTS(), POS(1, 26)), POS(1, 19))),
+                        POS(1, 10))));
+        COMPARE_WRAPPED(
+            L"match(a){-1|(2+3)|4=>{}}",
+            STMTS(MATCH(
+                VAREXPR(L"a", POS(1, 15)),
+                ARMS(LARM(
+                    LITERALS(UNEXPR(I32EXPR(1, POS(1, 20)), MINUS, POS(1, 19)),
+                             BINEXPR(I32EXPR(2, POS(1, 23)), ADD,
+                                     I32EXPR(3, POS(1, 25)), POS(1, 22)),
+                             I32EXPR(4, POS(1, 28))),
+                    BLOCK(STMTS(), POS(1, 26)), POS(1, 19))),
+                POS(1, 10))));
+    }
+}
