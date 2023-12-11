@@ -447,6 +447,26 @@ struct AssignStmt : public Statement
     }
 };
 
+struct ExprStmt : public Statement
+{
+    ExprNodePtr expr;
+
+    ExprStmt(ExprNodePtr &expr, const Position &position)
+        : Statement(position), expr(std::move(expr))
+    {
+    }
+
+    ExprStmt(ExprNodePtr &&expr, const Position &position)
+        : Statement(position), expr(std::move(expr))
+    {
+    }
+
+    void accept(StmtVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
+};
+
 struct WhileStmt : public Statement
 {
     ExprNodePtr condition_expr;

@@ -25,6 +25,7 @@ struct ContinueStmt;
 struct ReturnStmt;
 struct FuncDefStmt;
 struct AssignStmt;
+struct ExprStmt;
 struct VarDeclStmt;
 struct ExternStmt;
 struct Program;
@@ -75,6 +76,7 @@ class StmtVisitor : Visitor
     virtual void visit(const ContinueStmt &node) = 0;
     virtual void visit(const FuncDefStmt &node) = 0;
     virtual void visit(const AssignStmt &node) = 0;
+    virtual void visit(const ExprStmt &node) = 0;
     virtual void visit(const VarDeclStmt &node) = 0;
     virtual void visit(const ExternStmt &node) = 0;
 };

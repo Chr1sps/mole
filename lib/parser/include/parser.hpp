@@ -34,7 +34,6 @@ class Parser
     void next_token();
 
     void assert_current_and_eat(TokenType type, const std::wstring &error_msg);
-    void assert_next_token(TokenType type, const std::wstring &error_msg);
 
     // type names
 
@@ -55,8 +54,13 @@ class Parser
 
     TypePtr parse_type_specifier();
     ExprNodePtr parse_initial_value();
+
+    std::optional<AssignType> parse_assign_op();
+
+    std::optional<std::tuple<AssignType, ExprNodePtr>> parse_assign_part();
+
     std::unique_ptr<ReturnStmt> parse_return_stmt();
-    std::unique_ptr<AssignStmt> parse_assign_statement();
+    std::unique_ptr<Statement> parse_assign_or_expr_stmt();
     std::unique_ptr<Statement> parse_non_func_stmt();
     std::unique_ptr<Block> parse_block();
     std::unique_ptr<ContinueStmt> parse_continue_stmt();

@@ -287,7 +287,7 @@ GENERATE_VISITOR(
             this->expr.position == node.position;
     },
     IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, AssignStmt, VarDeclStmt, ExternStmt)
+    FuncDefStmt, AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
 
 GENERATE_VISITOR(
     StmtVisitor, IfStmt,
@@ -298,7 +298,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     Block, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, AssignStmt, VarDeclStmt, ExternStmt)
+    FuncDefStmt, AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
 
 GENERATE_VISITOR(
     StmtVisitor, WhileStmt,
@@ -308,7 +308,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     Block, IfStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt, FuncDefStmt,
-    AssignStmt, VarDeclStmt, ExternStmt)
+    AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
 
 GENERATE_VISITOR(
     StmtVisitor, MatchStmt,
@@ -319,7 +319,7 @@ GENERATE_VISITOR(
             this->expr.position == node.position;
     },
     Block, IfStmt, WhileStmt, ReturnStmt, BreakStmt, ContinueStmt, FuncDefStmt,
-    AssignStmt, VarDeclStmt, ExternStmt)
+    AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
 
 GENERATE_VISITOR(
     StmtVisitor, ReturnStmt,
@@ -328,19 +328,19 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     Block, IfStmt, WhileStmt, MatchStmt, BreakStmt, ContinueStmt, FuncDefStmt,
-    AssignStmt, VarDeclStmt, ExternStmt)
+    AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
 
 GENERATE_VISITOR(
     StmtVisitor, BreakStmt,
     { this->value = this->expr.position == node.position; }, Block, IfStmt,
     WhileStmt, MatchStmt, ReturnStmt, ContinueStmt, FuncDefStmt, AssignStmt,
-    VarDeclStmt, ExternStmt)
+    VarDeclStmt, ExternStmt, ExprStmt)
 
 GENERATE_VISITOR(
     StmtVisitor, ContinueStmt,
     { this->value = this->expr.position == node.position; }, Block, IfStmt,
     WhileStmt, MatchStmt, ReturnStmt, BreakStmt, FuncDefStmt, AssignStmt,
-    VarDeclStmt, ExternStmt)
+    VarDeclStmt, ExternStmt, ExprStmt)
 
 GENERATE_VISITOR(
     StmtVisitor, FuncDefStmt,
@@ -354,7 +354,7 @@ GENERATE_VISITOR(
             this->expr.position == node.position;
     },
     Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    AssignStmt, VarDeclStmt, ExternStmt)
+    AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
 
 GENERATE_VISITOR(
     StmtVisitor, AssignStmt,
@@ -365,7 +365,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, VarDeclStmt, ExternStmt)
+    FuncDefStmt, VarDeclStmt, ExternStmt, ExprStmt)
 
 GENERATE_VISITOR(
     StmtVisitor, VarDeclStmt,
@@ -378,7 +378,7 @@ GENERATE_VISITOR(
             this->expr.position == node.position;
     },
     Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, AssignStmt, ExternStmt)
+    FuncDefStmt, AssignStmt, ExternStmt, ExprStmt)
 
 GENERATE_VISITOR(
     StmtVisitor, ExternStmt,
@@ -390,7 +390,16 @@ GENERATE_VISITOR(
             this->expr.position == node.position;
     },
     Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, AssignStmt, VarDeclStmt)
+    FuncDefStmt, AssignStmt, VarDeclStmt, ExprStmt)
+
+GENERATE_VISITOR(
+    StmtVisitor, ExprStmt,
+    {
+        this->value = *this->expr.expr == *node.expr &&
+                      this->expr.position == node.position;
+    },
+    Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
+    FuncDefStmt, AssignStmt, VarDeclStmt, ExternStmt)
 
 struct StmtEquationVisitor : StmtVisitor
 {
@@ -401,7 +410,7 @@ struct StmtEquationVisitor : StmtVisitor
     }
     MAKE_EQUATION_VISITS(Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt,
                          BreakStmt, ContinueStmt, FuncDefStmt, AssignStmt,
-                         VarDeclStmt, ExternStmt)
+                         VarDeclStmt, ExternStmt, ExprStmt)
   private:
     const Statement &expr;
 };

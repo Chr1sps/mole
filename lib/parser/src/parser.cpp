@@ -102,13 +102,6 @@ void Parser::assert_current_and_eat(TokenType type,
     this->next_token();
 }
 
-void Parser::assert_next_token(TokenType type, const std::wstring &error_msg)
-{
-    this->next_token();
-    if (this->current_token != type)
-        this->report_error(error_msg);
-}
-
 void Parser::report_error(const std::wstring &msg)
 {
     auto error_msg = build_wstring(
@@ -124,7 +117,7 @@ void Parser::report_error(const std::wstring &msg)
 //
 //
 //
-// Program = {VarDeclStmt | FuncDefStmt | ExternStmt}
+// PROGRAM = {VAR_DECL_STMT | FUNC_DEF_STMT | EXTERN_STMT}
 ProgramPtr Parser::parse()
 {
     std::vector<std::unique_ptr<VarDeclStmt>> globals;
@@ -252,8 +245,9 @@ std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr> Parser::
     if (this->current_token != TokenType::IDENTIFIER)
         this->report_error(L"not a function identifier");
     auto name = std::get<std::wstring>((*this->current_token).value);
+    this->next_token();
 
-    this->assert_next_token(
+    this->assert_current_and_eat(
         TokenType::L_PAREN,
         L"left parenthesis missing in a function definition");
     auto params = this->parse_params();
@@ -270,12 +264,23 @@ std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr> Parser::
 std::vector<ParamPtr> Parser::parse_params()
 {
     std::vector<ParamPtr> params;
-    for (this->next_token(); this->current_token == TokenType::IDENTIFIER;)
+    ParamPtr param;
+    if ((param = this->parse_parameter()))
     {
-        auto parameter = this->parse_parameter();
-        params.push_back(std::move(parameter));
-        if (this->current_token == TokenType::COMMA)
+        params.push_back(std::move(param));
+        while (this->current_token == TokenType::COMMA)
+        {
             this->next_token();
+            if ((param = this->parse_parameter()))
+            {
+                params.push_back(std::move(param));
+            }
+            else
+            {
+                this->report_error(L"expected a parameter definition after a "
+                                   L"comma in a function definition");
+            }
+        }
     }
     return params;
 }
@@ -412,7 +417,7 @@ std::unique_ptr<Statement> Parser::parse_non_func_stmt()
     std::unique_ptr<Statement> result;
     if ((result = this->parse_return_stmt()))
         return result;
-    if ((result = this->parse_assign_statement()))
+    if ((result = this->parse_assign_or_expr_stmt()))
         return result;
     if ((result = this->parse_var_decl_stmt()))
         return result;
@@ -447,6 +452,52 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_stmt()
     this->assert_current_and_eat(TokenType::SEMICOLON,
                                  L"no semicolon found in a return statement");
     return std::make_unique<ReturnStmt>(expr, position);
+}
+
+// ASSIGN_OR_EXPR_STMT = BINARY_STMT, [ASSIGN_PART], SEMICOLON;
+std::unique_ptr<Statement> Parser::parse_assign_or_expr_stmt()
+{
+    StmtPtr result;
+    if (auto lhs = this->parse_binary_expr())
+    {
+        if (auto op_and_rhs = this->parse_assign_part())
+        {
+            auto [op, rhs] = std::move(*op_and_rhs);
+            result = std::make_unique<AssignStmt>(lhs, op, rhs, lhs->position);
+        }
+        else
+            result = std::make_unique<ExprStmt>(lhs, lhs->position);
+        this->assert_current_and_eat(
+            TokenType::SEMICOLON,
+            L"semicolon expected after an assignment or expression statement");
+    }
+    return nullptr;
+}
+
+// ASSIGN_PART = ASSIGN_OP, BINARY_EXPR;
+std::optional<std::tuple<AssignType, ExprNodePtr>> Parser::parse_assign_part()
+{
+    if (auto op = this->parse_assign_op())
+    {
+        auto rhs = this->parse_binary_expr();
+        return std::tuple(*op, std::move(rhs));
+    }
+    return std::nullopt;
+}
+
+// ASSIGN_OP = ASSIGN | ASSIGN_PLUS | ASSIGN_MINUS | ASSIGN_STAR | ASSIGN_SLASH
+// | ASSIGN_PERCENT | ASSIGN_EXP | ASSIGN_BIT_NEG | ASSIGN_AMPERSAND |
+// ASSIGN_BIT_OR | ASSIGN_BIT_XOR | ASSIGN_SHIFT_LEFT | ASSIGN_SHIFT_RIGHT;
+std::optional<AssignType> Parser::parse_assign_op()
+{
+    decltype(this->assign_map)::iterator iter;
+    if (this->current_token.has_value() &&
+        (iter = this->assign_map.find(this->current_token->type)) !=
+            this->assign_map.end())
+    {
+        return iter->second;
+    }
+    return std::nullopt;
 }
 
 // CONTINUE_STMT = KW_CONTINUE, SEMICOLON;
