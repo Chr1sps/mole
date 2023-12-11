@@ -1076,3 +1076,23 @@ void Parser::remove_logger(Logger *logger)
 {
     this->loggers.erase(logger);
 }
+
+LexerPtr Parser::attach_lexer(LexerPtr &lexer)
+{
+    auto temp = std::move(this->lexer);
+    this->lexer = std::move(lexer);
+    this->next_token();
+    return temp;
+}
+
+LexerPtr Parser::detach_lexer()
+{
+    auto temp = std::move(this->lexer);
+    this->lexer = nullptr;
+    return temp;
+}
+
+bool Parser::is_lexer_attached() const
+{
+    return this->lexer != nullptr;
+}

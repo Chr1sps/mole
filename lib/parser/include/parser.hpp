@@ -120,6 +120,10 @@ class Parser
     void report_error(const std::wstring &error_msg);
 
   public:
+    Parser() : lexer(nullptr)
+    {
+    }
+
     Parser(LexerPtr &lexer) : lexer(std::move(lexer))
     {
         this->next_token();
@@ -134,6 +138,10 @@ class Parser
 
     void add_logger(Logger *logger);
     void remove_logger(Logger *logger);
+
+    LexerPtr attach_lexer(LexerPtr &lexer);
+    LexerPtr detach_lexer();
+    bool is_lexer_attached() const;
 };
 
 #endif
