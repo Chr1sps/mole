@@ -71,9 +71,11 @@ template <typename T>
 bool compare_ptr_vectors(const std::vector<std::unique_ptr<T>> &first,
                          const std::vector<std::unique_ptr<T>> &second)
 {
-    return std::equal(first.begin(), first.end(), second.begin(),
-                      [](const std::unique_ptr<T> &a,
-                         const std::unique_ptr<T> &b) { return *a == *b; });
+    return std::equal(
+        first.begin(), first.end(), second.begin(), second.end(),
+        [](const std::unique_ptr<T> &a, const std::unique_ptr<T> &b) {
+            return a && b && *a == *b;
+        });
 }
 
 GENERATE_VISITOR(
@@ -166,7 +168,7 @@ GENERATE_VISITOR(
     {
         auto are_args_equal = std::equal(
             this->expr.args.begin(), this->expr.args.end(), node.args.begin(),
-            [](const ExprNodePtr &a, const ExprNodePtr &b) {
+            node.args.end(), [](const ExprNodePtr &a, const ExprNodePtr &b) {
                 return equal_or_null(a, b);
             });
         this->value = *this->expr.callable == *node.callable &&

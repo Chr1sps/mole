@@ -30,11 +30,14 @@ bool throws_errors(const std::wstring &source)
 #define COMPARE(source, expected)                                             \
     REQUIRE(check_generated_ast(source, expected))
 #define THROWS_ERRORS(source) REQUIRE(throws_errors(source))
+#define FN_WRAP(source) L"fn foo(){" + std::wstring(source) + L"}"
+// Remember to add 9 to any position value
+#define COMPARE_WRAPPED(source, expected)                                     \
+    REQUIRE(check_generated_ast(FN_WRAP(source), AST_FN_WRAP(expected)))
 
 // #define REPR_CHECK(source) REQUIRE(compare_output(source, source))
 // #define CHECK_EXCEPTION(source, exception)
 //     REQUIRE_THROWS_AS(parse_source(source), exception)
-// #define FN_WRAP(source) L"fn foo()=>i32{" + std::wstring(source) + L"}"
 // #define COMPARE_STATEMENT(source, output)
 //     REQUIRE(compare_output(FN_WRAP(source), FN_WRAP(output)))
 // #define REPR_STATEMENT(source) COMPARE_STATEMENT(source, source)
@@ -89,11 +92,16 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
 #define CASTEXPR(expr, type, position)                                        \
     std::make_unique<CastExpr>(expr, type, position)
 
+#define RETURN(expr, position) std::make_unique<ReturnStmt>(expr, position)
+#define CONTINUE(position) std::make_unique<ContinueStmt>(position)
+#define BREAK(position) std::make_unique<BreakStmt>(position)
 #define VAR(name, type, initial_value, is_mut, position)                      \
     std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut, position)
 #define FUNC(name, params, return_type, block, is_const, position)            \
     std::make_unique<FuncDefStmt>(name, params, return_type, block, is_const, \
                                   position)
+#define EXTERN(name, params, return_type, position)                           \
+    std::make_unique<ExternStmt>(name, params, return_type, position)
 #define BLOCK(statements, position)                                           \
     std::make_unique<Block>(statements, position)
 
@@ -113,6 +121,12 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
 
 #define PROGRAM(globals, functions, externs)                                  \
     std::make_unique<Program>(globals, functions, externs)
+
+#define AST_FN_WRAP(statements)                                               \
+    PROGRAM(GLOBALS(),                                                        \
+            FUNCTIONS(FUNC(L"foo", PARAMS(), nullptr,                         \
+                           BLOCK(statements, POS(1, 9)), false, POS(1, 1))),  \
+            EXTERNS())
 
 TEST_CASE("Empty code.")
 {
@@ -455,16 +469,29 @@ TEST_CASE("In-place lambdas.")
                     FUNCTIONS(), EXTERNS()));
 }
 
-// TEST_CASE("Scopes in functions.", "[SCOPE]")
-// {
-//     COMPARE(L"fn foo(){{}}", L"fn foo()=>!{{}}");
-// }
+TEST_CASE("Scopes in functions.", "[SCOPE]")
+{
+    COMPARE(L"fn foo(){{}}",
+            PROGRAM(GLOBALS(),
+                    FUNCTIONS(FUNC(
+                        L"foo", PARAMS(), nullptr,
+                        BLOCK(STMTS(BLOCK(STMTS(), POS(1, 10))), POS(1, 9)),
+                        false, POS(1, 1))),
+                    EXTERNS()));
+}
 
-// TEST_CASE("Externs.", "[EXT]")
-// {
-//     COMPARE(L"extern foo();", L"extern foo()=>!;");
-//     COMPARE(L"extern foo(x:i32);", L"extern foo(x:i32)=>!;");
-// }
+TEST_CASE("Externs.", "[EXT]")
+{
+    COMPARE(L"extern foo();",
+            PROGRAM(GLOBALS(), FUNCTIONS(),
+                    EXTERNS(EXTERN(L"foo", PARAMS(), nullptr, POS(1, 1)))));
+    COMPARE(L"extern foo(x:i32) => i32;",
+            PROGRAM(GLOBALS(), FUNCTIONS(),
+                    EXTERNS(EXTERN(
+                        L"foo",
+                        PARAMS(PARAM(L"x", STYPE(I32, NON_REF), POS(1, 12))),
+                        STYPE(I32, NON_REF), POS(1, 1)))));
+}
 
 // TEST_CASE("Assign statements.")
 // {
@@ -477,23 +504,12 @@ TEST_CASE("In-place lambdas.")
 //     REPR_STATEMENT(L"x^^=5;");
 // }
 
-// TEST_CASE("Return statements.")
-// {
-//     REPR_STATEMENT(L"return;");
-//     REPR_STATEMENT(L"return 8;");
-// }
-
-// TEST_CASE("Type tests.")
-// {
-//     REPR_CHECK(L"let var:i8;");
-//     REPR_CHECK(L"let var:i16;");
-//     REPR_CHECK(L"let var:i32;");
-//     REPR_CHECK(L"let var:i64;");
-//     REPR_CHECK(L"let var:u8;");
-//     REPR_CHECK(L"let var:u16;");
-//     REPR_CHECK(L"let var:u32;");
-//     REPR_CHECK(L"let var:u64;");
-// }
+TEST_CASE("Return statements.")
+{
+    COMPARE_WRAPPED(L"return;", STMTS(RETURN(nullptr, POS(1, 10))));
+    COMPARE_WRAPPED(L"return 8;",
+                    STMTS(RETURN(I32EXPR(8, POS(1, 17)), POS(1, 10))));
+}
 
 // TEST_CASE("Function calls.")
 // {

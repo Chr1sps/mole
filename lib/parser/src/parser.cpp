@@ -155,6 +155,7 @@ std::unique_ptr<ExternStmt> Parser::parse_extern_stmt()
     if (this->current_token != TokenType::KW_EXTERN)
         return nullptr;
     auto position = this->current_token->position;
+    this->next_token();
 
     auto [name, params, return_type] = this->parse_func_name_and_params();
 

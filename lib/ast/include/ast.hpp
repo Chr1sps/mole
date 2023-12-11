@@ -346,6 +346,11 @@ struct ReturnStmt : public Statement
     {
     }
 
+    ReturnStmt(ExprNodePtr &&expr, const Position &position)
+        : Statement(position), expr(std::move(expr))
+    {
+    }
+
     void accept(StmtVisitor &visitor) const override
     {
         visitor.visit(*this);
@@ -624,6 +629,13 @@ struct ExternStmt : public Statement
 
     ExternStmt(const std::wstring &name, std::vector<ParamPtr> &params,
                TypePtr &return_type, const Position &position)
+        : Statement(position), name(name), params(std::move(params)),
+          return_type(std::move(return_type))
+    {
+    }
+
+    ExternStmt(const std::wstring &name, std::vector<ParamPtr> &&params,
+               TypePtr &&return_type, const Position &position)
         : Statement(position), name(name), params(std::move(params)),
           return_type(std::move(return_type))
     {
