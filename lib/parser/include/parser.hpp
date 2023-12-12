@@ -74,7 +74,7 @@ class Parser
 
     // helper methods
 
-    std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr>
+    std::optional<std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr>>
     parse_func_name_and_params();
 
     std::unique_ptr<MatchArm> parse_match_arm();

@@ -256,6 +256,13 @@ TEST_CASE("Variables.", "[VARS]")
                                     false, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
     }
+    SECTION("Some errors.")
+    {
+        THROWS_ERRORS(L"let ;");
+        THROWS_ERRORS(L"let var:;");
+        THROWS_ERRORS(L"let var:=;");
+        THROWS_ERRORS(L"let var=;");
+    }
 }
 
 TEST_CASE("Binary operators.", "[VARS], [BINOP]")
@@ -464,6 +471,16 @@ TEST_CASE("Function definitions.", "[FUNC]")
     SECTION("Nested functions.")
     {
         THROWS_ERRORS(L"fn foo(){fn boo(){}}");
+    }
+    SECTION("Errors.")
+    {
+        THROWS_ERRORS(L"fn ()=>i32{}");
+        THROWS_ERRORS(L"fn foo()=>{}");
+        THROWS_ERRORS(L"fn foo()");
+        THROWS_ERRORS(L"fn foo(x)=>{}");
+        THROWS_ERRORS(L"fn foo(x:)=>{}");
+        THROWS_ERRORS(L"fn foo(x:i32,)=>{}");
+        THROWS_ERRORS(L"fn foo(,x:i32)=>{}");
     }
 }
 

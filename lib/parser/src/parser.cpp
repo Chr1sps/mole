@@ -148,7 +148,14 @@ std::unique_ptr<ExternStmt> Parser::parse_extern_stmt()
     auto position = this->current_token->position;
     this->next_token();
 
-    auto [name, params, return_type] = this->parse_func_name_and_params();
+    auto name_params_return_type = this->parse_func_name_and_params();
+    if (!name_params_return_type)
+    {
+        this->report_error(
+            L"function name, params or return type wasn't read properly");
+        return nullptr;
+    }
+    auto [name, params, return_type] = std::move(*name_params_return_type);
 
     this->assert_current_and_eat(TokenType::SEMICOLON,
                                  L"not a semicolon in an extern declaration");
@@ -173,8 +180,11 @@ std::unique_ptr<VarDeclStmt> Parser::parse_var_decl_stmt()
     }
 
     if (this->current_token != TokenType::IDENTIFIER)
+    {
         this->report_error(
             L"expected an identifier in a variable declaration");
+        return nullptr;
+    }
     auto name = std::get<std::wstring>(this->current_token->value);
     this->next_token();
 
@@ -208,6 +218,11 @@ ExprNodePtr Parser::parse_initial_value()
     {
         this->next_token();
         value = this->parse_binary_expr();
+        if (!value)
+        {
+            this->report_error(L"no initial value read");
+            return nullptr;
+        }
     }
     return value;
 }
@@ -228,20 +243,35 @@ std::unique_ptr<FuncDefStmt> Parser::parse_func_def_stmt()
         this->next_token();
     }
 
-    auto [name, params, return_type] = this->parse_func_name_and_params();
+    auto name_params_return_type = this->parse_func_name_and_params();
+    if (!name_params_return_type)
+    {
+        this->report_error(
+            L"function name, params or return type wasn't read properly");
+        return nullptr;
+    }
+    auto [name, params, return_type] = std::move(*name_params_return_type);
     auto block = this->parse_block();
+    if (!block)
+    {
+        this->report_error(L"expected a block in a function definition");
+        return nullptr;
+    }
     return std::make_unique<FuncDefStmt>(name, params, return_type, block,
                                          is_const, position);
 }
 
 // FUNC_NAME_AND_PARAMS = IDENTIFIER, L_PAREN, [PARAMS], R_PAREN,
 // [RETURN_TYPE];
-std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr> Parser::
-    parse_func_name_and_params()
+std::optional<std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr>>
+Parser::parse_func_name_and_params()
 {
 
     if (this->current_token != TokenType::IDENTIFIER)
+    {
         this->report_error(L"not a function identifier");
+        return std::nullopt;
+    }
     auto name = std::get<std::wstring>((*this->current_token).value);
     this->next_token();
 
@@ -255,7 +285,8 @@ std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr> Parser::
                                  "definition");
 
     auto return_type = this->parse_return_type();
-    return {std::move(name), std::move(params), std::move(return_type)};
+    return std::tuple(std::move(name), std::move(params),
+                      std::move(return_type));
 }
 
 // Params = Parameter, {COMMA, Parameter}
