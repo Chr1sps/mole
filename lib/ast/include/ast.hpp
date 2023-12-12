@@ -512,12 +512,19 @@ struct ExprStmt : public Statement
 struct WhileStmt : public Statement
 {
     ExprNodePtr condition_expr;
-    BlockPtr block;
+    StmtPtr statement;
 
-    WhileStmt(ExprNodePtr &condition_expr, BlockPtr &block,
+    WhileStmt(ExprNodePtr &condition_expr, StmtPtr &statement,
               const Position &position)
         : Statement(position), condition_expr(std::move(condition_expr)),
-          block(std::move(block))
+          statement(std::move(statement))
+    {
+    }
+
+    WhileStmt(ExprNodePtr &&condition_expr, StmtPtr &&statement,
+              const Position &position)
+        : Statement(position), condition_expr(std::move(condition_expr)),
+          statement(std::move(statement))
     {
     }
 
@@ -530,11 +537,18 @@ struct WhileStmt : public Statement
 struct IfStmt : public Statement
 {
     ExprNodePtr condition_expr;
-    BlockPtr then_block;
-    BlockPtr else_block;
+    StmtPtr then_block;
+    StmtPtr else_block;
 
-    IfStmt(ExprNodePtr &condition_expr, BlockPtr &then_block,
-           BlockPtr &else_block, const Position &position)
+    IfStmt(ExprNodePtr &condition_expr, StmtPtr &then_block,
+           StmtPtr &else_block, const Position &position)
+        : Statement(position), condition_expr(std::move(condition_expr)),
+          then_block(std::move(then_block)), else_block(std::move(else_block))
+    {
+    }
+
+    IfStmt(ExprNodePtr &&condition_expr, StmtPtr &&then_block,
+           StmtPtr &&else_block, const Position &position)
         : Statement(position), condition_expr(std::move(condition_expr)),
           then_block(std::move(then_block)), else_block(std::move(else_block))
     {

@@ -531,20 +531,31 @@ std::unique_ptr<IfStmt> Parser::parse_if_stmt()
     auto position = this->current_token->position;
     this->next_token();
 
-    auto condition_expr = this->parse_paren_expr();
-    auto then_block = this->parse_block();
-    auto else_block = this->parse_else_block();
-    return std::make_unique<IfStmt>(condition_expr, then_block, else_block,
-                                    position);
+    auto condition = this->parse_paren_expr();
+    if (!condition)
+    {
+        this->report_error(
+            L"no condition expression found in an if statement");
+        return nullptr;
+    }
+    auto then_stmt = this->parse_non_func_stmt();
+    if (!then_stmt)
+    {
+        this->report_error(
+            L"no positive condition statement found in the if statement");
+        return nullptr;
+    }
+    auto else_stmt = this->parse_else_block();
+    return std::make_unique<IfStmt>(condition, then_stmt, else_stmt, position);
 }
 
 // ELSE_BLOCK = KW_ELSE, BLOCK;
-std::unique_ptr<Block> Parser::parse_else_block()
+std::unique_ptr<Statement> Parser::parse_else_block()
 {
     if (this->current_token != TokenType::KW_ELSE)
         return nullptr;
     this->next_token();
-    auto result = this->parse_block();
+    auto result = this->parse_non_func_stmt();
     if (!result)
         this->report_error(L"no block present after else");
     return result;
@@ -558,8 +569,19 @@ std::unique_ptr<WhileStmt> Parser::parse_while_stmt()
     auto position = this->current_token->position;
     this->next_token();
     auto condition_expr = this->parse_paren_expr();
-    auto block = this->parse_block();
-    return std::make_unique<WhileStmt>(condition_expr, block, position);
+    if (!condition_expr)
+    {
+        this->report_error(
+            L"no condition expression found in the while loop statement");
+        return nullptr;
+    }
+    auto statement = this->parse_non_func_stmt();
+    if (!statement)
+    {
+        this->report_error(L"no block found in the while loop statement");
+        return nullptr;
+    }
+    return std::make_unique<WhileStmt>(condition_expr, statement, position);
 }
 
 // MATCH_STMT = KW_MATCH, PAREN_EXPR, L_BRACKET, {MATCH_CASE}, R_BRACKET;

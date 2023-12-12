@@ -50,7 +50,7 @@ class Parser
 
     // statements
 
-    std::unique_ptr<Block> parse_else_block();
+    std::unique_ptr<Statement> parse_else_block();
 
     TypePtr parse_type_specifier();
     ExprNodePtr parse_initial_value();

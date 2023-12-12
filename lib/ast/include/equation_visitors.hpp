@@ -313,7 +313,7 @@ GENERATE_VISITOR(
     StmtVisitor, WhileStmt,
     {
         this->value = *this->expr.condition_expr == *node.condition_expr &&
-                      *this->expr.block == *node.block &&
+                      *this->expr.statement == *node.statement &&
                       this->expr.position == node.position;
     },
     Block, IfStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt, FuncDefStmt,

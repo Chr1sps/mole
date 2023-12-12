@@ -36,13 +36,6 @@ bool throws_errors(const std::wstring &source)
     REQUIRE(check_generated_ast(FN_WRAP(source), AST_FN_WRAP(expected)))
 #define THROWS_WRAPPED(source) REQUIRE(throws_errors(FN_WRAP(source)))
 
-// #define REPR_CHECK(source) REQUIRE(compare_output(source, source))
-// #define CHECK_EXCEPTION(source, exception)
-//     REQUIRE_THROWS_AS(parse_source(source), exception)
-// #define COMPARE_STATEMENT(source, output)
-//     REQUIRE(compare_output(FN_WRAP(source), FN_WRAP(output)))
-// #define REPR_STATEMENT(source) COMPARE_STATEMENT(source, source)
-
 template <typename T, typename... Types>
 auto make_uniques_vector(Types &&...args)
 {
@@ -117,6 +110,10 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
                                   position)
 #define EXTERN(name, params, return_type, position)                           \
     std::make_unique<ExternStmt>(name, params, return_type, position)
+#define IF(condition, then_stmt, else_stmt, position)                         \
+    std::make_unique<IfStmt>(condition, then_stmt, else_stmt, position)
+#define WHILE(condition, statement, position)                                 \
+    std::make_unique<WhileStmt>(condition, statement, position)
 #define BLOCK(statements, position)                                           \
     std::make_unique<Block>(statements, position)
 
@@ -655,7 +652,7 @@ TEST_CASE("Match statements.")
     }
     SECTION("Literal arms.")
     {
-        THROWS_ERRORS(L"match(a){1=>}");
+        THROWS_WRAPPED(L"match(a){1=>}");
         COMPARE_WRAPPED(
             L"match(a){1=>{}}",
             STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
@@ -694,8 +691,8 @@ TEST_CASE("Match statements.")
     }
     SECTION("Guard arms.")
     {
-        THROWS_ERRORS(L"match(a){if()=>{}}");
-        THROWS_ERRORS(L"match(a){if(2)=>}");
+        THROWS_WRAPPED(L"match(a){if()=>{}}");
+        THROWS_WRAPPED(L"match(a){if(2)=>}");
         COMPARE_WRAPPED(
             L"match(a){if(1)=>{}}",
             STMTS(
@@ -706,11 +703,56 @@ TEST_CASE("Match statements.")
     }
     SECTION("Placeholder arms.")
     {
-        THROWS_ERRORS(L"match(a){_=>}");
+        THROWS_WRAPPED(L"match(a){_=>}");
         COMPARE_WRAPPED(
             L"match(a){_=>{}}",
             STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
-                        ARMS(PARM( BLOCK(STMTS(), POS(1, 22)), POS(1, 19))),
+                        ARMS(PARM(BLOCK(STMTS(), POS(1, 22)), POS(1, 19))),
                         POS(1, 10))));
     }
+}
+
+TEST_CASE("If statements.")
+{
+    THROWS_WRAPPED(L"if(){}");
+    THROWS_WRAPPED(L"if(1)");
+    THROWS_WRAPPED(L"if(1)else");
+    THROWS_WRAPPED(L"if(1){}else");
+    THROWS_WRAPPED(L"if(1){}else;");
+    THROWS_WRAPPED(L"if(1);else;");
+    COMPARE_WRAPPED(
+        L"if(1){}",
+        STMTS(IF(PARENEXPR(I32EXPR(1, POS(1, 13)), POS(1, 12)),
+                 BLOCK(STMTS(), POS(1, 15)), nullptr, POS(1, 10))));
+    COMPARE_WRAPPED(
+        L"if(1)return;",
+        STMTS(IF(PARENEXPR(I32EXPR(1, POS(1, 13)), POS(1, 12)),
+                 RETURN(nullptr, POS(1, 15)), nullptr, POS(1, 10))));
+    COMPARE_WRAPPED(L"if(1){}else{}",
+                    STMTS(IF(PARENEXPR(I32EXPR(1, POS(1, 13)), POS(1, 12)),
+                             BLOCK(STMTS(), POS(1, 15)),
+                             BLOCK(STMTS(), POS(1, 21)), POS(1, 10))));
+    COMPARE_WRAPPED(
+        L"if(1)return;else break;",
+        STMTS(IF(PARENEXPR(I32EXPR(1, POS(1, 13)), POS(1, 12)),
+                 RETURN(nullptr, POS(1, 15)), BREAK(POS(1, 27)), POS(1, 10))));
+    COMPARE_WRAPPED(L"if(1)if(2){}else{}else{}",
+                    STMTS(IF(PARENEXPR(I32EXPR(1, POS(1, 13)), POS(1, 12)),
+                             IF(PARENEXPR(I32EXPR(2, POS(1, 18)), POS(1, 17)),
+                                BLOCK(STMTS(), POS(1, 20)),
+                                BLOCK(STMTS(), POS(1, 26)), POS(1, 15)),
+                             BLOCK(STMTS(), POS(1, 32)), POS(1, 10))));
+}
+
+TEST_CASE("While statements.")
+{
+    THROWS_WRAPPED(L"while(){}");
+    THROWS_WRAPPED(L"while(1)");
+    THROWS_WRAPPED(L"while(1);");
+    COMPARE_WRAPPED(L"while(1){}",
+                    STMTS(WHILE(PARENEXPR(I32EXPR(1, POS(1, 16)), POS(1, 15)),
+                                BLOCK(STMTS(), POS(1, 18)), POS(1, 10))));
+    COMPARE_WRAPPED(L"while(1)continue;",
+                    STMTS(WHILE(PARENEXPR(I32EXPR(1, POS(1, 16)), POS(1, 15)),
+                                CONTINUE(POS(1, 18)), POS(1, 10))));
 }
