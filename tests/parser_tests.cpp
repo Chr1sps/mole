@@ -99,7 +99,7 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
 #define LARM(literals, block, position)                                       \
     std::make_unique<LiteralArm>(literals, block, position)
 #define GARM(condition, block, position)                                      \
-    std::make_unique<GuardArm>(literals, block, position)
+    std::make_unique<GuardArm>(condition, block, position)
 #define PARM(block, position) std::make_unique<PlaceholderArm>(block, position)
 #define ARMS(...) make_uniques_vector<MatchArm>(__VA_ARGS__)
 
@@ -645,18 +645,30 @@ TEST_CASE("Chaining call/index/lambda call expressions.")
 
 TEST_CASE("Match statements.")
 {
-    THROWS_WRAPPED(L"match(){}");
-    COMPARE_WRAPPED(
-        L"match(a){}",
-        STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)), ARMS(),
-                    POS(1, 10))));
+    SECTION("No arms.")
+    {
+        THROWS_WRAPPED(L"match(){}");
+        COMPARE_WRAPPED(
+            L"match(a){}",
+            STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
+                        ARMS(), POS(1, 10))));
+    }
     SECTION("Literal arms.")
     {
+        THROWS_ERRORS(L"match(a){1=>}");
         COMPARE_WRAPPED(
             L"match(a){1=>{}}",
             STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
                         ARMS(LARM(LITERALS(I32EXPR(1, POS(1, 19))),
                                   BLOCK(STMTS(), POS(1, 22)), POS(1, 19))),
+                        POS(1, 10))));
+        COMPARE_WRAPPED(
+            L"match(a){1=>{}2=>{}}",
+            STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
+                        ARMS(LARM(LITERALS(I32EXPR(1, POS(1, 19))),
+                                  BLOCK(STMTS(), POS(1, 22)), POS(1, 19)),
+                             LARM(LITERALS(I32EXPR(2, POS(1, 24))),
+                                  BLOCK(STMTS(), POS(1, 27)), POS(1, 24))),
                         POS(1, 10))));
         COMPARE_WRAPPED(
             L"match(a){1|2|3=>{}}",
@@ -679,5 +691,26 @@ TEST_CASE("Match statements.")
                         I32EXPR(4, POS(1, 28))),
                     BLOCK(STMTS(), POS(1, 26)), POS(1, 19))),
                 POS(1, 10))));
+    }
+    SECTION("Guard arms.")
+    {
+        THROWS_ERRORS(L"match(a){if()=>{}}");
+        THROWS_ERRORS(L"match(a){if(2)=>}");
+        COMPARE_WRAPPED(
+            L"match(a){if(1)=>{}}",
+            STMTS(
+                MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
+                      ARMS(GARM(PARENEXPR(I32EXPR(1, POS(1, 22)), POS(1, 21)),
+                                BLOCK(STMTS(), POS(1, 26)), POS(1, 19))),
+                      POS(1, 10))));
+    }
+    SECTION("Placeholder arms.")
+    {
+        THROWS_ERRORS(L"match(a){_=>}");
+        COMPARE_WRAPPED(
+            L"match(a){_=>{}}",
+            STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
+                        ARMS(PARM( BLOCK(STMTS(), POS(1, 22)), POS(1, 19))),
+                        POS(1, 10))));
     }
 }

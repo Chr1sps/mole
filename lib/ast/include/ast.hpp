@@ -567,6 +567,11 @@ struct PlaceholderArm : public MatchArm
     {
     }
 
+    PlaceholderArm(BlockPtr &&block, const Position &position)
+        : MatchArm(block, position)
+    {
+    }
+
     void accept(MatchArmVisitor &visitor) const override
     {
         visitor.visit(*this);
@@ -578,6 +583,12 @@ struct GuardArm : public MatchArm
     ExprNodePtr condition_expr;
 
     GuardArm(ExprNodePtr &condition_expr, BlockPtr &block,
+             const Position &position)
+        : MatchArm(block, position), condition_expr(std::move(condition_expr))
+    {
+    }
+
+    GuardArm(ExprNodePtr &&condition_expr, BlockPtr &&block,
              const Position &position)
         : MatchArm(block, position), condition_expr(std::move(condition_expr))
     {

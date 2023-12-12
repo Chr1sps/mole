@@ -614,6 +614,11 @@ std::unique_ptr<LiteralArm> Parser::parse_literal_arm()
     {
         auto [position, conditions] = std::move(*literals);
         auto block = this->parse_match_arm_block();
+        if (!block)
+        {
+            this->report_error(L"no block found in a literal guard arm");
+            return nullptr;
+        }
         return std::make_unique<LiteralArm>(conditions, block, position);
     }
     return nullptr;
@@ -654,19 +659,26 @@ std::unique_ptr<GuardArm> Parser::parse_guard_arm()
 {
     if (auto guard = this->parse_guard_condition())
     {
+        auto [position, condition] = std::move(*guard);
         auto block = this->parse_match_arm_block();
-        return std::make_unique<GuardArm>(guard, block, guard->position);
+        if (!block)
+        {
+            this->report_error(L"no block found in a guard match arm");
+        }
+        return std::make_unique<GuardArm>(condition, block, position);
     }
     return nullptr;
 }
 
 // GUARD_CONDITION = KW_IF, PAREN_EXPR;
-ExprNodePtr Parser::parse_guard_condition()
+std::optional<std::tuple<Position, ExprNodePtr>> Parser::
+    parse_guard_condition()
 {
     if (this->current_token != TokenType::KW_IF)
-        return nullptr;
+        return std::nullopt;
+    auto position = this->current_token->position;
     this->next_token();
-    return this->parse_paren_expr();
+    return std::tuple(position, this->parse_paren_expr());
 }
 
 // PLACEHOLDER_ARM = PLACEHOLDER, MATCH_ARM_BLOCK;
@@ -677,6 +689,11 @@ std::unique_ptr<PlaceholderArm> Parser::parse_placeholder_arm()
     auto position = this->current_token->position;
     this->next_token();
     auto block = parse_match_arm_block();
+    if (!block)
+    {
+        this->report_error(L"no block found in a placeholder arm");
+        return nullptr;
+    }
     return std::make_unique<PlaceholderArm>(block, position);
 }
 

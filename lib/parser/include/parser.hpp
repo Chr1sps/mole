@@ -86,7 +86,7 @@ class Parser
     std::optional<std::tuple<Position, std::vector<ExprNodePtr>>>
     parse_literal_condition();
 
-    ExprNodePtr parse_guard_condition();
+    std::optional<std::tuple<Position, ExprNodePtr>> parse_guard_condition();
 
     BlockPtr parse_match_arm_block();
 
