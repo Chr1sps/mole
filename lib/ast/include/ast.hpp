@@ -37,6 +37,26 @@ struct ExprNode : public AstNode
 
 using ExprNodePtr = std::unique_ptr<ExprNode>;
 
+struct ParenExpr : public ExprNode
+{
+    ExprNodePtr expr;
+
+    ParenExpr(ExprNodePtr &expr, const Position &position)
+        : ExprNode(position), expr(std::move(expr))
+    {
+    }
+
+    ParenExpr(ExprNodePtr &&expr, const Position &position)
+        : ExprNode(position), expr(std::move(expr))
+    {
+    }
+
+    void accept(ExprVisitor &visitor) const override
+    {
+        visitor.visit(*this);
+    }
+};
+
 struct VariableExpr : public ExprNode
 {
     std::wstring name;
@@ -197,6 +217,13 @@ struct IndexExpr : public ExprNode
     ExprNodePtr expr, index_value;
 
     IndexExpr(ExprNodePtr &expr, ExprNodePtr &index_value,
+              const Position &position)
+        : ExprNode(position), expr(std::move(expr)),
+          index_value(std::move(index_value))
+    {
+    }
+
+    IndexExpr(ExprNodePtr &&expr, ExprNodePtr &&index_value,
               const Position &position)
         : ExprNode(position), expr(std::move(expr)),
           index_value(std::move(index_value))

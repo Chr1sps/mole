@@ -85,7 +85,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, BinaryExpr, UnaryExpr,
-    CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
+    CallExpr, LambdaCallExpr, IndexExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, I32Expr,
@@ -94,7 +94,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     VariableExpr, F64Expr, StringExpr, CharExpr, BoolExpr, BinaryExpr,
-    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
+    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, F64Expr,
@@ -103,7 +103,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     VariableExpr, I32Expr, StringExpr, CharExpr, BoolExpr, BinaryExpr,
-    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
+    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, StringExpr,
@@ -112,7 +112,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     VariableExpr, I32Expr, F64Expr, CharExpr, BoolExpr, BinaryExpr, UnaryExpr,
-    CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
+    CallExpr, LambdaCallExpr, IndexExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, CharExpr,
@@ -121,7 +121,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     VariableExpr, I32Expr, F64Expr, StringExpr, BoolExpr, BinaryExpr,
-    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
+    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, BoolExpr,
@@ -130,7 +130,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     VariableExpr, I32Expr, F64Expr, StringExpr, CharExpr, BinaryExpr,
-    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
+    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, UnaryExpr,
@@ -140,7 +140,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, BinaryExpr, VariableExpr,
-    CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
+    CallExpr, LambdaCallExpr, IndexExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, BinaryExpr,
@@ -151,7 +151,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
-    CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
+    CallExpr, LambdaCallExpr, IndexExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, CallExpr,
@@ -161,7 +161,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
-    BinaryExpr, LambdaCallExpr, IndexExpr, CastExpr)
+    BinaryExpr, LambdaCallExpr, IndexExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, LambdaCallExpr,
@@ -175,7 +175,7 @@ GENERATE_VISITOR(
                       are_args_equal && this->expr.position == node.position;
     },
     I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
-    BinaryExpr, CallExpr, IndexExpr, CastExpr)
+    BinaryExpr, CallExpr, IndexExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, IndexExpr,
@@ -185,7 +185,7 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
-    BinaryExpr, CallExpr, LambdaCallExpr, CastExpr)
+    BinaryExpr, CallExpr, LambdaCallExpr, CastExpr, ParenExpr)
 
 GENERATE_VISITOR(
     ExprVisitor, CastExpr,
@@ -195,7 +195,16 @@ GENERATE_VISITOR(
                       this->expr.position == node.position;
     },
     I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
-    BinaryExpr, CallExpr, LambdaCallExpr, IndexExpr)
+    BinaryExpr, CallExpr, LambdaCallExpr, IndexExpr, ParenExpr)
+
+GENERATE_VISITOR(
+    ExprVisitor, ParenExpr,
+    {
+        this->value = *this->expr.expr == *node.expr &&
+                      this->expr.position == node.position;
+    },
+    I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
+    BinaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
 
 #define MAKE_EQUATION_VISIT(type)                                             \
     void visit(const type &other) override                                    \
@@ -215,7 +224,7 @@ struct ExprEquationVisitor : ExprVisitor
     }
     MAKE_EQUATION_VISITS(VariableExpr, I32Expr, F64Expr, StringExpr, CharExpr,
                          BoolExpr, BinaryExpr, UnaryExpr, CallExpr,
-                         LambdaCallExpr, IndexExpr, CastExpr)
+                         LambdaCallExpr, IndexExpr, CastExpr, ParenExpr)
   private:
     const ExprNode &expr;
 };

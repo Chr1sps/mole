@@ -93,6 +93,8 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
 #define CASTEXPR(expr, type, position)                                        \
     std::make_unique<CastExpr>(expr, type, position)
 
+#define PARENEXPR(value, position) std::make_unique<ParenExpr>(value, position)
+
 #define LITERALS(...) ARGS(__VA_ARGS__)
 #define LARM(literals, block, position)                                       \
     std::make_unique<LiteralArm>(literals, block, position)
@@ -347,18 +349,27 @@ TEST_CASE("Unary operators.", "[VARS], [UNOP]")
                             UNEXPR(I32EXPR(5, POS(1, 10)), BIT_NEG, POS(1, 9)),
                             false, POS(1, 1))),
                 FUNCTIONS(), EXTERNS()));
+    COMPARE(
+        L"let var=-5;",
+        PROGRAM(GLOBALS(VAR(L"var", nullptr,
+                            UNEXPR(I32EXPR(5, POS(1, 10)), MINUS, POS(1, 9)),
+                            false, POS(1, 1))),
+                FUNCTIONS(), EXTERNS()));
     SECTION("Nested.")
     {
-        COMPARE(L"let var=++--~!5;",
-                PROGRAM(GLOBALS(VAR(
-                            L"var", nullptr,
-                            UNEXPR(UNEXPR(UNEXPR(UNEXPR(I32EXPR(5, POS(1, 15)),
-                                                        NEG, POS(1, 14)),
-                                                 BIT_NEG, POS(1, 13)),
-                                          DEC, POS(1, 11)),
-                                   INC, POS(1, 9)),
-                            false, POS(1, 1))),
-                        FUNCTIONS(), EXTERNS()));
+        COMPARE(
+            L"let var=++---~!5;",
+            PROGRAM(
+                GLOBALS(VAR(
+                    L"var", nullptr,
+                    UNEXPR(UNEXPR(UNEXPR(UNEXPR(UNEXPR(I32EXPR(5, POS(1, 16)),
+                                                       NEG, POS(1, 15)),
+                                                BIT_NEG, POS(1, 14)),
+                                         MINUS, POS(1, 13)),
+                                  DEC, POS(1, 11)),
+                           INC, POS(1, 9)),
+                    false, POS(1, 1))),
+                FUNCTIONS(), EXTERNS()));
     }
 }
 
@@ -480,6 +491,20 @@ TEST_CASE("In-place lambdas.")
                                    POS(1, 9)),
                         false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
+    COMPARE(
+        L"let foo=boo@(_,_,_,_);",
+        PROGRAM(GLOBALS(VAR(L"foo", nullptr,
+                            LAMBDAEXPR(VAREXPR(L"boo", POS(1, 9)),
+                                       LAMBDAARGS(NOARG, NOARG, NOARG, NOARG),
+                                       POS(1, 9)),
+                            false, POS(1, 1))),
+                FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let foo=boo@();",
+            PROGRAM(GLOBALS(VAR(L"foo", nullptr,
+                                LAMBDAEXPR(VAREXPR(L"boo", POS(1, 9)),
+                                           LAMBDAARGS(), POS(1, 9)),
+                                false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
 }
 
 TEST_CASE("Scopes in functions.", "[SCOPE]")
@@ -556,33 +581,86 @@ TEST_CASE("Function calls.")
                     FUNCTIONS(), EXTERNS()));
     COMPARE(L"let var=(foo)();",
             PROGRAM(GLOBALS(VAR(L"var", nullptr,
-                                CALLEXPR(VAREXPR(L"foo", POS(1, 9)), ARGS(),
-                                         POS(1, 9)),
+                                CALLEXPR(PARENEXPR(VAREXPR(L"foo", POS(1, 10)),
+                                                   POS(1, 9)),
+                                         ARGS(), POS(1, 9)),
                                 false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
+    THROWS_ERRORS(L"let var=foo(1,);");
+    THROWS_ERRORS(L"let var=foo(,1);");
+    THROWS_ERRORS(L"let var=foo(,);");
+}
+
+TEST_CASE("Index expressions.")
+{
+    COMPARE(L"let var=foo[1];",
+            PROGRAM(GLOBALS(VAR(L"var", nullptr,
+                                INDEXEXPR(VAREXPR(L"foo", POS(1, 9)),
+                                          I32EXPR(1, POS(1, 13)), POS(1, 9)),
+                                false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    THROWS_ERRORS(L"let var=foo[];");
 }
 
 TEST_CASE("Chaining call/index/lambda call expressions.")
 {
-    // REPR_STATEMENT(L"let var=foo(1,_)(2);");
+    COMPARE(
+        L"let var=foo(1)(2);",
+        PROGRAM(GLOBALS(VAR(
+                    L"var", nullptr,
+                    CALLEXPR(CALLEXPR(VAREXPR(L"foo", POS(1, 9)),
+                                      ARGS(I32EXPR(1, POS(1, 13))), POS(1, 9)),
+                             ARGS(I32EXPR(2, POS(1, 16))), POS(1, 9)),
+                    false, POS(1, 1))),
+                FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let var=foo@(1)@(2);",
+            PROGRAM(GLOBALS(VAR(
+                        L"var", nullptr,
+                        LAMBDAEXPR(LAMBDAEXPR(VAREXPR(L"foo", POS(1, 9)),
+                                              ARGS(I32EXPR(1, POS(1, 14))),
+                                              POS(1, 9)),
+                                   ARGS(I32EXPR(2, POS(1, 18))), POS(1, 9)),
+                        false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let var=foo[1][2];",
+            PROGRAM(GLOBALS(VAR(
+                        L"var", nullptr,
+                        INDEXEXPR(INDEXEXPR(VAREXPR(L"foo", POS(1, 9)),
+                                            I32EXPR(1, POS(1, 13)), POS(1, 9)),
+                                  I32EXPR(2, POS(1, 16)), POS(1, 9)),
+                        false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    COMPARE(
+        L"let var=foo(1)[2]@(3);",
+        PROGRAM(GLOBALS(VAR(
+                    L"var", nullptr,
+                    LAMBDAEXPR(INDEXEXPR(CALLEXPR(VAREXPR(L"foo", POS(1, 9)),
+                                                  ARGS(I32EXPR(1, POS(1, 13))),
+                                                  POS(1, 9)),
+                                         I32EXPR(2, POS(1, 16)), POS(1, 9)),
+                               ARGS(I32EXPR(3, POS(1, 20))), POS(1, 9)),
+                    false, POS(1, 1))),
+                FUNCTIONS(), EXTERNS()));
 }
 
 TEST_CASE("Match statements.")
 {
     THROWS_WRAPPED(L"match(){}");
-    COMPARE_WRAPPED(L"match(a){}", STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
-                                               ARMS(), POS(1, 10))));
+    COMPARE_WRAPPED(
+        L"match(a){}",
+        STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)), ARMS(),
+                    POS(1, 10))));
     SECTION("Literal arms.")
     {
         COMPARE_WRAPPED(
             L"match(a){1=>{}}",
-            STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
+            STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
                         ARMS(LARM(LITERALS(I32EXPR(1, POS(1, 19))),
                                   BLOCK(STMTS(), POS(1, 22)), POS(1, 19))),
                         POS(1, 10))));
         COMPARE_WRAPPED(
             L"match(a){1|2|3=>{}}",
-            STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
+            STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
                         ARMS(LARM(LITERALS(I32EXPR(1, POS(1, 19)),
                                            I32EXPR(2, POS(1, 21)),
                                            I32EXPR(3, POS(1, 23))),
@@ -591,12 +669,14 @@ TEST_CASE("Match statements.")
         COMPARE_WRAPPED(
             L"match(a){-1|(2+3)|4=>{}}",
             STMTS(MATCH(
-                VAREXPR(L"a", POS(1, 15)),
+                PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
                 ARMS(LARM(
-                    LITERALS(UNEXPR(I32EXPR(1, POS(1, 20)), MINUS, POS(1, 19)),
-                             BINEXPR(I32EXPR(2, POS(1, 23)), ADD,
-                                     I32EXPR(3, POS(1, 25)), POS(1, 22)),
-                             I32EXPR(4, POS(1, 28))),
+                    LITERALS(
+                        UNEXPR(I32EXPR(1, POS(1, 20)), MINUS, POS(1, 19)),
+                        PARENEXPR(BINEXPR(I32EXPR(2, POS(1, 23)), ADD,
+                                          I32EXPR(3, POS(1, 25)), POS(1, 23)),
+                                  POS(1, 22)),
+                        I32EXPR(4, POS(1, 28))),
                     BLOCK(STMTS(), POS(1, 26)), POS(1, 19))),
                 POS(1, 10))));
     }

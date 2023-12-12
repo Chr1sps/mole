@@ -1026,7 +1026,14 @@ ExprNodePtr Parser::parse_index_part()
 {
     if (this->current_token != TokenType::L_SQ_BRACKET)
         return nullptr;
+    this->next_token();
     auto result = this->parse_binary_expr();
+    if (!result)
+    {
+        this->report_error(L"no index value expression found in the index "
+                           L"expression's square brackets");
+        return nullptr;
+    }
     this->assert_current_and_eat(
         TokenType::R_SQ_BRACKET,
         L"expected right square bracket in an index expression");
@@ -1062,19 +1069,19 @@ ExprNodePtr Parser::parse_paren_expr()
     auto position = this->current_token->position;
     this->next_token();
 
-    auto result = this->parse_binary_expr();
-    if (!result)
+    auto expr = this->parse_binary_expr();
+    if (!expr)
     {
         this->report_error(L"no expression found after a left parenthesis");
-        return result;
+        return nullptr;
     }
 
     this->assert_current_and_eat(
         TokenType::R_PAREN,
         L"expected a right bracket in a parenthesis expression");
 
-    result->position = position;
-    return result;
+    return std::make_unique<ParenExpr>(expr, position);
+    // return result;
 }
 
 void Parser::add_logger(Logger *logger)
