@@ -39,7 +39,6 @@ add_subdirectory("${LIB_DIR}")
 
 # add_library(mole ${HEADERS} ${SOURCES})
 # target_include_directories(mole PUBLIC "${INCLUDE}" "${LLVM_INCLUDE_DIRS}")
-# target_link_libraries(mole PUBLIC LLVM compiler_flags)
 option(COVERAGE "Compile tests with coverage flags." FALSE)
 option(TESTS "Compile the tests executables." TRUE)
 
@@ -48,6 +47,7 @@ if(NOT COVERAGE)
 
     # target_link_libraries(molec PRIVATE mole)
     target_link_libraries(molec PRIVATE mole_ast mole_lexer mole_logger mole_parser mole_json_serializer mole_reader mole_utils)
+    target_link_libraries(molec PRIVATE LLVM compiler_flags)
 endif()
 
 function(new_test)

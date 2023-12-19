@@ -103,7 +103,7 @@ void Parser::assert_current_and_eat(TokenType type,
 void Parser::report_error(const std::wstring &msg)
 {
     auto error_msg = build_wstring(
-        L"[ERROR] Parser error at [", this->current_token->position.line, ",",
+        L"Parser error at [", this->current_token->position.line, ",",
         this->current_token->position.column, "]: ", msg, ".");
     auto log_msg = LogMessage(error_msg, LogLevel::ERROR);
     for (auto logger : this->loggers)

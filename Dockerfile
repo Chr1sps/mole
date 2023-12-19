@@ -3,12 +3,11 @@ FROM ubuntu:22.04
 USER root
 
 RUN apt-get update -y
-# RUN apt-get upgrade -y
+RUN apt-get upgrade -y
 
 RUN apt-get install -y \
     xz-utils \
     wget \
-    libncurses5 \
     cmake \
     make \
     libstdc++6-12-dbg

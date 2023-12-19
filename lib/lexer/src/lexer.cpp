@@ -524,8 +524,8 @@ Token Lexer::report_error(const std::wstring &msg)
     {
         position_text = L"EOF";
     }
-    auto error_text = build_wstring(L"[ERROR] Lexer error at [", position_text,
-                                    "]: ", msg, ".");
+    auto error_text =
+        build_wstring(L"Lexer error at [", position_text, "]: ", msg, ".");
     auto log_msg = LogMessage(error_text, LogLevel::ERROR);
     for (auto logger : this->loggers)
     {
