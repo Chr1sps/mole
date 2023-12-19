@@ -13,7 +13,6 @@ struct CallExpr;
 struct LambdaCallExpr;
 struct IndexExpr;
 struct CastExpr;
-struct ParenExpr;
 struct Block;
 struct IfStmt;
 struct WhileStmt;
@@ -63,7 +62,6 @@ class ExprVisitor : Visitor
     virtual void visit(const LambdaCallExpr &node) = 0;
     virtual void visit(const IndexExpr &node) = 0;
     virtual void visit(const CastExpr &node) = 0;
-    virtual void visit(const ParenExpr &node) = 0;
 };
 
 class StmtVisitor : Visitor

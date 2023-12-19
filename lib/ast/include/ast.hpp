@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 struct AstNode
@@ -37,25 +38,12 @@ struct ExprNode : public AstNode
 
 using ExprNodePtr = std::unique_ptr<ExprNode>;
 
-struct ParenExpr : public ExprNode
-{
-    ExprNodePtr expr;
-
-    ParenExpr(ExprNodePtr &expr, const Position &position)
-        : ExprNode(position), expr(std::move(expr))
-    {
-    }
-
-    ParenExpr(ExprNodePtr &&expr, const Position &position)
-        : ExprNode(position), expr(std::move(expr))
-    {
-    }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
-    }
-};
+// using ExprNodeVariant =
+//     std::variant<VariableExpr, BinaryExpr, UnaryExpr, CallExpr,
+//     LambdaCallExpr,
+//                  IndexExpr, CastExpr, I32Expr, F64Expr, BoolExpr,
+//                  StringExpr, CharExpr>;
+// using ExprVariantPtr = std::unique_ptr<ExprNodeVariant>;
 
 struct VariableExpr : public ExprNode
 {

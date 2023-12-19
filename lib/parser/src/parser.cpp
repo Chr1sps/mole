@@ -1143,8 +1143,8 @@ ExprNodePtr Parser::parse_paren_expr()
         TokenType::R_PAREN,
         L"expected a right bracket in a parenthesis expression");
 
-    return std::make_unique<ParenExpr>(expr, position);
-    // return result;
+    expr->position = position;
+    return expr;
 }
 
 void Parser::add_logger(Logger *logger)

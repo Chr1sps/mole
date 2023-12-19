@@ -86,7 +86,8 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
 #define CASTEXPR(expr, type, position)                                        \
     std::make_unique<CastExpr>(expr, type, position)
 
-#define PARENEXPR(value, position) std::make_unique<ParenExpr>(value, position)
+// #define PARENEXPR(value, position) std::make_unique<ParenExpr>(value,
+// position)
 
 #define LITERALS(...) ARGS(__VA_ARGS__)
 #define LARM(literals, block, position)                                       \
@@ -595,9 +596,8 @@ TEST_CASE("Function calls.")
                     FUNCTIONS(), EXTERNS()));
     COMPARE(L"let var=(foo)();",
             PROGRAM(GLOBALS(VAR(L"var", nullptr,
-                                CALLEXPR(PARENEXPR(VAREXPR(L"foo", POS(1, 10)),
-                                                   POS(1, 9)),
-                                         ARGS(), POS(1, 9)),
+                                CALLEXPR(VAREXPR(L"foo", POS(1, 9)), ARGS(),
+                                         POS(1, 9)),
                                 false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
     THROWS_ERRORS(L"let var=foo(1,);");
@@ -662,23 +662,21 @@ TEST_CASE("Match statements.")
     SECTION("No arms.")
     {
         THROWS_WRAPPED(L"match(){}");
-        COMPARE_WRAPPED(
-            L"match(a){}",
-            STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
-                        ARMS(), POS(1, 10))));
+        COMPARE_WRAPPED(L"match(a){}", STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
+                                                   ARMS(), POS(1, 10))));
     }
     SECTION("Literal arms.")
     {
         THROWS_WRAPPED(L"match(a){1=>}");
         COMPARE_WRAPPED(
             L"match(a){1=>{}}",
-            STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
+            STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
                         ARMS(LARM(LITERALS(I32EXPR(1, POS(1, 19))),
                                   BLOCK(STMTS(), POS(1, 22)), POS(1, 19))),
                         POS(1, 10))));
         COMPARE_WRAPPED(
             L"match(a){1=>{}2=>{}}",
-            STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
+            STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
                         ARMS(LARM(LITERALS(I32EXPR(1, POS(1, 19))),
                                   BLOCK(STMTS(), POS(1, 22)), POS(1, 19)),
                              LARM(LITERALS(I32EXPR(2, POS(1, 24))),
@@ -686,7 +684,7 @@ TEST_CASE("Match statements.")
                         POS(1, 10))));
         COMPARE_WRAPPED(
             L"match(a){1|2|3=>{}}",
-            STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
+            STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
                         ARMS(LARM(LITERALS(I32EXPR(1, POS(1, 19)),
                                            I32EXPR(2, POS(1, 21)),
                                            I32EXPR(3, POS(1, 23))),
@@ -695,14 +693,12 @@ TEST_CASE("Match statements.")
         COMPARE_WRAPPED(
             L"match(a){-1|(2+3)|4=>{}}",
             STMTS(MATCH(
-                PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
+                VAREXPR(L"a", POS(1, 15)),
                 ARMS(LARM(
-                    LITERALS(
-                        UNEXPR(I32EXPR(1, POS(1, 20)), MINUS, POS(1, 19)),
-                        PARENEXPR(BINEXPR(I32EXPR(2, POS(1, 23)), ADD,
-                                          I32EXPR(3, POS(1, 25)), POS(1, 23)),
-                                  POS(1, 22)),
-                        I32EXPR(4, POS(1, 28))),
+                    LITERALS(UNEXPR(I32EXPR(1, POS(1, 20)), MINUS, POS(1, 19)),
+                             BINEXPR(I32EXPR(2, POS(1, 23)), ADD,
+                                     I32EXPR(3, POS(1, 25)), POS(1, 22)),
+                             I32EXPR(4, POS(1, 28))),
                     BLOCK(STMTS(), POS(1, 26)), POS(1, 19))),
                 POS(1, 10))));
     }
@@ -712,18 +708,17 @@ TEST_CASE("Match statements.")
         THROWS_WRAPPED(L"match(a){if(2)=>}");
         COMPARE_WRAPPED(
             L"match(a){if(1)=>{}}",
-            STMTS(
-                MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
-                      ARMS(GARM(PARENEXPR(I32EXPR(1, POS(1, 22)), POS(1, 21)),
-                                BLOCK(STMTS(), POS(1, 26)), POS(1, 19))),
-                      POS(1, 10))));
+            STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
+                        ARMS(GARM(I32EXPR(1, POS(1, 21)),
+                                  BLOCK(STMTS(), POS(1, 26)), POS(1, 19))),
+                        POS(1, 10))));
     }
     SECTION("Placeholder arms.")
     {
         THROWS_WRAPPED(L"match(a){_=>}");
         COMPARE_WRAPPED(
             L"match(a){_=>{}}",
-            STMTS(MATCH(PARENEXPR(VAREXPR(L"a", POS(1, 16)), POS(1, 15)),
+            STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
                         ARMS(PARM(BLOCK(STMTS(), POS(1, 22)), POS(1, 19))),
                         POS(1, 10))));
     }
@@ -737,28 +732,26 @@ TEST_CASE("If statements.")
     THROWS_WRAPPED(L"if(1){}else");
     THROWS_WRAPPED(L"if(1){}else;");
     THROWS_WRAPPED(L"if(1);else;");
+    COMPARE_WRAPPED(L"if(1){}", STMTS(IF(I32EXPR(1, POS(1, 12)),
+                                         BLOCK(STMTS(), POS(1, 15)), nullptr,
+                                         POS(1, 10))));
+    COMPARE_WRAPPED(L"if(1)return;", STMTS(IF(I32EXPR(1, POS(1, 12)),
+                                              RETURN(nullptr, POS(1, 15)),
+                                              nullptr, POS(1, 10))));
     COMPARE_WRAPPED(
-        L"if(1){}",
-        STMTS(IF(PARENEXPR(I32EXPR(1, POS(1, 13)), POS(1, 12)),
-                 BLOCK(STMTS(), POS(1, 15)), nullptr, POS(1, 10))));
-    COMPARE_WRAPPED(
-        L"if(1)return;",
-        STMTS(IF(PARENEXPR(I32EXPR(1, POS(1, 13)), POS(1, 12)),
-                 RETURN(nullptr, POS(1, 15)), nullptr, POS(1, 10))));
-    COMPARE_WRAPPED(L"if(1){}else{}",
-                    STMTS(IF(PARENEXPR(I32EXPR(1, POS(1, 13)), POS(1, 12)),
-                             BLOCK(STMTS(), POS(1, 15)),
-                             BLOCK(STMTS(), POS(1, 21)), POS(1, 10))));
+        L"if(1){}else{}",
+        STMTS(IF(I32EXPR(1, POS(1, 12)), BLOCK(STMTS(), POS(1, 15)),
+                 BLOCK(STMTS(), POS(1, 21)), POS(1, 10))));
     COMPARE_WRAPPED(
         L"if(1)return;else break;",
-        STMTS(IF(PARENEXPR(I32EXPR(1, POS(1, 13)), POS(1, 12)),
-                 RETURN(nullptr, POS(1, 15)), BREAK(POS(1, 27)), POS(1, 10))));
-    COMPARE_WRAPPED(L"if(1)if(2){}else{}else{}",
-                    STMTS(IF(PARENEXPR(I32EXPR(1, POS(1, 13)), POS(1, 12)),
-                             IF(PARENEXPR(I32EXPR(2, POS(1, 18)), POS(1, 17)),
-                                BLOCK(STMTS(), POS(1, 20)),
-                                BLOCK(STMTS(), POS(1, 26)), POS(1, 15)),
-                             BLOCK(STMTS(), POS(1, 32)), POS(1, 10))));
+        STMTS(IF(I32EXPR(1, POS(1, 12)), RETURN(nullptr, POS(1, 15)),
+                 BREAK(POS(1, 27)), POS(1, 10))));
+    COMPARE_WRAPPED(
+        L"if(1)if(2){}else{}else{}",
+        STMTS(IF(I32EXPR(1, POS(1, 12)),
+                 IF(I32EXPR(2, POS(1, 17)), BLOCK(STMTS(), POS(1, 20)),
+                    BLOCK(STMTS(), POS(1, 26)), POS(1, 15)),
+                 BLOCK(STMTS(), POS(1, 32)), POS(1, 10))));
 }
 
 TEST_CASE("While statements.")
@@ -767,9 +760,9 @@ TEST_CASE("While statements.")
     THROWS_WRAPPED(L"while(1)");
     THROWS_WRAPPED(L"while(1);");
     COMPARE_WRAPPED(L"while(1){}",
-                    STMTS(WHILE(PARENEXPR(I32EXPR(1, POS(1, 16)), POS(1, 15)),
+                    STMTS(WHILE(I32EXPR(1, POS(1, 15)),
                                 BLOCK(STMTS(), POS(1, 18)), POS(1, 10))));
     COMPARE_WRAPPED(L"while(1)continue;",
-                    STMTS(WHILE(PARENEXPR(I32EXPR(1, POS(1, 16)), POS(1, 15)),
-                                CONTINUE(POS(1, 18)), POS(1, 10))));
+                    STMTS(WHILE(I32EXPR(1, POS(1, 15)), CONTINUE(POS(1, 18)),
+                                POS(1, 10))));
 }
