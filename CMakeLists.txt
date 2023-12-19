@@ -45,7 +45,9 @@ option(TESTS "Compile the tests executables." TRUE)
 
 if(NOT COVERAGE)
     add_executable(molec main.cpp)
-    target_link_libraries(molec PRIVATE mole_lexer)
+
+    # target_link_libraries(molec PRIVATE mole)
+    target_link_libraries(molec PRIVATE mole_ast mole_lexer mole_logger mole_parser mole_print_visitor mole_reader mole_utils)
 endif()
 
 function(new_test)

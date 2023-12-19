@@ -20,3 +20,15 @@ const std::vector<LogMessage> &DebugLogger::get_messages() const
 {
     return this->messages;
 }
+
+void ExecutionLogger::log(const LogMessage &msg)
+{
+    if (msg.log_level >= this->threshold)
+        this->run = false;
+}
+
+void ConsoleLogger::log(const LogMessage &msg)
+{
+    this->out << "[" << this->log_level_strings[msg.log_level] << "]"
+              << msg.text << std::endl;
+}

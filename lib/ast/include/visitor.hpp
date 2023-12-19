@@ -89,7 +89,10 @@ class MatchArmVisitor : Visitor
     virtual void visit(const PlaceholderArm &node) = 0;
 };
 
-class AstVisitor : public ExprVisitor, StmtVisitor, MatchArmVisitor
+class AstVisitor : public ExprVisitor,
+                   public StmtVisitor,
+                   public MatchArmVisitor,
+                   public TypeVisitor
 {
   public:
     virtual void visit(const Program &node) = 0;
@@ -97,5 +100,6 @@ class AstVisitor : public ExprVisitor, StmtVisitor, MatchArmVisitor
     using ExprVisitor::visit;
     using MatchArmVisitor::visit;
     using StmtVisitor::visit;
+    using TypeVisitor::visit;
 };
 #endif

@@ -2,11 +2,12 @@
 #define __LOGGER_HPP__
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-enum class LogLevel
+enum class LogLevel : uint8_t
 {
     INFO,
     WARNING,
@@ -30,7 +31,43 @@ class Logger
 
 using LoggerPtr = std::shared_ptr<Logger>;
 
+class ConsoleLogger : public Logger
+{
+    std::wostream &out;
+
+  public:
+    ConsoleLogger() : out(std::wcout)
+    {
+    }
+
+    void log(const LogMessage &msg) override;
+};
+
+class ExecutionLogger : public Logger
+{
+    bool run;
+    LogLevel threshold;
+
+  public:
+    ExecutionLogger(const LogLevel &threshold)
+        : run(true), threshold(threshold)
+    {
+    }
+
+    ExecutionLogger() : ExecutionLogger(LogLevel::ERROR)
+    {
+    }
+
+    void log(const LogMessage &msg) override;
+
+    operator bool()
+    {
+        return this->run;
+    }
+};
+
 class FileLogger : public Logger
+
 {
     std::filesystem::path file_path;
     std::wofstream output;

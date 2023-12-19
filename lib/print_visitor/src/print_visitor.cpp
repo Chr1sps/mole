@@ -1,314 +1,265 @@
 #include "print_visitor.hpp"
+#include "nlohmann/json.hpp"
 #include <functional>
 
-std::map<BinOpEnum, std::wstring> PrintVisitor::bin_op_strings = {
-    {BinOpEnum::ADD, L"+"},     {BinOpEnum::AND, L"&&"},
-    {BinOpEnum::BIT_AND, L"&"}, {BinOpEnum::BIT_OR, L"|"},
-    {BinOpEnum::BIT_XOR, L"^"}, {BinOpEnum::DIV, L"/"},
-    {BinOpEnum::EQ, L"=="},     {BinOpEnum::EXP, L"^^"},
-    {BinOpEnum::GE, L">="},     {BinOpEnum::GT, L">"},
-    {BinOpEnum::LE, L"<="},     {BinOpEnum::LT, L">"},
-    {BinOpEnum::MOD, L"%"},     {BinOpEnum::MUL, L"*"},
-    {BinOpEnum::NEQ, L"!="},    {BinOpEnum::OR, L"||"},
-    {BinOpEnum::SHL, L"<<"},    {BinOpEnum::SHR, L">>"},
-    {BinOpEnum::SUB, L"-"},
-
-};
-
-std::map<UnaryOpEnum, std::wstring> PrintVisitor::unary_op_strings = {
-    {UnaryOpEnum::BIT_NEG, L"~"},
-    {UnaryOpEnum::DEC, L"--"},
-    {UnaryOpEnum::INC, L"++"},
-    {UnaryOpEnum::NEG, L"!"},
-};
-
-std::map<TypeEnum, std::wstring> PrintVisitor::type_string_map = {
-    {TypeEnum::I8, L"i8"},   {TypeEnum::I16, L"i16"}, {TypeEnum::I32, L"i32"},
-    {TypeEnum::I64, L"i64"}, {TypeEnum::U8, L"u8"},   {TypeEnum::U16, L"u16"},
-    {TypeEnum::U32, L"u32"}, {TypeEnum::U64, L"u64"}, {TypeEnum::F32, L"f32"},
-    {TypeEnum::F64, L"f64"},
-};
-
-std::map<AssignType, std::wstring> PrintVisitor::assign_strings = {
-    {AssignType::NORMAL, L"="},   {AssignType::PLUS, L"+="},
-    {AssignType::MINUS, L"-="},   {AssignType::MUL, L"*="},
-    {AssignType::DIV, L"/="},     {AssignType::EXP, L"^^="},
-    {AssignType::MOD, L"%="},     {AssignType::BIT_NEG, L"~="},
-    {AssignType::BIT_AND, L"&="}, {AssignType::BIT_OR, L"|="},
-    {AssignType::BIT_XOR, L"^="}, {AssignType::SHL, L"<<="},
-    {AssignType::SHR, L">>="},
-};
-
-void PrintVisitor::print_indent()
+nlohmann::json PrintVisitor::get_position(const Position &position)
 {
-    this->out << this->indent_if_not_debug();
-}
-
-void PrintVisitor::increment_indent()
-{
-    ++(this->indent_level);
-}
-
-void PrintVisitor::decrement_indent()
-{
-    --(this->indent_level);
-}
-
-std::wstring PrintVisitor::space_if_not_debug()
-{
-    return (this->debug_mode) ? (L"") : (L" ");
-}
-
-std::wstring PrintVisitor::newline_if_not_debug()
-{
-    return (this->debug_mode) ? (L"") : (L"\n");
-}
-
-std::wstring PrintVisitor::indent_if_not_debug()
-{
-    if (this->debug_mode)
-        return L"";
-    else
-    {
-        auto result = std::wstring();
-        for (unsigned i = 0; i < this->indent_level * 4; ++i)
-            result += L" ";
-        return result;
-    }
-}
-
-std::wstring PrintVisitor::lparen_if_debug()
-{
-    return (this->debug_mode) ? (L"(") : (L"");
-}
-
-std::wstring PrintVisitor::rparen_if_debug()
-{
-    return (this->debug_mode) ? (L")") : (L"");
+    nlohmann::json result;
+    result["line"] = position.line;
+    result["column"] = position.column;
+    return result;
 }
 
 void PrintVisitor::visit(const VariableExpr &node)
 {
-    this->out << node.name;
+    nlohmann::json output;
+    output["type"] = "VarExpr";
+    output["value"] = node.name;
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const I32Expr &node)
 {
-    this->out << node.value;
+    nlohmann::json output;
+    output["type"] = "I32Expr";
+    output["value"] = node.value;
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const F64Expr &node)
 {
-    this->out << node.value;
+    nlohmann::json output;
+    output["type"] = "F64Expr";
+    output["value"] = node.value;
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const BinaryExpr &node)
 {
-    this->out << this->lparen_if_debug();
+    nlohmann::json output;
+    output["type"] = "BinaryExpr";
     node.lhs->accept(*this);
-    this->out << this->space_if_not_debug();
-    node.op->accept(*this);
-    this->out << this->space_if_not_debug();
+    output["lhs"] = this->last_object;
+    // output["op"] = ;
     node.rhs->accept(*this);
-    this->out << this->rparen_if_debug();
+    output["rhs"] = this->last_object;
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const UnaryExpr &node)
 {
-    this->out << this->lparen_if_debug();
-    node.op->accept(*this);
+    nlohmann::json output;
+    output["type"] = "UnaryExpr";
+    // output["op"] = ;
     node.expr->accept(*this);
-    this->out << this->rparen_if_debug();
+    output["expr"] = this->last_object;
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const CallExpr &node)
 {
-    node.callable->accept(*this);
-    this->out << "(";
-    for (unsigned long i = 0; i < node.args.size(); ++i)
+    nlohmann::json output;
+    output["type"] = "CallExpr";
+    for (const auto &arg : node.args)
     {
-        node.args[i]->accept(*this);
-        if (i < node.args.size() - 1)
-            this->out << "," << this->space_if_not_debug();
+        arg->accept(*this);
+        output["args"].push_back(this->last_object);
     }
-    this->out << ")";
-}
-
-void PrintVisitor::print_optional_args(
-    const std::vector<std::optional<ExprNodePtr>> &args)
-{
-    for (unsigned i = 0; i < args.size(); ++i)
-    {
-        auto &arg = args[i];
-        if (arg.has_value())
-            arg.value()->accept(*this);
-        else
-            this->out << "_";
-        if (i < args.size() - 1)
-            this->out << "," << this->space_if_not_debug();
-    }
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const LambdaCallExpr &node)
 {
-    node.callable->accept(*this);
-    this->out << "(";
-    this->print_optional_args(node.args);
-    if (node.is_ellipsis)
-        this->out << "," << this->space_if_not_debug() << "...";
-    this->out << ")";
+    nlohmann::json output;
+    output["type"] = "LambdaCallExpr";
+    for (const auto &arg : node.args)
+    {
+        if (arg)
+        {
+            arg->accept(*this);
+            output["args"].push_back(this->last_object);
+        }
+        else
+            output["args"].push_back(nullptr);
+    }
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const Block &node)
 {
-    if (this->function_block_indent)
-        this->function_block_indent = false;
-    else
-        this->print_indent();
-    this->out << "{" << this->newline_if_not_debug();
-    this->increment_indent();
-    for (auto &stmt : node.statements)
+    nlohmann::json output;
+    output["type"] = "Block";
+    for (const auto &stmt : node.statements)
+    {
         stmt->accept(*this);
-    this->decrement_indent();
-    this->print_indent();
-    this->out << "}" << this->newline_if_not_debug();
+        output["stmts"].push_back(this->last_object);
+    }
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const ReturnStmt &node)
 {
-    this->print_indent();
-    this->out << "return";
-    if (node.expr.has_value())
+    nlohmann::json output;
+    output["type"] = "ReturnStmt";
+    if (node.expr)
     {
-        this->out << " ";
-        (*node.expr)->accept(*this);
+        node.expr->accept(*this);
+        output["value"] = this->last_object;
     }
-    this->out << ";" << this->newline_if_not_debug();
-}
-
-void PrintVisitor::print_params(const std::vector<ParamPtr> &params)
-{
-    for (unsigned long i = 0; i < params.size(); ++i)
+    else
     {
-        this->out << params[i]->name << ":" << this->space_if_not_debug();
-        params[i]->type->accept(*this);
-        if (i < params.size() - 1)
-            this->out << "," << this->space_if_not_debug();
+        output["value"] = nullptr;
     }
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const FuncDefStmt &node)
 {
-    this->print_indent();
-    this->out << "fn ";
-    if (node.is_const)
-        this->out << "const ";
-    this->out << node.name << "(";
-    this->print_params(node.params);
-    this->out << ")" << this->space_if_not_debug() << "=>"
-              << this->space_if_not_debug();
-    node.return_type->accept(*this);
-    this->out << this->space_if_not_debug();
-    this->function_block_indent = true;
+    nlohmann::json output;
+    output["type"] = "FuncDefStmt";
+    output["name"] = node.name;
+    output["const"] = node.is_const;
+    for (const auto &param : node.params)
+    {
+        param->accept(*this);
+    }
+    if (node.return_type)
+    {
+        node.return_type->accept(*this);
+        output["return_type"] = this->last_object;
+    }
     node.block->accept(*this);
+    output["block"] = this->last_object;
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const AssignStmt &node)
 {
-    this->print_indent();
-    this->out << node.name << this->space_if_not_debug()
-              << this->assign_strings.at(node.type)
-              << this->space_if_not_debug();
-    node.value->accept(*this);
-    this->out << L";" << this->newline_if_not_debug();
+    nlohmann::json output;
+    output["type"] = "AssignStmt";
+    node.lhs->accept(*this);
+    output["lhs"] = this->last_object;
+    // output["op"] = node.type
+    node.rhs->accept(*this);
+    output["rhs"] = this->last_object;
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const VarDeclStmt &node)
 {
-    this->print_indent();
-    this->out << "let ";
-    if (node.is_mut)
-        this->out << "mut ";
-    this->out << node.name;
-    if (node.type.has_value())
+    nlohmann::json output;
+    output["type"] = "VarDeclStmt";
+    output["name"] = node.name;
+    if (node.type)
     {
-        this->out << this->space_if_not_debug() << ":"
-                  << this->space_if_not_debug();
-        node.type.value()->accept(*this);
+        node.type->accept(*this);
+        output["var_type"] = this->last_object;
     }
-    if (node.initial_value.has_value())
+    else
     {
-        this->out << this->space_if_not_debug() << "="
-                  << this->space_if_not_debug();
-        node.initial_value.value()->accept(*this);
+        output["var_type"] = nullptr;
     }
-    this->out << ";" << this->newline_if_not_debug();
+    output["mut"] = node.is_mut;
+    if (node.initial_value)
+    {
+        node.initial_value->accept(*this);
+        output["value"] = this->last_object;
+    }
+    else
+    {
+        output["value"] = nullptr;
+    }
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const ExternStmt &node)
 {
-    this->print_indent();
-    this->out << "extern " << node.name << "(";
-    this->print_params(node.params);
-    this->out << ")" << this->space_if_not_debug() << "=>"
-              << this->space_if_not_debug();
-    node.return_type->accept(*this);
-    this->out << ";" << this->newline_if_not_debug();
+    nlohmann::json output;
+    output["type"] = "ExternStmt";
+    output["name"] = node.name;
+    for (const auto &param : node.params)
+    {
+        param->accept(*this);
+    }
+    if (node.return_type)
+    {
+        node.return_type->accept(*this);
+        output["return_type"] = this->last_object;
+    }
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const Program &node)
 {
+    nlohmann::json output;
+    output["type"] = "Program";
     for (auto &ext : node.externs)
+    {
         ext->accept(*this);
+        output["externs"].push_back(this->last_object);
+    }
     for (auto &var : node.globals)
+    {
         var->accept(*this);
+        output["globals"].push_back(this->last_object);
+    }
     for (auto &function : node.functions)
+    {
         function->accept(*this);
-}
-
-void PrintVisitor::visit(const NeverType &type)
-{
-    this->out << L"!";
+        output["functions"].push_back(this->last_object);
+    }
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const SimpleType &type)
 {
-    this->out << this->type_string_map.at(type.type);
+    nlohmann::json output;
+    output["type"] = "SimpleType";
+    output["ref_spec"] = "TODO";
+    // output["value"] = type.type;
+    output["value"] = "TODO";
+    // output["position"] = this->get_position(node.position);
+    this->last_object = output;
 }
 
 void PrintVisitor::visit(const FunctionType &type)
 {
-    this->out << "fn";
-    if (type.is_const)
-        this->out << " const";
-    this->out << "(";
-    for (unsigned long i = 0; i < type.arg_types.size(); ++i)
+    nlohmann::json output;
+    output["type"] = "FnType";
+    output["const"] = type.is_const;
+    for (const auto &arg_type : type.arg_types)
     {
-        type.arg_types[i]->accept(*this);
-        if (i < type.arg_types.size() - 1)
-            this->out << ",";
+        arg_type->accept(*this);
+        output["args"] = this->last_object;
     }
-    this->out << ")" << this->space_if_not_debug() << "=>"
-              << this->space_if_not_debug();
-    type.return_type->accept(*this);
+    if (type.return_type)
+    {
+        type.return_type->accept(*this);
+        output["return_type"] = this->last_object;
+    }
+    else
+    {
+        output["return_type"] = nullptr;
+    }
+    this->last_object = output;
 }
 
-void PrintVisitor::visit(const BuiltInBinOp &op)
+nlohmann::json JsonSerializer::serialize(const Program &program)
 {
-    this->out << this->bin_op_strings.at(op.op);
-}
-
-void PrintVisitor::visit(const BuiltInUnaryOp &op)
-{
-    this->out << this->unary_op_strings.at(op.op);
-}
-
-void PrintVisitor::turn_on_debug_mode()
-{
-    this->debug_mode = true;
-}
-
-void PrintVisitor::turn_off_debug_mode()
-{
-    this->debug_mode = false;
+    program.accept(this->visitor);
+    return this->visitor.last_object;
 }
