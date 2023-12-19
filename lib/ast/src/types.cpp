@@ -5,37 +5,12 @@ void SimpleTypeVisitor::visit(const SimpleType &other)
     this->value = this->type.type == other.type;
 }
 
-void SimpleTypeVisitor::visit(const NeverType &other)
-{
-    this->value = false;
-}
-
 void SimpleTypeVisitor::visit(const FunctionType &other)
 {
     this->value = false;
 }
 
-void NeverTypeVisitor::visit(const SimpleType &other)
-{
-    this->value = false;
-}
-
-void NeverTypeVisitor::visit(const NeverType &other)
-{
-    this->value = true;
-}
-
-void NeverTypeVisitor::visit(const FunctionType &other)
-{
-    this->value = false;
-}
-
 void FunctionTypeVisitor::visit(const SimpleType &other)
-{
-    this->value = false;
-}
-
-void FunctionTypeVisitor::visit(const NeverType &other)
 {
     this->value = false;
 }
@@ -57,13 +32,6 @@ void FunctionTypeVisitor::visit(const FunctionType &other)
 void TypeEquationVisitor::visit(const SimpleType &other)
 {
     auto visitor = SimpleTypeVisitor(other);
-    type.accept(visitor);
-    this->value = visitor.value;
-}
-
-void TypeEquationVisitor::visit(const NeverType &other)
-{
-    auto visitor = NeverTypeVisitor();
     type.accept(visitor);
     this->value = visitor.value;
 }

@@ -47,7 +47,7 @@ if(NOT COVERAGE)
     add_executable(molec main.cpp)
 
     # target_link_libraries(molec PRIVATE mole)
-    target_link_libraries(molec PRIVATE mole_ast mole_lexer mole_logger mole_parser mole_print_visitor mole_reader mole_utils)
+    target_link_libraries(molec PRIVATE mole_ast mole_lexer mole_logger mole_parser mole_json_serializer mole_reader mole_utils)
 endif()
 
 function(new_test)

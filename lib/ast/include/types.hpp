@@ -96,20 +96,10 @@ struct SimpleTypeVisitor : public TypeVisitor
     }
 
     void visit(const SimpleType &other) override;
-    void visit(const NeverType &other) override;
     void visit(const FunctionType &other) override;
 
   private:
     const SimpleType &type;
-};
-
-struct NeverTypeVisitor : public TypeVisitor
-{
-    bool value;
-
-    void visit(const SimpleType &other) override;
-    void visit(const NeverType &other) override;
-    void visit(const FunctionType &other) override;
 };
 
 struct FunctionTypeVisitor : public TypeVisitor
@@ -121,7 +111,6 @@ struct FunctionTypeVisitor : public TypeVisitor
     }
 
     void visit(const SimpleType &other) override;
-    void visit(const NeverType &other) override;
     void visit(const FunctionType &other) override;
 
   private:
@@ -138,7 +127,6 @@ struct TypeEquationVisitor : public TypeVisitor
     }
 
     void visit(const SimpleType &other) override;
-    void visit(const NeverType &other) override;
     void visit(const FunctionType &other) override;
 
   private:

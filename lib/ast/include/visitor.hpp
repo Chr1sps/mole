@@ -31,7 +31,6 @@ struct ExternStmt;
 struct Program;
 struct Parameter;
 
-struct NeverType;
 struct SimpleType;
 struct FunctionType;
 
@@ -42,7 +41,6 @@ class Visitor
 class TypeVisitor : public Visitor
 {
   public:
-    virtual void visit(const NeverType &type) = 0;
     virtual void visit(const SimpleType &type) = 0;
     virtual void visit(const FunctionType &type) = 0;
 };

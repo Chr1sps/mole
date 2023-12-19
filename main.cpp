@@ -1,5 +1,5 @@
+#include "json_serializer.hpp"
 #include "parser.hpp"
-#include "print_visitor.hpp"
 // #include "semantic_checker.hpp"
 #include "locale.hpp"
 #include <system_error>
@@ -31,7 +31,7 @@ int main(int argc, char **argv)
         }
         auto serializer = JsonSerializer();
         auto result = serializer.serialize(*program);
-        std::cout << result << std::endl;
+        std::cout << result.dump(4) << std::endl;
         return 0;
     }
 }
