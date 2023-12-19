@@ -19,7 +19,7 @@ struct BinOpData
     }
 };
 
-class Parser
+class Parser : public Reporter
 {
     static std::map<TokenType, BinOpData> binary_map;
     static std::map<TokenType, UnaryOpEnum> unary_map;
@@ -29,7 +29,6 @@ class Parser
 
     LexerPtr lexer;
     std::optional<Token> current_token;
-    std::unordered_set<Logger *> loggers;
 
     void next_token();
 
@@ -117,7 +116,7 @@ class Parser
 
     ExprNodePtr parse_index_part();
 
-    void report_error(const std::wstring &error_msg);
+    std::wstring wrap_error_msg(const std::wstring &error_msg) override;
 
   public:
     Parser() : lexer(nullptr)
@@ -135,9 +134,6 @@ class Parser
     }
 
     ProgramPtr parse();
-
-    void add_logger(Logger *logger);
-    void remove_logger(Logger *logger);
 
     LexerPtr attach_lexer(LexerPtr &lexer);
     LexerPtr detach_lexer();

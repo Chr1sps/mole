@@ -16,7 +16,7 @@ target_link_libraries(mole_json_serializer PUBLIC mole_ast)
 target_link_libraries(mole_json_serializer PUBLIC compiler_flags)
 
 include(FetchContent)
-
+cmake_policy(SET CMP0135 NEW)
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz)
 FetchContent_MakeAvailable(json)
 

@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 enum class LogLevel : uint8_t
 {
@@ -90,5 +91,33 @@ class DebugLogger : public Logger
     DebugLogger() = default;
     void log(const LogMessage &msg) override;
     const std::vector<LogMessage> &get_messages() const;
+};
+
+class Reporter
+{
+  protected:
+    std::unordered_set<Logger *> loggers;
+    virtual std::wstring wrap_error_msg(const std::wstring &msg) = 0;
+
+  public:
+    void report_error(const std::wstring &error_msg)
+    {
+        auto wrapped = this->wrap_error_msg(error_msg);
+        auto log_entry = LogMessage(wrapped, LogLevel::ERROR);
+        for (const auto &logger : this->loggers)
+        {
+            logger->log(log_entry);
+        }
+    }
+
+    void add_logger(Logger *logger)
+    {
+        this->loggers.insert(logger);
+    }
+
+    void remove_logger(Logger *logger)
+    {
+        this->loggers.erase(logger);
+    }
 };
 #endif

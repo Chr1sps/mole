@@ -83,6 +83,13 @@ std::map<TokenType, AssignType> Parser::assign_map{
 };
 #undef ASSIGN_TYPE
 
+std::wstring Parser::wrap_error_msg(const std::wstring &msg)
+{
+    return build_wstring(
+        L"Parser error at [", this->current_token->position.line, ",",
+        this->current_token->position.column, "]: ", msg, ".");
+}
+
 void Parser::next_token()
 {
     do
@@ -97,18 +104,6 @@ void Parser::assert_current_and_eat(TokenType type,
     if (this->current_token != type)
         this->report_error(error_msg);
     this->next_token();
-}
-
-void Parser::report_error(const std::wstring &msg)
-{
-    auto error_msg = build_wstring(
-        L"Parser error at [", this->current_token->position.line, ",",
-        this->current_token->position.column, "]: ", msg, ".");
-    auto log_msg = LogMessage(error_msg, LogLevel::ERROR);
-    for (auto logger : this->loggers)
-    {
-        logger->log(log_msg);
-    }
 }
 
 //
@@ -862,14 +857,6 @@ ExprNodePtr Parser::parse_binary_expr()
     std::stack<ExprNodePtr> values;
     std::stack<BinOpData> ops;
     decltype(this->binary_map)::iterator iter;
-    if (auto expr = this->parse_cast_expr())
-    {
-        values.push(std::move(expr));
-    }
-    else
-    {
-        return nullptr;
-    }
     while (true)
     {
         if (auto expr = this->parse_cast_expr())
@@ -1152,16 +1139,6 @@ ExprNodePtr Parser::parse_paren_expr()
 
     expr->position = position;
     return expr;
-}
-
-void Parser::add_logger(Logger *logger)
-{
-    this->loggers.insert(logger);
-}
-
-void Parser::remove_logger(Logger *logger)
-{
-    this->loggers.erase(logger);
 }
 
 LexerPtr Parser::attach_lexer(LexerPtr &lexer)

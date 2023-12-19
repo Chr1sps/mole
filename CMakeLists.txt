@@ -14,7 +14,7 @@ include_directories(${LLVM_INCLUDE_DIRS})
 message(STATUS "${LLVM_INCLUDE_DIRS}")
 
 add_library(compiler_flags INTERFACE)
-target_compile_features(compiler_flags INTERFACE cxx_std_20)
+target_compile_features(compiler_flags INTERFACE cxx_std_23)
 
 target_compile_options(compiler_flags
     INTERFACE

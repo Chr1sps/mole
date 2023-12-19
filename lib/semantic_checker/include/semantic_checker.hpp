@@ -1,6 +1,5 @@
 #ifndef __SEMANTIC_CHECKER_HPP__
 #define __SEMANTIC_CHECKER_HPP__
-#include "exceptions.hpp"
 #include "string_builder.hpp"
 #include "types.hpp"
 #include "visitor.hpp"
@@ -39,6 +38,7 @@ class SemanticChecker : public AstVisitor
     };
 
     TypePtr last_type, return_type;
+    std::vector<Logger *> loggers;
 
     std::vector<std::unordered_set<std::shared_ptr<Variable>>> variables;
     std::vector<std::unordered_set<std::shared_ptr<Function>>> functions;
@@ -81,7 +81,8 @@ class SemanticChecker : public AstVisitor
 
     void check_var_name(const VarDeclStmt &node);
 
-    template <typename... Args> void report_error(Args &&...args);
+    // template <typename... Args> void report_error(Args &&...args);
+    void report_error(const std::wstring &error_msg);
 
   public:
     void visit(const VariableExpr &node) override; // tu trzeba dać
@@ -100,10 +101,10 @@ class SemanticChecker : public AstVisitor
     void visit(const Program &node) override;
 };
 
-template <typename... Args> void SemanticChecker::report_error(Args &&...args)
-{
-    std::wstring full_msg =
-        build_wstring(L"[ERROR] Semantic error: ", args..., L".");
-    throw SemanticException(full_msg);
-}
+// template <typename... Args> void SemanticChecker::report_error(Args
+// &&...args)
+// {
+//     std::wstring full_msg = build_wstring(L"Semantic error: ", args...,
+//     L"."); throw SemanticException(full_msg);
+// }
 #endif

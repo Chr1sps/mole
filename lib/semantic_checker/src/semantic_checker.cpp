@@ -1,8 +1,11 @@
 #include "semantic_checker.hpp"
 #include "ast.hpp"
-#include "exceptions.hpp"
 #include "string_builder.hpp"
 #include <algorithm>
+
+void SemanticChecker::report_error(const std::wstring &error_msg)
+{
+}
 
 void SemanticChecker::enter_scope()
 {
