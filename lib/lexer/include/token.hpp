@@ -115,7 +115,6 @@ struct Token
     TokenType type;
     std::variant<std::wstring, wchar_t, double, unsigned long long> value;
     Position position;
-    Token() = default;
 
     Token(const TokenType &type, const Position &position)
         : type(type), value(0ull), position(position)

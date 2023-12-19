@@ -1,0 +1,13 @@
+.github
+build
+docs
+html
+scripts
+tests
+
+.gitignore
+.clang-format
+lang.txt
+example.mole
+packages.txt
+README.md
