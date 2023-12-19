@@ -166,11 +166,12 @@ GENERATE_VISITOR(
 GENERATE_VISITOR(
     ExprVisitor, LambdaCallExpr,
     {
-        auto are_args_equal = std::equal(
-            this->expr.args.begin(), this->expr.args.end(), node.args.begin(),
-            node.args.end(), [](const ExprNodePtr &a, const ExprNodePtr &b) {
-                return equal_or_null(a, b);
-            });
+        auto are_args_equal =
+            std::equal(this->expr.args.begin(), this->expr.args.end(),
+                       node.args.begin(), node.args.end(),
+                       [](const ExprNodeVariant &a, const ExprNodeVariant &b) {
+                           return equal_or_null(a, b);
+                       });
         this->value = *this->expr.callable == *node.callable &&
                       are_args_equal && this->expr.position == node.position;
     },

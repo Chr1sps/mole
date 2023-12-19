@@ -45,9 +45,9 @@ auto make_uniques_vector(Types &&...args)
 }
 
 template <typename... Types>
-std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
+std::vector<std::optional<ExprNodeVariant>> make_lambda_vector(Types &&...args)
 {
-    std::vector<std::optional<ExprNodePtr>> result;
+    std::vector<std::optional<ExprNodeVariant>> result;
     (result.emplace_back(std::forward<Types>(args)), ...);
     return result;
 }

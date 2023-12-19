@@ -52,11 +52,11 @@ class Parser : public Reporter
     std::unique_ptr<Statement> parse_else_block();
 
     TypePtr parse_type_specifier();
-    ExprNodePtr parse_initial_value();
+    ExprNodeVariant parse_initial_value();
 
     std::optional<AssignType> parse_assign_op();
 
-    std::optional<std::tuple<AssignType, ExprNodePtr>> parse_assign_part();
+    std::optional<std::tuple<AssignType, ExprNodeVariant>> parse_assign_part();
 
     std::unique_ptr<ReturnStmt> parse_return_stmt();
     std::unique_ptr<Statement> parse_assign_or_expr_stmt();
@@ -82,10 +82,11 @@ class Parser : public Reporter
     std::unique_ptr<GuardArm> parse_guard_arm();
     std::unique_ptr<ElseArm> parse_else_arm();
 
-    std::optional<std::tuple<Position, std::vector<ExprNodePtr>>>
+    std::optional<std::tuple<Position, std::vector<ExprNodeVariant>>>
     parse_literal_condition();
 
-    std::optional<std::tuple<Position, ExprNodePtr>> parse_guard_condition();
+    std::optional<std::tuple<Position, ExprNodeVariant>>
+    parse_guard_condition();
 
     StmtPtr parse_match_arm_block();
 
@@ -99,22 +100,22 @@ class Parser : public Reporter
     std::unique_ptr<CharExpr> parse_char_expr();
     std::unique_ptr<BoolExpr> parse_bool_expr();
 
-    ExprNodePtr parse_paren_expr();
+    ExprNodeVariant parse_paren_expr();
 
-    ExprNodePtr parse_factor();
-    ExprNodePtr parse_index_lambda_or_call();
-    ExprNodePtr parse_unary_expr();
-    ExprNodePtr parse_cast_expr();
-    ExprNodePtr parse_binary_expr();
+    ExprNodeVariant parse_factor();
+    ExprNodeVariant parse_index_lambda_or_call();
+    ExprNodeVariant parse_unary_expr();
+    ExprNodeVariant parse_cast_expr();
+    ExprNodeVariant parse_binary_expr();
 
-    std::optional<std::vector<ExprNodePtr>> parse_call_part();
-    std::vector<ExprNodePtr> parse_args();
+    std::optional<std::vector<ExprNodeVariant>> parse_call_part();
+    std::vector<ExprNodeVariant> parse_args();
 
-    std::optional<std::vector<ExprNodePtr>> parse_lambda_call_part();
-    std::optional<std::vector<ExprNodePtr>> parse_lambda_args();
-    std::optional<ExprNodePtr> parse_lambda_arg();
+    std::optional<std::vector<ExprNodeVariant>> parse_lambda_call_part();
+    std::optional<std::vector<ExprNodeVariant>> parse_lambda_args();
+    std::optional<ExprNodeVariant> parse_lambda_arg();
 
-    ExprNodePtr parse_index_part();
+    ExprNodeVariant parse_index_part();
 
     std::wstring wrap_error_msg(const std::wstring &error_msg) override;
 
