@@ -632,16 +632,9 @@ std::unique_ptr<MatchStmt> Parser::parse_match_stmt()
     this->assert_current_and_eat(TokenType::L_BRACKET,
                                  L"no left bracket in a match statement");
     std::vector<MatchArmPtr> match_cases;
-    while (true)
+    while (auto match_case = this->parse_match_arm())
     {
-        if (auto match_case = this->parse_match_arm())
-        {
-            match_cases.push_back(std::move(match_case));
-        }
-        else
-        {
-            break;
-        }
+        match_cases.push_back(std::move(match_case));
     }
     this->assert_current_and_eat(TokenType::R_BRACKET,
                                  L"no left bracket in a match statement");
