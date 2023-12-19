@@ -2,12 +2,12 @@
 #include "nlohmann/json.hpp"
 #include <functional>
 
+// Because std::wstring serialization creates an array of integers by
+// default, a custom serialization definition is needed.
 namespace nlohmann
 {
 template <> struct adl_serializer<std::wstring>
 {
-    // Because std::wstring serialization creates an array of integers by
-    // default, a custom serialization definition is needed.
     static void to_json(json &j, const std::wstring &str)
     {
         j = std::string(str.begin(), str.end());
@@ -106,6 +106,7 @@ void JsonSerializer::JsonVisitor::visit(const CallExpr &node)
 {
     nlohmann::json output;
     output["type"] = "CallExpr";
+    output["args"] = nlohmann::json::array();
     for (const auto &arg : node.args)
     {
         arg->accept(*this);
@@ -119,6 +120,7 @@ void JsonSerializer::JsonVisitor::visit(const LambdaCallExpr &node)
 {
     nlohmann::json output;
     output["type"] = "LambdaCallExpr";
+    output["args"] = nlohmann::json::array();
     for (const auto &arg : node.args)
     {
         if (arg)
@@ -161,6 +163,7 @@ void JsonSerializer::JsonVisitor::visit(const Block &node)
 {
     nlohmann::json output;
     output["type"] = "Block";
+    output["stmts"] = nlohmann::json::array();
     for (const auto &stmt : node.statements)
     {
         stmt->accept(*this);
@@ -202,6 +205,7 @@ void JsonSerializer::JsonVisitor::visit(const MatchStmt &node)
     output["type"] = "MatchStmt";
     node.matched_expr->accept(*this);
     output["matched_expr"] = this->last_object;
+    output["arms"] = nlohmann::json::array();
     for (const auto &arm : node.match_arms)
     {
         arm->accept(*this);
@@ -250,9 +254,11 @@ void JsonSerializer::JsonVisitor::visit(const FuncDefStmt &node)
     output["type"] = "FuncDefStmt";
     output["name"] = node.name;
     output["const"] = node.is_const;
+    output["params"] = nlohmann::json::array();
     for (const auto &param : node.params)
     {
         param->accept(*this);
+        output["params"] = this->last_object;
     }
     if (node.return_type)
     {
@@ -339,16 +345,19 @@ void JsonSerializer::JsonVisitor::visit(const Program &node)
 {
     nlohmann::json output;
     output["type"] = "Program";
+    output["externs"] = nlohmann::json::array();
     for (auto &ext : node.externs)
     {
         ext->accept(*this);
         output["externs"].push_back(this->last_object);
     }
+    output["globals"] = nlohmann::json::array();
     for (auto &var : node.globals)
     {
         var->accept(*this);
         output["globals"].push_back(this->last_object);
     }
+    output["functions"] = nlohmann::json::array();
     for (auto &function : node.functions)
     {
         function->accept(*this);
@@ -373,6 +382,7 @@ void JsonSerializer::JsonVisitor::visit(const LiteralArm &node)
 {
     nlohmann::json output;
     output["type"] = "LiteralArm";
+    output["literals"] = nlohmann::json::array();
     for (const auto &literal : node.literals)
     {
         literal->accept(*this);
@@ -396,10 +406,10 @@ void JsonSerializer::JsonVisitor::visit(const GuardArm &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const PlaceholderArm &node)
+void JsonSerializer::JsonVisitor::visit(const ElseArm &node)
 {
     nlohmann::json output;
-    output["type"] = "PlaceholderArm";
+    output["type"] = "ElseArm";
     node.block->accept(*this);
     output["block"] = this->last_object;
     output["position"] = this->get_position(node.position);

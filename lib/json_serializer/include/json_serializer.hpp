@@ -44,7 +44,7 @@ class JsonSerializer
 
         void visit(const LiteralArm &node) override;
         void visit(const GuardArm &node) override;
-        void visit(const PlaceholderArm &node) override;
+        void visit(const ElseArm &node) override;
 
         void visit(const SimpleType &type) override;
         void visit(const FunctionType &type) override;

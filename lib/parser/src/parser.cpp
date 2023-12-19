@@ -39,8 +39,7 @@ std::map<TokenType, BinOpData> Parser::binary_map{
     }
 std::map<TokenType, UnaryOpEnum> Parser::unary_map{
     UNOP(INCREMENT, INC),   UNOP(DECREMENT, DEC), UNOP(NEG, NEG),
-    UNOP(BIT_NEG, BIT_NEG), UNOP(MINUS, MINUS),
-};
+    UNOP(BIT_NEG, BIT_NEG), UNOP(MINUS, MINUS),   UNOP(AMPERSAND, REF)};
 #undef UNOP
 
 #define TYPE(token_type, type)                                                \
@@ -648,7 +647,7 @@ std::unique_ptr<MatchArm> Parser::parse_match_arm()
         return arm;
     if (auto arm = this->parse_guard_arm())
         return arm;
-    if (auto arm = this->parse_placeholder_arm())
+    if (auto arm = this->parse_else_arm())
         return arm;
     return nullptr;
 }
@@ -728,23 +727,23 @@ std::optional<std::tuple<Position, ExprNodePtr>> Parser::
 }
 
 // PLACEHOLDER_ARM = PLACEHOLDER, MATCH_ARM_BLOCK;
-std::unique_ptr<PlaceholderArm> Parser::parse_placeholder_arm()
+std::unique_ptr<ElseArm> Parser::parse_else_arm()
 {
-    if (this->current_token != TokenType::PLACEHOLDER)
+    if (this->current_token != TokenType::KW_ELSE)
         return nullptr;
     auto position = this->current_token->position;
     this->next_token();
     auto block = parse_match_arm_block();
     if (!block)
     {
-        this->report_error(L"no block found in a placeholder arm");
+        this->report_error(L"no block found in an else arm");
         return nullptr;
     }
-    return std::make_unique<PlaceholderArm>(block, position);
+    return std::make_unique<ElseArm>(block, position);
 }
 
 // MATCH_ARM_BLOCK = LAMBDA_ARROW, BLOCK;
-BlockPtr Parser::parse_match_arm_block()
+StmtPtr Parser::parse_match_arm_block()
 {
     if (this->current_token != TokenType::LAMBDA_ARROW)
     {
@@ -752,7 +751,7 @@ BlockPtr Parser::parse_match_arm_block()
         return nullptr;
     }
     this->next_token();
-    return this->parse_block();
+    return this->parse_non_func_stmt();
 }
 
 // VARIABLE_EXPR = IDENTIFIER;
@@ -863,6 +862,14 @@ ExprNodePtr Parser::parse_binary_expr()
     std::stack<ExprNodePtr> values;
     std::stack<BinOpData> ops;
     decltype(this->binary_map)::iterator iter;
+    if (auto expr = this->parse_cast_expr())
+    {
+        values.push(std::move(expr));
+    }
+    else
+    {
+        return nullptr;
+    }
     while (true)
     {
         if (auto expr = this->parse_cast_expr())

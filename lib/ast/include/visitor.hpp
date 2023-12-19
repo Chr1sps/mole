@@ -19,7 +19,7 @@ struct WhileStmt;
 struct MatchStmt;
 struct LiteralArm;
 struct GuardArm;
-struct PlaceholderArm;
+struct ElseArm;
 struct BreakStmt;
 struct ContinueStmt;
 struct ReturnStmt;
@@ -84,7 +84,7 @@ class MatchArmVisitor : Visitor
   public:
     virtual void visit(const LiteralArm &node) = 0;
     virtual void visit(const GuardArm &node) = 0;
-    virtual void visit(const PlaceholderArm &node) = 0;
+    virtual void visit(const ElseArm &node) = 0;
 };
 
 class AstVisitor : public ExprVisitor,

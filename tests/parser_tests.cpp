@@ -94,7 +94,7 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
     std::make_unique<LiteralArm>(literals, block, position)
 #define GARM(condition, block, position)                                      \
     std::make_unique<GuardArm>(condition, block, position)
-#define PARM(block, position) std::make_unique<PlaceholderArm>(block, position)
+#define EARM(block, position) std::make_unique<ElseArm>(block, position)
 #define ARMS(...) make_uniques_vector<MatchArm>(__VA_ARGS__)
 
 #define MATCH(expr, arms, position)                                           \
@@ -713,13 +713,13 @@ TEST_CASE("Match statements.")
                                   BLOCK(STMTS(), POS(1, 26)), POS(1, 19))),
                         POS(1, 10))));
     }
-    SECTION("Placeholder arms.")
+    SECTION("Else arms.")
     {
-        THROWS_WRAPPED(L"match(a){_=>}");
+        THROWS_WRAPPED(L"match(a){else=>}");
         COMPARE_WRAPPED(
-            L"match(a){_=>{}}",
+            L"match(a){else=>{}}",
             STMTS(MATCH(VAREXPR(L"a", POS(1, 15)),
-                        ARMS(PARM(BLOCK(STMTS(), POS(1, 22)), POS(1, 19))),
+                        ARMS(EARM(BLOCK(STMTS(), POS(1, 22)), POS(1, 19))),
                         POS(1, 10))));
     }
 }

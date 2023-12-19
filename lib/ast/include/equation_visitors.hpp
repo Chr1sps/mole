@@ -239,7 +239,7 @@ GENERATE_VISITOR(
             compare_ptr_vectors(this->expr.literals, node.literals) &&
             this->expr.position == node.position;
     },
-    GuardArm, PlaceholderArm)
+    GuardArm, ElseArm)
 
 GENERATE_VISITOR(
     MatchArmVisitor, GuardArm,
@@ -247,10 +247,10 @@ GENERATE_VISITOR(
         this->value = *this->expr.condition_expr == *node.condition_expr &&
                       this->expr.position == node.position;
     },
-    LiteralArm, PlaceholderArm)
+    LiteralArm, ElseArm)
 
 GENERATE_VISITOR(
-    MatchArmVisitor, PlaceholderArm,
+    MatchArmVisitor, ElseArm,
     { this->value = this->expr.position == node.position; }, LiteralArm,
     GuardArm)
 
@@ -262,7 +262,7 @@ struct MatchArmEquationVisitor : MatchArmVisitor
     {
     }
 
-    MAKE_EQUATION_VISITS(LiteralArm, GuardArm, PlaceholderArm)
+    MAKE_EQUATION_VISITS(LiteralArm, GuardArm, ElseArm)
   private:
     const MatchArm &expr;
 };

@@ -2,6 +2,7 @@
 #include "parser.hpp"
 // #include "semantic_checker.hpp"
 #include "locale.hpp"
+#include <fstream>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
 #include <llvm/Support/MemoryBuffer.h>
@@ -11,17 +12,18 @@
 int main(int argc, char **argv)
 {
     llvm::cl::OptionCategory mole_opts("Mole options");
-    llvm::cl::opt<std::string> file_name(llvm::cl::Positional,
-                                         llvm::cl::desc("<input file>"),
-                                         llvm::cl::Required);
+    llvm::cl::opt<std::string> input_file(llvm::cl::Positional,
+                                          llvm::cl::desc("<input file>"),
+                                          llvm::cl::Required);
     llvm::cl::opt<bool> dump_ast(
-        "dump_ast",
+        "ast-dump",
         llvm::cl::desc(
-            "Print the abstract syntax tree instead of compiling the code."),
+            "Dump the abstract syntax tree of the file as a JSON object."),
         llvm::cl::init(false), llvm::cl::cat(mole_opts));
     llvm::cl::opt<std::string> output_file(
         "o", llvm::cl::desc("Specify the output file."),
-        llvm::cl::value_desc("filename"), llvm::cl::init("out.o"),
+        llvm::cl::value_desc("filename"),
+        // llvm::cl::init("out.o"),
         llvm::cl::cat(mole_opts));
 
     llvm::InitLLVM init(argc, argv);
@@ -35,7 +37,7 @@ int main(int argc, char **argv)
     llvm::cl::HideUnrelatedOptions(mole_opts);
     llvm::cl::ParseCommandLineOptions(argc, argv);
 
-    auto path = file_name.getValue();
+    auto path = input_file.getValue();
 
     auto locale = Locale("C.utf8");
     auto logger = ConsoleLogger();
@@ -51,8 +53,26 @@ int main(int argc, char **argv)
     {
         return std::make_error_condition(std::errc::invalid_argument).value();
     }
-    auto serializer = JsonSerializer();
-    auto result = serializer.serialize(*program);
-    std::cout << result.dump(4) << std::endl;
+    if (dump_ast.getValue())
+    {
+        auto serializer = JsonSerializer();
+        auto result = serializer.serialize(*program);
+        if (output_file.getValue() != "")
+        {
+            std::ofstream output;
+            output.open(output_file.getValue());
+            if (!output.good())
+            {
+                std::cout << "Error while opening the output file."
+                          << std::endl;
+                return std::make_error_condition(std::errc::io_error).value();
+            }
+            output << result.dump(4) << std::endl;
+            output.close();
+        }
+        else
+            std::cout << result.dump(4) << std::endl;
+        return 0;
+    }
     return 0;
 }

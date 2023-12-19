@@ -95,6 +95,7 @@ enum class UnaryOpEnum
     NEG,
     BIT_NEG,
     MINUS,
+    REF
 };
 
 struct BinaryExpr : public ExprNode
@@ -550,9 +551,9 @@ struct IfStmt : public Statement
 
 struct MatchArm : public AstNode
 {
-    BlockPtr block;
+    StmtPtr block;
 
-    MatchArm(BlockPtr &block, const Position &position)
+    MatchArm(StmtPtr &block, const Position &position)
         : AstNode(position), block(std::move(block))
     {
     }
@@ -562,14 +563,14 @@ struct MatchArm : public AstNode
 
 using MatchArmPtr = std::unique_ptr<MatchArm>;
 
-struct PlaceholderArm : public MatchArm
+struct ElseArm : public MatchArm
 {
-    PlaceholderArm(BlockPtr &block, const Position &position)
+    ElseArm(StmtPtr &block, const Position &position)
         : MatchArm(block, position)
     {
     }
 
-    PlaceholderArm(BlockPtr &&block, const Position &position)
+    ElseArm(StmtPtr &&block, const Position &position)
         : MatchArm(block, position)
     {
     }
@@ -584,13 +585,13 @@ struct GuardArm : public MatchArm
 {
     ExprNodePtr condition_expr;
 
-    GuardArm(ExprNodePtr &condition_expr, BlockPtr &block,
+    GuardArm(ExprNodePtr &condition_expr, StmtPtr &block,
              const Position &position)
         : MatchArm(block, position), condition_expr(std::move(condition_expr))
     {
     }
 
-    GuardArm(ExprNodePtr &&condition_expr, BlockPtr &&block,
+    GuardArm(ExprNodePtr &&condition_expr, StmtPtr &&block,
              const Position &position)
         : MatchArm(block, position), condition_expr(std::move(condition_expr))
     {
@@ -606,13 +607,13 @@ struct LiteralArm : public MatchArm
 {
     std::vector<ExprNodePtr> literals;
 
-    LiteralArm(std::vector<ExprNodePtr> &literals, BlockPtr &block,
+    LiteralArm(std::vector<ExprNodePtr> &literals, StmtPtr &block,
                const Position &position)
         : MatchArm(block, position), literals(std::move(literals))
     {
     }
 
-    LiteralArm(std::vector<ExprNodePtr> &&literals, BlockPtr &&block,
+    LiteralArm(std::vector<ExprNodePtr> &&literals, StmtPtr &&block,
                const Position &position)
         : MatchArm(block, position), literals(std::move(literals))
     {

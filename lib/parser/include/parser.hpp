@@ -81,14 +81,14 @@ class Parser
 
     std::unique_ptr<LiteralArm> parse_literal_arm();
     std::unique_ptr<GuardArm> parse_guard_arm();
-    std::unique_ptr<PlaceholderArm> parse_placeholder_arm();
+    std::unique_ptr<ElseArm> parse_else_arm();
 
     std::optional<std::tuple<Position, std::vector<ExprNodePtr>>>
     parse_literal_condition();
 
     std::optional<std::tuple<Position, ExprNodePtr>> parse_guard_condition();
 
-    BlockPtr parse_match_arm_block();
+    StmtPtr parse_match_arm_block();
 
     // expressions
 
