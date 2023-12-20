@@ -82,10 +82,10 @@ void JsonSerializer::JsonVisitor::visit(const BinaryExpr &node)
 {
     nlohmann::json output;
     output["type"] = "BinaryExpr";
-    node.lhs->accept(*this);
+    this->visit(*node.lhs);
     output["lhs"] = this->last_object;
     // output["op"] = ;
-    node.rhs->accept(*this);
+    this->visit(*node.rhs);
     output["rhs"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
@@ -96,7 +96,7 @@ void JsonSerializer::JsonVisitor::visit(const UnaryExpr &node)
     nlohmann::json output;
     output["type"] = "UnaryExpr";
     // output["op"] = ;
-    node.expr->accept(*this);
+    this->visit(*node.expr);
     output["expr"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
@@ -109,7 +109,7 @@ void JsonSerializer::JsonVisitor::visit(const CallExpr &node)
     output["args"] = nlohmann::json::array();
     for (const auto &arg : node.args)
     {
-        arg->accept(*this);
+        this->visit(*arg);
         output["args"].push_back(this->last_object);
     }
     output["position"] = this->get_position(node.position);
@@ -125,7 +125,7 @@ void JsonSerializer::JsonVisitor::visit(const LambdaCallExpr &node)
     {
         if (arg)
         {
-            arg->accept(*this);
+            this->visit(*arg);
             output["args"].push_back(this->last_object);
         }
         else
@@ -139,9 +139,9 @@ void JsonSerializer::JsonVisitor::visit(const IndexExpr &node)
 {
     nlohmann::json output;
     output["type"] = "IndexExpr";
-    node.expr->accept(*this);
+    this->visit(*node.expr);
     output["expr"] = this->last_object;
-    node.index_value->accept(*this);
+    this->visit(*node.index_value);
     output["index_value"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
@@ -151,12 +151,32 @@ void JsonSerializer::JsonVisitor::visit(const CastExpr &node)
 {
     nlohmann::json output;
     output["type"] = "CastExpr";
-    node.expr->accept(*this);
+    this->visit(*node.expr);
     output["expr"] = this->last_object;
     node.type->accept(*this);
     output["cast_type"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
+}
+
+void JsonSerializer::JsonVisitor::visit(const ExprNode &node)
+{
+    // this looks like a cheap, half-assed version of double-dispatch, but
+    // whatever
+    std::visit(
+        overloaded{[this](const VariableExpr &node) { this->visit(node); },
+                   [this](const I32Expr &node) { this->visit(node); },
+                   [this](const F64Expr &node) { this->visit(node); },
+                   [this](const StringExpr &node) { this->visit(node); },
+                   [this](const CharExpr &node) { this->visit(node); },
+                   [this](const BoolExpr &node) { this->visit(node); },
+                   [this](const BinaryExpr &node) { this->visit(node); },
+                   [this](const UnaryExpr &node) { this->visit(node); },
+                   [this](const CallExpr &node) { this->visit(node); },
+                   [this](const LambdaCallExpr &node) { this->visit(node); },
+                   [this](const IndexExpr &node) { this->visit(node); },
+                   [this](const CastExpr &node) { this->visit(node); }},
+        node);
 }
 
 void JsonSerializer::JsonVisitor::visit(const Block &node)
@@ -177,7 +197,7 @@ void JsonSerializer::JsonVisitor::visit(const IfStmt &node)
 {
     nlohmann::json output;
     output["type"] = "IfStmt";
-    node.condition_expr->accept(*this);
+    this->visit(*node.condition_expr);
     output["condition"] = this->last_object;
     node.then_block->accept(*this);
     output["then_block"] = this->last_object;
@@ -191,7 +211,7 @@ void JsonSerializer::JsonVisitor::visit(const WhileStmt &node)
 {
     nlohmann::json output;
     output["type"] = "IfStmt";
-    node.condition_expr->accept(*this);
+    this->visit(*node.condition_expr);
     output["condition"] = this->last_object;
     node.statement->accept(*this);
     output["statement"] = this->last_object;
@@ -203,7 +223,7 @@ void JsonSerializer::JsonVisitor::visit(const MatchStmt &node)
 {
     nlohmann::json output;
     output["type"] = "MatchStmt";
-    node.matched_expr->accept(*this);
+    this->visit(*node.matched_expr);
     output["matched_expr"] = this->last_object;
     output["arms"] = nlohmann::json::array();
     for (const auto &arm : node.match_arms)
@@ -221,7 +241,7 @@ void JsonSerializer::JsonVisitor::visit(const ReturnStmt &node)
     output["type"] = "ReturnStmt";
     if (node.expr)
     {
-        node.expr->accept(*this);
+        this->visit(*node.expr);
         output["value"] = this->last_object;
     }
     else
@@ -275,11 +295,11 @@ void JsonSerializer::JsonVisitor::visit(const AssignStmt &node)
 {
     nlohmann::json output;
     output["type"] = "AssignStmt";
-    node.lhs->accept(*this);
+    this->visit(*node.lhs);
     output["lhs"] = this->last_object;
     // output["op"] = node.type
     output["op"] = "TODO: OP TYPE";
-    node.rhs->accept(*this);
+    this->visit(*node.rhs);
     output["rhs"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
@@ -289,7 +309,7 @@ void JsonSerializer::JsonVisitor::visit(const ExprStmt &node)
 {
     nlohmann::json output;
     output["type"] = "AssignStmt";
-    node.expr->accept(*this);
+    this->visit(*node.expr);
     output["expr"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
@@ -312,7 +332,7 @@ void JsonSerializer::JsonVisitor::visit(const VarDeclStmt &node)
     output["mut"] = node.is_mut;
     if (node.initial_value)
     {
-        node.initial_value->accept(*this);
+        this->visit(*node.initial_value);
         output["value"] = this->last_object;
     }
     else
@@ -385,7 +405,7 @@ void JsonSerializer::JsonVisitor::visit(const LiteralArm &node)
     output["literals"] = nlohmann::json::array();
     for (const auto &literal : node.literals)
     {
-        literal->accept(*this);
+        this->visit(*literal);
         output["literals"].push_back(this->last_object);
     }
     node.block->accept(*this);
@@ -398,7 +418,7 @@ void JsonSerializer::JsonVisitor::visit(const GuardArm &node)
 {
     nlohmann::json output;
     output["type"] = "GuardArm";
-    node.condition_expr->accept(*this);
+    this->visit(*node.condition_expr);
     output["condition"] = this->last_object;
     node.block->accept(*this);
     output["block"] = this->last_object;

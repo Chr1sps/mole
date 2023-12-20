@@ -85,11 +85,10 @@ bool compare_variant_vectors(const std::vector<ExprNodePtr> &first,
         [](const ExprNodePtr &a, const ExprNodePtr &b) { return a == b; });
 }
 
-bool operator==(const ExprNodeVariant &first, const ExprNodeVariant &other)
+bool operator==(const ExprNode &first, const ExprNode &other)
 {
     return std::visit(
         overloaded{
-            [](const auto &, const auto &) -> bool { return false; },
             [](const VariableExpr &first, const VariableExpr &other) -> bool {
                 return first.name == other.name &&
                        first.position == other.position;
@@ -115,22 +114,22 @@ bool operator==(const ExprNodeVariant &first, const ExprNodeVariant &other)
                        first.position == other.position;
             },
             [](const UnaryExpr &first, const UnaryExpr &other) -> bool {
-                return first.expr == other.expr && first.op == other.op &&
+                return *first.expr == *other.expr && first.op == other.op &&
                        first.position == other.position;
             },
             [](const BinaryExpr &first, const BinaryExpr &other) -> bool {
-                return first.lhs == other.lhs && first.rhs == other.rhs &&
+                return *first.lhs == *other.lhs && *first.rhs == *other.rhs &&
                        first.op == other.op &&
                        first.position == other.position;
             },
             [](const CallExpr &first, const CallExpr &other) -> bool {
-                return first.callable == other.callable &&
-                       compare_variant_vectors(first.args, other.args) &&
+                return *first.callable == *other.callable &&
+                       compare_ptr_vectors(first.args, other.args) &&
                        first.position == other.position;
             },
             [](const LambdaCallExpr &first,
                const LambdaCallExpr &other) -> bool {
-                return first.callable == other.callable &&
+                return *first.callable == *other.callable &&
                        std::equal(
                            first.args.begin(), first.args.end(),
                            other.args.begin(), other.args.end(),
@@ -140,14 +139,16 @@ bool operator==(const ExprNodeVariant &first, const ExprNodeVariant &other)
                        first.position == other.position;
             },
             [](const IndexExpr &first, const IndexExpr &other) -> bool {
-                return first.expr == other.expr &&
-                       first.index_value == other.index_value &&
+                return *first.expr == *other.expr &&
+                       *first.index_value == *other.index_value &&
                        first.position == other.position;
             },
             [](const CastExpr &first, const CastExpr &other) -> bool {
-                return first.expr == other.expr && first.type == other.type &&
+                return *first.expr == *other.expr &&
+                       *first.type == *other.type &&
                        first.position == other.position;
-            }},
+            },
+            [](const auto &, const auto &) -> bool { return false; }},
         first, other);
 }
 

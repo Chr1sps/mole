@@ -776,7 +776,7 @@ ExprNodePtr Parser::parse_variable_expr()
 {
     if (this->current_token != TokenType::IDENTIFIER)
         return nullptr;
-    auto result = std::make_unique<ExprNodeVariant>(
+    auto result = std::make_unique<ExprNode>(
         VariableExpr(std::get<std::wstring>(this->current_token->value),
                      this->current_token->position));
     this->next_token();
@@ -788,7 +788,7 @@ ExprNodePtr Parser::parse_f64_expr()
 {
     if (this->current_token != TokenType::DOUBLE)
         return nullptr;
-    auto result = std::make_unique<ExprNodeVariant>(
+    auto result = std::make_unique<ExprNode>(
         F64Expr(std::get<double>(this->current_token->value),
                 this->current_token->position));
     this->next_token();
@@ -800,7 +800,7 @@ ExprNodePtr Parser::parse_u32_expr()
 {
     if (this->current_token != TokenType::INT)
         return nullptr;
-    auto result = std::make_unique<ExprNodeVariant>(
+    auto result = std::make_unique<ExprNode>(
         I32Expr(std::get<unsigned long long>(this->current_token->value),
                 this->current_token->position));
     this->next_token();
@@ -812,7 +812,7 @@ ExprNodePtr Parser::parse_string_expr()
 {
     if (this->current_token != TokenType::STRING)
         return nullptr;
-    auto result = std::make_unique<ExprNodeVariant>(
+    auto result = std::make_unique<ExprNode>(
         StringExpr(std::get<std::wstring>(this->current_token->value),
                    this->current_token->position));
     this->next_token();
@@ -824,7 +824,7 @@ ExprNodePtr Parser::parse_char_expr()
 {
     if (this->current_token != TokenType::CHAR)
         return nullptr;
-    auto result = std::make_unique<ExprNodeVariant>(
+    auto result = std::make_unique<ExprNode>(
         CharExpr(std::get<wchar_t>(this->current_token->value),
                  this->current_token->position));
     this->next_token();
@@ -839,8 +839,7 @@ ExprNodePtr Parser::parse_bool_expr()
     {
         auto value = this->current_token == TokenType::KW_TRUE;
         auto position = this->current_token->position;
-        auto result =
-            std::make_unique<ExprNodeVariant>(BoolExpr(value, position));
+        auto result = std::make_unique<ExprNode>(BoolExpr(value, position));
         this->next_token();
         return result;
     }
@@ -868,8 +867,8 @@ bool join_into_binary_op(std::stack<ExprNodePtr> &values,
         values.pop();
 
         auto position = get_expr_position(*lhs);
-        auto new_expr = std::make_unique<ExprNodeVariant>(
-            BinaryExpr(lhs, rhs, op, position));
+        auto new_expr =
+            std::make_unique<ExprNode>(BinaryExpr(lhs, rhs, op, position));
         values.push(std::move(new_expr));
         return true;
     }
@@ -919,11 +918,11 @@ ExprNodePtr Parser::parse_binary_expr()
     if (values.size() > 1)
     {
         this->report_error(L"binary expression doesn't have an operand");
-        return {};
+        return nullptr;
     }
     else if (values.empty())
     {
-        return {};
+        return nullptr;
     }
     auto result = std::move(values.top());
     values.pop();
@@ -936,9 +935,7 @@ ExprNodePtr Parser::parse_cast_expr()
     auto lhs = this->parse_unary_expr();
     if (!lhs)
     {
-        this->report_error(
-            L"no expression found on the left side of the cast expression");
-        return {};
+        return nullptr;
     }
     auto position = get_expr_position(*lhs);
     while (this->current_token == TokenType::KW_AS)
@@ -946,8 +943,7 @@ ExprNodePtr Parser::parse_cast_expr()
         this->next_token();
         if (auto type = this->parse_simple_type())
         {
-            lhs = std::make_unique<ExprNodeVariant>(
-                CastExpr(lhs, type, position));
+            lhs = std::make_unique<ExprNode>(CastExpr(lhs, type, position));
         }
         else
         {
@@ -977,7 +973,7 @@ ExprNodePtr Parser::parse_unary_expr()
     {
         while (!ops.empty())
         {
-            inner = std::make_unique<ExprNodeVariant>(
+            inner = std::make_unique<ExprNode>(
                 UnaryExpr(inner, ops.top(), positions.top()));
             ops.pop();
             positions.pop();
@@ -988,7 +984,7 @@ ExprNodePtr Parser::parse_unary_expr()
     {
         this->report_error(L"no inner expression found in a unary expression");
     }
-    return {};
+    return nullptr;
 }
 
 // INDEX_LAMBDA_OR_CALL = FACTOR, {CALL_PART | LAMBDA_CALL_PART | INDEX_PART};
@@ -996,28 +992,26 @@ ExprNodePtr Parser::parse_index_lambda_or_call()
 {
     auto result = this->parse_factor();
     if (!result)
-    {
-        this->report_error(
-            L"no expression found in an index, lambda or call expression");
+
         return nullptr;
-    }
+
     auto position = get_expr_position(*result);
     while (true)
     {
         if (auto params = this->parse_call_part())
         {
-            result = std::make_unique<ExprNodeVariant>(
+            result = std::make_unique<ExprNode>(
                 CallExpr(result, *params, position));
         }
         else if (auto params = this->parse_lambda_call_part())
         {
-            result = std::make_unique<ExprNodeVariant>(
+            result = std::make_unique<ExprNode>(
                 LambdaCallExpr(result, *params, position));
         }
         else if (auto param = this->parse_index_part())
         {
-            result = std::make_unique<ExprNodeVariant>(
-                IndexExpr(result, param, position));
+            result =
+                std::make_unique<ExprNode>(IndexExpr(result, param, position));
         }
         else
             break;
@@ -1124,7 +1118,7 @@ std::optional<ExprNodePtr> Parser::parse_lambda_arg()
     else if (this->current_token == TokenType::PLACEHOLDER)
     {
         this->next_token();
-        return {};
+        return nullptr;
     }
     else
         return std::nullopt;
@@ -1134,19 +1128,19 @@ std::optional<ExprNodePtr> Parser::parse_lambda_arg()
 ExprNodePtr Parser::parse_index_part()
 {
     if (this->current_token != TokenType::L_SQ_BRACKET)
-        return {};
+        return nullptr;
     this->next_token();
     auto result = this->parse_binary_expr();
     if (!result)
     {
         this->report_error(L"no index value expression found in the index "
                            L"expression's square brackets");
-        return {};
+        return nullptr;
     }
     if (!this->assert_current_and_eat(
             TokenType::R_SQ_BRACKET,
             L"expected right square bracket in an index expression"))
-        return {};
+        return nullptr;
     return result;
 }
 
@@ -1168,14 +1162,14 @@ ExprNodePtr Parser::parse_factor()
         return result;
     else if (auto result = this->parse_paren_expr())
         return result;
-    return {};
+    return nullptr;
 }
 
 // PAREN_EXPR = L_PAREN, BINARY_EXPR, R_PAREN;
 ExprNodePtr Parser::parse_paren_expr()
 {
     if (this->current_token != TokenType::L_PAREN)
-        return {};
+        return nullptr;
     auto position = this->current_token->position;
     this->next_token();
 
@@ -1183,12 +1177,12 @@ ExprNodePtr Parser::parse_paren_expr()
     if (!expr)
     {
         this->report_error(L"no expression found after a left parenthesis");
-        return {};
+        return nullptr;
     }
     if (!this->assert_current_and_eat(
             TokenType::R_PAREN,
             L"expected a right bracket in a parenthesis expression"))
-        return {};
+        return nullptr;
 
     set_expr_position(*expr, position);
     return expr;

@@ -45,23 +45,6 @@ class TypeVisitor : public Visitor
     virtual void visit(const FunctionType &type) = 0;
 };
 
-class ExprVisitor : Visitor
-{
-  public:
-    virtual void visit(const VariableExpr &node) = 0;
-    virtual void visit(const I32Expr &node) = 0;
-    virtual void visit(const F64Expr &node) = 0;
-    virtual void visit(const StringExpr &node) = 0;
-    virtual void visit(const CharExpr &node) = 0;
-    virtual void visit(const BoolExpr &node) = 0;
-    virtual void visit(const BinaryExpr &node) = 0;
-    virtual void visit(const UnaryExpr &node) = 0;
-    virtual void visit(const CallExpr &node) = 0;
-    virtual void visit(const LambdaCallExpr &node) = 0;
-    virtual void visit(const IndexExpr &node) = 0;
-    virtual void visit(const CastExpr &node) = 0;
-};
-
 class StmtVisitor : Visitor
 {
   public:
@@ -87,15 +70,13 @@ class MatchArmVisitor : Visitor
     virtual void visit(const ElseArm &node) = 0;
 };
 
-class AstVisitor : public ExprVisitor,
-                   public StmtVisitor,
+class AstVisitor : public StmtVisitor,
                    public MatchArmVisitor,
                    public TypeVisitor
 {
   public:
     virtual void visit(const Program &node) = 0;
     virtual void visit(const Parameter &node) = 0;
-    using ExprVisitor::visit;
     using MatchArmVisitor::visit;
     using StmtVisitor::visit;
     using TypeVisitor::visit;

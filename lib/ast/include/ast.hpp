@@ -28,29 +28,6 @@ struct AstNode
 
 using AstNodePtr = std::unique_ptr<AstNode>;
 
-struct ExprNode : public AstNode
-{
-    virtual void accept(ExprVisitor &visitor) const = 0;
-
-  protected:
-    ExprNode(const Position &position) : AstNode(position)
-    {
-    }
-};
-
-// struct VariableExpr;
-// struct BinaryExpr;
-// struct UnaryExpr;
-// struct CallExpr;
-// struct LambdaCallExpr;
-// struct IndexExpr;
-// struct CastExpr;
-// struct I32Expr;
-// struct F64Expr;
-// struct StringExpr;
-// struct CharExpr;
-// struct BoolExpr;
-
 using VariableExprPtr = std::unique_ptr<VariableExpr>;
 using BinaryExprPtr = std::unique_ptr<BinaryExpr>;
 using UnaryExprPtr = std::unique_ptr<UnaryExpr>;
@@ -64,11 +41,10 @@ using StringExprPtr = std::unique_ptr<StringExpr>;
 using CharExprPtr = std::unique_ptr<CharExpr>;
 using BoolExprPtr = std::unique_ptr<BoolExpr>;
 
-using ExprNodeVariant =
-    std::variant<VariableExpr, BinaryExpr, UnaryExpr, CallExpr, LambdaCallExpr,
-                 IndexExpr, CastExpr, I32Expr, F64Expr, BoolExpr, StringExpr,
-                 CharExpr>;
-using ExprNodePtr = std::unique_ptr<ExprNodeVariant>;
+using ExprNode = std::variant<VariableExpr, BinaryExpr, UnaryExpr, CallExpr,
+                              LambdaCallExpr, IndexExpr, CastExpr, I32Expr,
+                              F64Expr, BoolExpr, StringExpr, CharExpr>;
+using ExprNodePtr = std::unique_ptr<ExprNode>;
 
 template <typename... Ts> struct overloaded : Ts...
 {
@@ -77,18 +53,13 @@ template <typename... Ts> struct overloaded : Ts...
 
 template <typename... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-struct VariableExpr : public ExprNode
+struct VariableExpr : public AstNode
 {
     std::wstring name;
 
     VariableExpr(const std::wstring &name, const Position &position)
-        : ExprNode(position), name(name)
+        : AstNode(position), name(name)
     {
-    }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
@@ -130,231 +101,175 @@ enum class UnaryOpEnum
     REF
 };
 
-struct BinaryExpr : public ExprNode
+struct BinaryExpr : public AstNode
 {
     ExprNodePtr lhs, rhs;
     BinOpEnum op;
 
     BinaryExpr(ExprNodePtr &lhs, ExprNodePtr &rhs, const BinOpEnum &op,
                const Position &position)
-        : ExprNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
+        : AstNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
     {
     }
 
     BinaryExpr(ExprNodePtr &&lhs, ExprNodePtr &&rhs, const BinOpEnum &op,
                const Position &position)
-        : ExprNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
+        : AstNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
     {
-    }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct UnaryExpr : public ExprNode
+struct UnaryExpr : public AstNode
 {
     ExprNodePtr expr;
     UnaryOpEnum op;
 
     UnaryExpr(ExprNodePtr &expr, const UnaryOpEnum &op,
               const Position &position)
-        : ExprNode(position), expr(std::move(expr)), op(op)
+        : AstNode(position), expr(std::move(expr)), op(op)
     {
     }
 
     UnaryExpr(ExprNodePtr &&expr, const UnaryOpEnum &op,
               const Position &position)
-        : ExprNode(position), expr(std::move(expr)), op(op)
+        : AstNode(position), expr(std::move(expr)), op(op)
     {
-    }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct CallExpr : public ExprNode
+struct CallExpr : public AstNode
 {
     ExprNodePtr callable;
     std::vector<ExprNodePtr> args;
 
     CallExpr(ExprNodePtr &callable, std::vector<ExprNodePtr> &args,
              const Position &position)
-        : ExprNode(position), callable(std::move(callable)),
+        : AstNode(position), callable(std::move(callable)),
           args(std::move(args))
     {
     }
 
     CallExpr(ExprNodePtr &&callable, std::vector<ExprNodePtr> &&args,
              const Position &position)
-        : ExprNode(position), callable(std::move(callable)),
+        : AstNode(position), callable(std::move(callable)),
           args(std::move(args))
     {
     }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
-    }
 };
 
-struct LambdaCallExpr : public ExprNode
+struct LambdaCallExpr : public AstNode
 {
     ExprNodePtr callable;
     std::vector<ExprNodePtr> args;
 
     LambdaCallExpr(ExprNodePtr &callable, std::vector<ExprNodePtr> &args,
                    const Position &position)
-        : ExprNode(position), callable(std::move(callable)),
+        : AstNode(position), callable(std::move(callable)),
           args(std::move(args))
     {
     }
 
     LambdaCallExpr(ExprNodePtr &&callable, std::vector<ExprNodePtr> &&args,
                    const Position &position)
-        : ExprNode(position), callable(std::move(callable)),
+        : AstNode(position), callable(std::move(callable)),
           args(std::move(args))
     {
     }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
-    }
 };
 
-struct IndexExpr : public ExprNode
+struct IndexExpr : public AstNode
 {
     ExprNodePtr expr, index_value;
 
     IndexExpr(ExprNodePtr &expr, ExprNodePtr &index_value,
               const Position &position)
-        : ExprNode(position), expr(std::move(expr)),
+        : AstNode(position), expr(std::move(expr)),
           index_value(std::move(index_value))
     {
     }
 
     IndexExpr(ExprNodePtr &&expr, ExprNodePtr &&index_value,
               const Position &position)
-        : ExprNode(position), expr(std::move(expr)),
+        : AstNode(position), expr(std::move(expr)),
           index_value(std::move(index_value))
     {
     }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
-    }
 };
 
-struct CastExpr : public ExprNode
+struct CastExpr : public AstNode
 {
     ExprNodePtr expr;
     TypePtr type;
 
     CastExpr(ExprNodePtr &expr, TypePtr &type, const Position &position)
-        : ExprNode(position), expr(std::move(expr)), type(std::move(type))
+        : AstNode(position), expr(std::move(expr)), type(std::move(type))
     {
-    }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct I32Expr : public ExprNode
+struct I32Expr : public AstNode
 {
     static const std::shared_ptr<SimpleType> type;
     unsigned long long value;
 
     I32Expr(const unsigned long long &value, const Position &position)
-        : ExprNode(position), value(value)
+        : AstNode(position), value(value)
     {
-    }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct F64Expr : public ExprNode
+struct F64Expr : public AstNode
 {
     static const std::shared_ptr<SimpleType> type;
     double value;
 
     F64Expr(const double &value, const Position &position)
-        : ExprNode(position), value(value)
+        : AstNode(position), value(value)
     {
-    }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct StringExpr : public ExprNode
+struct StringExpr : public AstNode
 {
     // static const std::shared_ptr<SimpleType> type;
     std::wstring value;
 
     StringExpr(const std::wstring &value, const Position &position)
-        : ExprNode(position), value(value)
+        : AstNode(position), value(value)
     {
-    }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct CharExpr : public ExprNode
+struct CharExpr : public AstNode
 {
     // static const std::shared_ptr<SimpleType> type;
     wchar_t value;
 
     CharExpr(const wchar_t &value, const Position &position)
-        : ExprNode(position), value(value)
+        : AstNode(position), value(value)
     {
-    }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct BoolExpr : public ExprNode
+struct BoolExpr : public AstNode
 {
     // static const std::shared_ptr<SimpleType> type;
     bool value;
 
     BoolExpr(const bool &value, const Position &position)
-        : ExprNode(position), value(value)
+        : AstNode(position), value(value)
     {
-    }
-
-    void accept(ExprVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-inline Position get_expr_position(const ExprNodeVariant &variant)
+inline Position get_expr_position(const ExprNode &variant)
 {
     return std::visit(
         [](const AstNode &node) -> Position { return node.position; },
         variant);
 }
 
-inline void set_expr_position(ExprNodeVariant &variant,
-                              const Position &position)
+inline void set_expr_position(ExprNode &variant, const Position &position)
 {
     std::visit([&position](AstNode &node) { node.position = position; },
                variant);

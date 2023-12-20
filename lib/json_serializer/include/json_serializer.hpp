@@ -16,18 +16,20 @@ class JsonSerializer
         nlohmann::json last_object;
         JsonVisitor() = default;
 
-        void visit(const VariableExpr &node) override;
-        void visit(const I32Expr &node) override;
-        void visit(const F64Expr &node) override;
-        void visit(const StringExpr &node) override;
-        void visit(const CharExpr &node) override;
-        void visit(const BoolExpr &node) override;
-        void visit(const BinaryExpr &node) override;
-        void visit(const UnaryExpr &node) override;
-        void visit(const CallExpr &node) override;
-        void visit(const LambdaCallExpr &node) override;
-        void visit(const IndexExpr &node) override;
-        void visit(const CastExpr &node) override;
+        void visit(const VariableExpr &node);
+        void visit(const I32Expr &node);
+        void visit(const F64Expr &node);
+        void visit(const StringExpr &node);
+        void visit(const CharExpr &node);
+        void visit(const BoolExpr &node);
+        void visit(const BinaryExpr &node);
+        void visit(const UnaryExpr &node);
+        void visit(const CallExpr &node);
+        void visit(const LambdaCallExpr &node);
+        void visit(const IndexExpr &node);
+        void visit(const CastExpr &node);
+
+        void visit(const ExprNode &node);
 
         void visit(const Block &node) override;
         void visit(const IfStmt &node) override;
