@@ -27,22 +27,22 @@ class Lexer
     const unsigned long long max_var_name_size;
     const unsigned long long max_str_length;
 
-    std::optional<IndexedChar> last_char;
+    std::optional<wchar_t> last_char;
+    Position position;
+
     std::vector<Logger *> loggers;
 
-    std::optional<IndexedChar> get_new_char();
-    std::optional<IndexedChar> peek_char() const;
+    std::optional<wchar_t> get_new_char();
 
-    std::optional<IndexedChar> get_nonempty_char();
+    std::optional<wchar_t> get_nonempty_char();
 
     std::optional<unsigned long long> parse_integral();
     std::optional<double> parse_floating();
 
     std::optional<Token> parse_number_token(const Position &position);
 
-    std::optional<Token> parse_underscore(const Position &position);
     std::optional<wchar_t> parse_hex_escape_sequence();
-    std::optional<Token> parse_alpha_token(const Position &position);
+    std::optional<Token> parse_alpha_or_placeholder(const Position &position);
     Token parse_comment_or_operator(const Position &position);
     std::optional<Token> parse_operator(const Position &position);
     Token parse_char(const Position &position);
@@ -70,7 +70,7 @@ class Lexer
     Lexer(ReaderPtr &reader, const unsigned long long &max_var_name_size,
           const unsigned long long &max_str_length)
         : reader(std::move(reader)), max_var_name_size(max_var_name_size),
-          max_str_length(max_str_length)
+          max_str_length(max_str_length), position(0, 0)
     {
         // this loads the first character into the lexer so that when we run
         // the get_nonempty_char() function at the very first get_token() call

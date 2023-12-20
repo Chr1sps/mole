@@ -1,15 +1,5 @@
 #include "reader.hpp"
 
-bool operator==(const IndexedChar &first, const wchar_t &other)
-{
-    return first.character == other;
-}
-
-bool operator!=(const IndexedChar &first, const wchar_t &other)
-{
-    return first.character != other;
-}
-
 void Reader::update_position(const wchar_t &ch)
 {
     if (ch == '\n')
@@ -20,24 +10,11 @@ void Reader::update_position(const wchar_t &ch)
     ++this->current_position.column;
 }
 
-std::optional<IndexedChar> Reader::peek()
-{
-    auto result_char = this->peek_raw();
-    if (static_cast<std::wint_t>(result_char) == WEOF)
-        return std::nullopt;
-
-    if (result_char == '\r' && this->peek_second_raw() == L'\n')
-    {
-        result_char = '\n';
-    }
-    return IndexedChar(result_char, this->current_position);
-}
-
-std::optional<IndexedChar> Reader::get()
+CharWithPos Reader::get()
 {
     auto result_char = this->get_raw();
     if (static_cast<std::wint_t>(result_char) == WEOF)
-        return std::nullopt;
+        return {std::nullopt, this->current_position};
 
     // converting Windows newline to Unix newline
     if (result_char == '\r' && this->peek_raw() == L'\n')
@@ -46,7 +23,8 @@ std::optional<IndexedChar> Reader::get()
         this->get_raw();
     }
 
-    auto result = IndexedChar(result_char, this->current_position);
+    auto result =
+        std::tuple(std::make_optional(result_char), this->current_position);
     this->update_position(result_char);
     return result;
 }

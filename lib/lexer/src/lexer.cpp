@@ -100,27 +100,39 @@ const std::map<wchar_t, CharNode> Lexer::char_nodes{
 #undef CHAR_NODE
 #undef EMPTY_NODE
 
-std::optional<IndexedChar> Lexer::get_new_char()
+std::optional<wchar_t> Lexer::get_new_char()
 {
-    return this->last_char = this->reader->get();
+    const auto &[chr, pos] = this->reader->get();
+    this->position = pos;
+    return this->last_char = chr;
 }
 
-std::optional<IndexedChar> Lexer::get_nonempty_char()
+std::optional<wchar_t> Lexer::get_nonempty_char()
 {
-    while (this->last_char.has_value() &&
-           std::iswspace(this->last_char->character))
+    while (this->last_char.has_value() && std::iswspace(*(this->last_char)))
     {
         this->get_new_char();
     }
     return this->last_char;
 }
 
-std::optional<Token> Lexer::parse_alpha_token(const Position &position)
+std::optional<Token> Lexer::parse_alpha_or_placeholder(
+    const Position &position)
 {
+
     std::wstring name;
+    if (this->last_char == L'_')
+    {
+        name += L'_';
+        this->get_new_char();
+        if (!this->is_alpha_char())
+        {
+            return Token(TokenType::PLACEHOLDER, position);
+        }
+    }
     do
     {
-        name += this->last_char->character;
+        name += *(this->last_char);
         this->get_new_char();
     } while (this->is_alpha_char() && name.length() < this->max_var_name_size);
 
@@ -143,15 +155,14 @@ unsigned int convert_to_int(const wchar_t &chr)
 std::optional<unsigned long long> Lexer::parse_integral()
 {
     unsigned long long result = 0;
-    for (; this->last_char.has_value() &&
-           std::iswdigit(this->last_char->character);
+    for (; this->last_char.has_value() && std::iswdigit(*(this->last_char));
          this->get_new_char())
     {
         if (result >= std::numeric_limits<uint32_t>::max() / 10)
             return std::nullopt;
         result *= 10;
 
-        auto digit = convert_to_int(this->last_char->character);
+        auto digit = convert_to_int(*(this->last_char));
         if (result >= std::numeric_limits<uint32_t>::max() - digit)
             return std::nullopt;
         result += digit;
@@ -162,11 +173,11 @@ std::optional<unsigned long long> Lexer::parse_integral()
 std::optional<double> Lexer::parse_floating()
 {
     double result = 0;
-    for (double shift = 0.1; this->last_char.has_value() &&
-                             std::iswdigit(this->last_char->character);
+    for (double shift = 0.1;
+         this->last_char.has_value() && std::iswdigit(*(this->last_char));
          this->get_new_char(), shift /= 10)
     {
-        auto digit = convert_to_int(this->last_char->character);
+        auto digit = convert_to_int(*(this->last_char));
         auto shifted_digit = digit * shift;
         result += shifted_digit;
     }
@@ -196,29 +207,26 @@ std::optional<Token> Lexer::parse_number_token(const Position &position)
 
 std::optional<Token> Lexer::parse_operator(const Position &position)
 {
-    auto node = this->char_nodes.at(this->last_char->character);
-    std::optional<Token> result;
-    for (auto next_char = this->peek_char();;
-         this->get_new_char(), next_char = this->peek_char())
+    auto node = this->char_nodes.at(*(this->last_char));
+    this->get_new_char();
+    for (auto next_char = this->last_char;;
+         this->get_new_char(), next_char = this->last_char)
     {
-        if (decltype(node.children)::iterator child_iter;
-            next_char.has_value() &&
-            (child_iter = node.children.find(next_char->character)) !=
+        decltype(node.children)::iterator child_iter;
+        if (next_char.has_value() &&
+            (child_iter = node.children.find(*(next_char))) !=
                 node.children.end())
             node = child_iter->second;
 
         else
         {
             if (node.type.has_value())
-                result = Token(*node.type, position);
+                return Token(*node.type, position);
             else
-                result = this->report_error(L"this operator is not supported");
-
-            this->get_new_char();
-            break;
+                return this->report_error(L"this operator is not supported");
         }
     }
-    return result;
+    // return std::nullopt;
 }
 
 Token Lexer::parse_comment_or_operator(const Position &position)
@@ -226,7 +234,7 @@ Token Lexer::parse_comment_or_operator(const Position &position)
     this->get_new_char();
     if (this->last_char.has_value())
     {
-        auto char_value = this->last_char->character;
+        auto char_value = *(this->last_char);
         this->get_new_char();
         switch (char_value)
         {
@@ -257,13 +265,14 @@ Token Lexer::parse_block_comment(const Position &position)
 {
     for (; this->last_char.has_value(); this->get_new_char())
     {
-        if (this->last_char == L'*' && this->peek_char() == L'/')
+        if (this->last_char == L'*')
         {
             this->get_new_char();
-            this->get_new_char();
-            // not returning here because Werror screams that there is no
-            // return in the main function scope
-            break;
+            if (this->last_char == L'/')
+            {
+                this->get_new_char();
+                break;
+            }
         }
     }
     return Token(TokenType::COMMENT, position);
@@ -297,20 +306,6 @@ LexerPtr Lexer::from_file(const std::string &path)
     return std::make_unique<Lexer>(reader);
 }
 
-std::optional<Token> Lexer::parse_underscore(const Position &position)
-{
-    auto next = this->reader->peek();
-    if (next.has_value() && std::iswalnum(next->character))
-    {
-        return this->parse_alpha_token(position);
-    }
-    else
-    {
-        this->get_new_char();
-        return Token(TokenType::PLACEHOLDER, position);
-    }
-}
-
 std::optional<wchar_t> Lexer::parse_hex_escape_sequence()
 {
     this->get_new_char();
@@ -318,9 +313,9 @@ std::optional<wchar_t> Lexer::parse_hex_escape_sequence()
 
     for (int i = 0; i < 8 && this->last_char; ++i)
     {
-        if (std::iswxdigit(this->last_char->character))
+        if (std::iswxdigit(*(this->last_char)))
         {
-            buffer += this->last_char->character;
+            buffer += *(this->last_char);
             this->get_new_char();
         }
         else if (this->last_char == L'}' && i == 0)
@@ -345,7 +340,7 @@ std::optional<wchar_t> Lexer::parse_escape_sequence()
         return std::nullopt;
     }
     wchar_t result;
-    switch (this->last_char->character)
+    switch (*(this->last_char))
     {
     case L'\\':
         result = L'\\';
@@ -384,7 +379,7 @@ std::optional<wchar_t> Lexer::parse_language_char()
 {
     if (!this->last_char.has_value())
         return std::nullopt;
-    switch (this->last_char->character)
+    switch (*(this->last_char))
     {
     case '\\':
         return this->parse_escape_sequence();
@@ -393,7 +388,7 @@ std::optional<wchar_t> Lexer::parse_language_char()
         return std::nullopt;
 
     default:
-        auto result = this->last_char->character;
+        auto result = *(this->last_char);
         this->get_new_char();
         return result;
     }
@@ -447,11 +442,11 @@ std::optional<Token> Lexer::get_token()
         return std::nullopt;
     else
     {
-        auto position = this->last_char->position;
-        switch (this->last_char->character)
+        auto position = this->position;
+        switch (*(this->last_char))
         {
         case L'_':
-            return this->parse_underscore(position);
+            return this->parse_alpha_or_placeholder(position);
             break;
         case L'/':
             return this->parse_comment_or_operator(position);
@@ -467,7 +462,7 @@ std::optional<Token> Lexer::get_token()
             if (this->is_a_number_char())
                 return this->parse_number_token(position);
             else if (this->is_identifier_char())
-                return this->parse_alpha_token(position);
+                return this->parse_alpha_or_placeholder(position);
             else if (this->is_an_operator_char())
                 return this->parse_operator(position);
             else
@@ -482,48 +477,31 @@ std::optional<Token> Lexer::get_token()
 
 bool Lexer::is_a_number_char() const
 {
-    auto character = this->last_char.value().character;
-    auto next_char = this->peek_char();
-    return std::iswdigit(character) ||
-           (character == L'.' && next_char.has_value() &&
-            std::iswdigit(next_char.value().character));
+    auto character = *(this->last_char);
+    return std::iswdigit(character);
 }
 
 bool Lexer::is_identifier_char() const
 {
-    auto character = this->last_char.value().character;
+    auto character = *(this->last_char);
     return std::iswalpha(character) || character == L'_';
 }
 
 bool Lexer::is_an_operator_char() const
 {
-    return this->char_nodes.contains(this->last_char.value().character);
+    return this->char_nodes.contains(*(this->last_char));
 }
 
 bool Lexer::is_alpha_char() const
 {
-    return this->last_char && (std::iswalnum(this->last_char->character) ||
-                               this->last_char == L'_');
-}
-
-std::optional<IndexedChar> Lexer::peek_char() const
-{
-    return this->reader->peek();
+    return this->last_char.has_value() &&
+           (std::iswalnum(*(this->last_char)) || this->last_char == L'_');
 }
 
 Token Lexer::report_error(const std::wstring &msg)
 {
-    std::wstring position_text;
-    Position position = Position(-1, -1);
-    if (this->last_char)
-    {
-        position = this->last_char->position;
-        position_text = build_wstring(position.line, ",", position.column);
-    }
-    else
-    {
-        position_text = L"EOF";
-    }
+    auto position_text =
+        build_wstring(this->position.line, ",", this->position.column);
     auto error_text =
         build_wstring(L"Lexer error at [", position_text, "]: ", msg, ".");
     auto log_msg = LogMessage(error_text, LogLevel::ERROR);
@@ -532,7 +510,7 @@ Token Lexer::report_error(const std::wstring &msg)
         logger->log(log_msg);
     }
 
-    return Token(TokenType::INVALID, position);
+    return Token(TokenType::INVALID, this->position);
 }
 
 Token Lexer::report_and_consume(const std::wstring &msg)

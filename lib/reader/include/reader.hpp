@@ -9,20 +9,9 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <tuple>
 
-struct IndexedChar
-{
-    wchar_t character;
-    Position position;
-
-    IndexedChar(const wchar_t character, const Position &position)
-        : character(character), position(position)
-    {
-    }
-
-    friend bool operator==(const IndexedChar &first, const wchar_t &other);
-    friend bool operator!=(const IndexedChar &first, const wchar_t &other);
-};
+using CharWithPos = std::tuple<std::optional<wchar_t>, Position>;
 
 class Reader
 {
@@ -35,15 +24,13 @@ class Reader
 
     virtual wchar_t get_raw() = 0;
     virtual wchar_t peek_raw() = 0;
-    virtual wchar_t peek_second_raw() = 0;
 
     Reader(const std::locale &locale) : current_position(1, 1), locale(locale)
     {
     }
 
   public:
-    std::optional<IndexedChar> peek();
-    std::optional<IndexedChar> get();
+    CharWithPos get();
 
     const std::locale &get_locale() const
     {
@@ -74,14 +61,6 @@ template <DerivedFromWistream T> class IStreamReader : public Reader
         return this->driver.peek();
     }
 
-    wchar_t peek_second_raw() override
-    {
-        this->driver.ignore();
-        auto result = this->driver.peek();
-        this->driver.unget();
-        return result;
-    }
-
     IStreamReader(const std::locale &locale) : Reader(locale)
     {
     }
@@ -98,14 +77,6 @@ class ConsoleReader : public Reader
     wchar_t peek_raw() override
     {
         return std::wcin.peek();
-    }
-
-    wchar_t peek_second_raw() override
-    {
-        std::wcin.ignore();
-        auto result = std::wcin.peek();
-        std::wcin.unget();
-        return result;
     }
 
   public:

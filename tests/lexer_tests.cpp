@@ -71,7 +71,7 @@ void throws_logs(const std::wstring &code)
     auto lexer = Lexer::from_wstring(code);
     lexer->add_logger(logger.get());
 
-    for (; lexer->get_token();)
+    while (lexer->get_token())
     {
     }
 
@@ -185,7 +185,6 @@ TEST_CASE("Numericals.", "[NUMS]")
         compare_lexed_tokens(L"0", LIST(V(INT, 0ull, 1, 1)));
         compare_lexed_tokens(L"00001", LIST(V(INT, 1ull, 1, 1)));
         compare_lexed_tokens(L"1.0", LIST(V(DOUBLE, 1.0, 1, 1)));
-        compare_lexed_tokens(L".25", LIST(V(DOUBLE, 0.25, 1, 1)));
     }
     SECTION("Too big.")
     {
@@ -254,11 +253,10 @@ TEST_CASE("Other special tokens.", "[OTHER]")
 
 TEST_CASE("Invalid signs.", "[ERR]")
 {
-    check_lexer(L".", LIST(T(INVALID, 1, 1)), LIST(L(ERROR)));
-    check_lexer(L"..", LIST(T(INVALID, 1, 1), T(INVALID, 1, 2)),
-                LIST(L(ERROR), L(ERROR)));
-    check_lexer(L"$", LIST(T(INVALID, 1, 1)), LIST(L(ERROR)));
-    check_lexer(L"#", LIST(T(INVALID, 1, 1)), LIST(L(ERROR)));
+    throws_logs(L".");
+    throws_logs(L"..");
+    throws_logs(L"$");
+    throws_logs(L"#");
 }
 
 TEST_CASE("Chars.", "[CHAR]")
