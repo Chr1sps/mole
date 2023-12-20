@@ -98,12 +98,16 @@ void Parser::next_token()
     } while (this->current_token == TokenType::COMMENT);
 }
 
-void Parser::assert_current_and_eat(TokenType type,
+bool Parser::assert_current_and_eat(TokenType type,
                                     const std::wstring &error_msg)
 {
     if (this->current_token != type)
+    {
         this->report_error(error_msg);
+        return false;
+    }
     this->next_token();
+    return true;
 }
 
 //
@@ -151,8 +155,9 @@ std::unique_ptr<ExternStmt> Parser::parse_extern_stmt()
     }
     auto [name, params, return_type] = std::move(*name_params_return_type);
 
-    this->assert_current_and_eat(TokenType::SEMICOLON,
-                                 L"not a semicolon in an extern declaration");
+    if (!this->assert_current_and_eat(
+            TokenType::SEMICOLON, L"not a semicolon in an extern declaration"))
+        return nullptr;
 
     return std::make_unique<ExternStmt>(name, params, return_type, position);
 }
@@ -185,8 +190,10 @@ std::unique_ptr<VarDeclStmt> Parser::parse_var_decl_stmt()
     auto type = this->parse_type_specifier();
     auto initial_value = this->parse_initial_value();
 
-    this->assert_current_and_eat(
-        TokenType::SEMICOLON, L"no semicolon found in a variable declaration");
+    if (!this->assert_current_and_eat(
+            TokenType::SEMICOLON,
+            L"no semicolon found in a variable declaration"))
+        return nullptr;
 
     return std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut,
                                          position);
@@ -269,14 +276,16 @@ Parser::parse_func_name_and_params()
     auto name = std::get<std::wstring>((*this->current_token).value);
     this->next_token();
 
-    this->assert_current_and_eat(
-        TokenType::L_PAREN,
-        L"left parenthesis missing in a function definition");
+    if (!this->assert_current_and_eat(
+            TokenType::L_PAREN,
+            L"left parenthesis missing in a function definition"))
+        return std::nullopt;
     auto params = this->parse_params();
-    this->assert_current_and_eat(TokenType::R_PAREN,
-                                 L"right parenthesis missing "
-                                 "in a function "
-                                 "definition");
+    if (!this->assert_current_and_eat(TokenType::R_PAREN,
+                                      L"right parenthesis missing "
+                                      "in a function "
+                                      "definition"))
+        return std::nullopt;
 
     auto return_type = this->parse_return_type();
     return std::tuple(std::move(name), std::move(params),
@@ -383,15 +392,17 @@ std::unique_ptr<FunctionType> Parser::parse_function_type()
         is_const = true;
         this->next_token();
     }
-    this->assert_current_and_eat(
-        TokenType::L_PAREN,
-        L"no left parenthesis in the function type definition");
+    if (!this->assert_current_and_eat(
+            TokenType::L_PAREN,
+            L"no left parenthesis in the function type definition"))
+        return nullptr;
 
     auto types = this->parse_types();
 
-    this->assert_current_and_eat(
-        TokenType::R_PAREN,
-        L"no right parenthesis in the function type definition");
+    if (!this->assert_current_and_eat(
+            TokenType::R_PAREN,
+            L"no right parenthesis in the function type definition"))
+        return nullptr;
 
     TypePtr return_type = this->parse_return_type();
     return std::make_unique<FunctionType>(types, return_type, is_const);
@@ -428,8 +439,9 @@ std::unique_ptr<Block> Parser::parse_block()
             break;
     }
 
-    this->assert_current_and_eat(TokenType::R_BRACKET,
-                                 L"block statement missing a right bracket");
+    if (!this->assert_current_and_eat(
+            TokenType::R_BRACKET, L"block statement missing a right bracket"))
+        return nullptr;
     return std::make_unique<Block>(statements, position);
 }
 
@@ -472,8 +484,9 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_stmt()
         return std::make_unique<ReturnStmt>(position);
     }
     auto expr = this->parse_binary_expr();
-    this->assert_current_and_eat(TokenType::SEMICOLON,
-                                 L"no semicolon found in a return statement");
+    if (!this->assert_current_and_eat(
+            TokenType::SEMICOLON, L"no semicolon found in a return statement"))
+        return nullptr;
     return std::make_unique<ReturnStmt>(expr, position);
 }
 
@@ -490,9 +503,10 @@ std::unique_ptr<Statement> Parser::parse_assign_or_expr_stmt()
         }
         else
             result = std::make_unique<ExprStmt>(lhs, lhs->position);
-        this->assert_current_and_eat(
-            TokenType::SEMICOLON,
-            L"semicolon expected after an assignment or expression statement");
+        if (!this->assert_current_and_eat(
+                TokenType::SEMICOLON, L"semicolon expected after an "
+                                      L"assignment or expression statement"))
+            return nullptr;
     }
     return result;
 }
@@ -531,8 +545,10 @@ std::unique_ptr<ContinueStmt> Parser::parse_continue_stmt()
         return nullptr;
     auto position = this->current_token->position;
     this->next_token();
-    this->assert_current_and_eat(
-        TokenType::SEMICOLON, L"no semicolon found in a continue statement");
+    if (!this->assert_current_and_eat(
+            TokenType::SEMICOLON,
+            L"no semicolon found in a continue statement"))
+        return nullptr;
     return std::make_unique<ContinueStmt>(position);
 }
 
@@ -543,8 +559,10 @@ std::unique_ptr<BreakStmt> Parser::parse_break_stmt()
         return nullptr;
     auto position = this->current_token->position;
     this->next_token();
-    this->assert_current_and_eat(
-        TokenType::SEMICOLON, L"no semicolon found in a continue statement");
+    if (!this->assert_current_and_eat(
+            TokenType::SEMICOLON,
+            L"no semicolon found in a continue statement"))
+        return nullptr;
     return std::make_unique<BreakStmt>(position);
 }
 
@@ -623,15 +641,17 @@ std::unique_ptr<MatchStmt> Parser::parse_match_stmt()
             L"no parenthesis expression found in a match statement");
         return nullptr;
     }
-    this->assert_current_and_eat(TokenType::L_BRACKET,
-                                 L"no left bracket in a match statement");
+    if (!this->assert_current_and_eat(TokenType::L_BRACKET,
+                                      L"no left bracket in a match statement"))
+        return nullptr;
     std::vector<MatchArmPtr> match_cases;
     while (auto match_case = this->parse_match_arm())
     {
         match_cases.push_back(std::move(match_case));
     }
-    this->assert_current_and_eat(TokenType::R_BRACKET,
-                                 L"no left bracket in a match statement");
+    if (!this->assert_current_and_eat(TokenType::R_BRACKET,
+                                      L"no left bracket in a match statement"))
+        return nullptr;
     return std::make_unique<MatchStmt>(matched_expr, match_cases, position);
 }
 
@@ -992,8 +1012,10 @@ std::optional<std::vector<ExprNodePtr>> Parser::parse_call_part()
         return std::nullopt;
     this->next_token();
     auto args = this->parse_args();
-    this->assert_current_and_eat(
-        TokenType::R_PAREN, L"expected right parenthesis in call expression");
+    if (!this->assert_current_and_eat(
+            TokenType::R_PAREN,
+            L"expected right parenthesis in call expression"))
+        return std::nullopt;
     return args;
 }
 
@@ -1028,18 +1050,26 @@ std::optional<std::vector<ExprNodePtr>> Parser::parse_lambda_call_part()
     if (this->current_token != TokenType::AT)
         return std::nullopt;
     this->next_token();
-    this->assert_current_and_eat(
-        TokenType::L_PAREN,
-        L"expected left parenthesis in lambda call expression");
+    if (!this->assert_current_and_eat(
+            TokenType::L_PAREN,
+            L"expected left parenthesis in lambda call expression"))
+        return std::nullopt;
     auto args = this->parse_lambda_args();
-    this->assert_current_and_eat(
-        TokenType::R_PAREN,
-        L"expected right parenthesis in lambda call expression");
+    if (!args)
+    {
+        this->report_error(
+            L"expected a list of arguments in a lambda call expression");
+        return std::nullopt;
+    }
+    if (!this->assert_current_and_eat(
+            TokenType::R_PAREN,
+            L"expected right parenthesis in lambda call expression"))
+        return std::nullopt;
     return args;
 }
 
 // LAMBDA_ARGS = LAMBDA_ARG, {COMMA, LAMBDA_ARG};
-std::vector<ExprNodePtr> Parser::parse_lambda_args()
+std::optional<std::vector<ExprNodePtr>> Parser::parse_lambda_args()
 {
     std::optional<ExprNodePtr> arg;
     std::vector<ExprNodePtr> args;
@@ -1058,6 +1088,7 @@ std::vector<ExprNodePtr> Parser::parse_lambda_args()
                 this->report_error(
                     L"argument or placeholder expected after a comma in a "
                     L"lambda call argument list");
+                return std::nullopt;
             }
         }
     }
@@ -1091,9 +1122,10 @@ ExprNodePtr Parser::parse_index_part()
                            L"expression's square brackets");
         return nullptr;
     }
-    this->assert_current_and_eat(
-        TokenType::R_SQ_BRACKET,
-        L"expected right square bracket in an index expression");
+    if (!this->assert_current_and_eat(
+            TokenType::R_SQ_BRACKET,
+            L"expected right square bracket in an index expression"))
+        return nullptr;
     return result;
 }
 
@@ -1132,10 +1164,10 @@ ExprNodePtr Parser::parse_paren_expr()
         this->report_error(L"no expression found after a left parenthesis");
         return nullptr;
     }
-
-    this->assert_current_and_eat(
-        TokenType::R_PAREN,
-        L"expected a right bracket in a parenthesis expression");
+    if (!this->assert_current_and_eat(
+            TokenType::R_PAREN,
+            L"expected a right bracket in a parenthesis expression"))
+        return nullptr;
 
     expr->position = position;
     return expr;

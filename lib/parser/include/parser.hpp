@@ -32,7 +32,7 @@ class Parser : public Reporter
 
     void next_token();
 
-    void assert_current_and_eat(TokenType type, const std::wstring &error_msg);
+    bool assert_current_and_eat(TokenType type, const std::wstring &error_msg);
 
     // type names
 
@@ -111,7 +111,7 @@ class Parser : public Reporter
     std::vector<ExprNodePtr> parse_args();
 
     std::optional<std::vector<ExprNodePtr>> parse_lambda_call_part();
-    std::vector<ExprNodePtr> parse_lambda_args();
+    std::optional<std::vector<ExprNodePtr>> parse_lambda_args();
     std::optional<ExprNodePtr> parse_lambda_arg();
 
     ExprNodePtr parse_index_part();

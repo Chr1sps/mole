@@ -48,10 +48,6 @@ class Lexer
     Token parse_char(const Position &position);
     Token parse_str(const Position &position);
 
-    std::string parse_digits();
-    Token parse_floating_remainder(std::string &num_str,
-                                   const Position &position);
-
     std::optional<wchar_t> parse_escape_sequence();
     std::optional<wchar_t> parse_language_char();
 

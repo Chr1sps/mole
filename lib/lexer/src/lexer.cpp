@@ -102,9 +102,8 @@ const std::map<wchar_t, CharNode> Lexer::char_nodes{
 
 std::optional<wchar_t> Lexer::get_new_char()
 {
-    const auto &[chr, pos] = this->reader->get();
-    this->position = pos;
-    return this->last_char = chr;
+    std::tie(this->last_char, this->position) = this->reader->get();
+    return this->last_char;
 }
 
 std::optional<wchar_t> Lexer::get_nonempty_char()
