@@ -65,10 +65,10 @@ using CharExprPtr = std::unique_ptr<CharExpr>;
 using BoolExprPtr = std::unique_ptr<BoolExpr>;
 
 using ExprNodeVariant =
-    std::variant<std::monostate, VariableExprPtr, BinaryExprPtr, UnaryExprPtr,
-                 CallExprPtr, LambdaCallExprPtr, IndexExprPtr, CastExprPtr,
-                 I32ExprPtr, F64ExprPtr, BoolExprPtr, StringExprPtr,
-                 CharExprPtr>;
+    std::variant<VariableExpr, BinaryExpr, UnaryExpr, CallExpr, LambdaCallExpr,
+                 IndexExpr, CastExpr, I32Expr, F64Expr, BoolExpr, StringExpr,
+                 CharExpr>;
+using ExprNodePtr = std::unique_ptr<ExprNodeVariant>;
 
 template <typename... Ts> struct overloaded : Ts...
 {
@@ -132,17 +132,17 @@ enum class UnaryOpEnum
 
 struct BinaryExpr : public ExprNode
 {
-    ExprNodeVariant lhs, rhs;
+    ExprNodePtr lhs, rhs;
     BinOpEnum op;
 
-    BinaryExpr(ExprNodeVariant &lhs, ExprNodeVariant &rhs, const BinOpEnum &op,
+    BinaryExpr(ExprNodePtr &lhs, ExprNodePtr &rhs, const BinOpEnum &op,
                const Position &position)
         : ExprNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
     {
     }
 
-    BinaryExpr(ExprNodeVariant &&lhs, ExprNodeVariant &&rhs,
-               const BinOpEnum &op, const Position &position)
+    BinaryExpr(ExprNodePtr &&lhs, ExprNodePtr &&rhs, const BinOpEnum &op,
+               const Position &position)
         : ExprNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
     {
     }
@@ -155,16 +155,16 @@ struct BinaryExpr : public ExprNode
 
 struct UnaryExpr : public ExprNode
 {
-    ExprNodeVariant expr;
+    ExprNodePtr expr;
     UnaryOpEnum op;
 
-    UnaryExpr(ExprNodeVariant &expr, const UnaryOpEnum &op,
+    UnaryExpr(ExprNodePtr &expr, const UnaryOpEnum &op,
               const Position &position)
         : ExprNode(position), expr(std::move(expr)), op(op)
     {
     }
 
-    UnaryExpr(ExprNodeVariant &&expr, const UnaryOpEnum &op,
+    UnaryExpr(ExprNodePtr &&expr, const UnaryOpEnum &op,
               const Position &position)
         : ExprNode(position), expr(std::move(expr)), op(op)
     {
@@ -178,17 +178,17 @@ struct UnaryExpr : public ExprNode
 
 struct CallExpr : public ExprNode
 {
-    ExprNodeVariant callable;
-    std::vector<ExprNodeVariant> args;
+    ExprNodePtr callable;
+    std::vector<ExprNodePtr> args;
 
-    CallExpr(ExprNodeVariant &callable, std::vector<ExprNodeVariant> &args,
+    CallExpr(ExprNodePtr &callable, std::vector<ExprNodePtr> &args,
              const Position &position)
         : ExprNode(position), callable(std::move(callable)),
           args(std::move(args))
     {
     }
 
-    CallExpr(ExprNodeVariant &&callable, std::vector<ExprNodeVariant> &&args,
+    CallExpr(ExprNodePtr &&callable, std::vector<ExprNodePtr> &&args,
              const Position &position)
         : ExprNode(position), callable(std::move(callable)),
           args(std::move(args))
@@ -203,19 +203,17 @@ struct CallExpr : public ExprNode
 
 struct LambdaCallExpr : public ExprNode
 {
-    ExprNodeVariant callable;
-    std::vector<ExprNodeVariant> args;
+    ExprNodePtr callable;
+    std::vector<ExprNodePtr> args;
 
-    LambdaCallExpr(ExprNodeVariant &callable,
-                   std::vector<ExprNodeVariant> &args,
+    LambdaCallExpr(ExprNodePtr &callable, std::vector<ExprNodePtr> &args,
                    const Position &position)
         : ExprNode(position), callable(std::move(callable)),
           args(std::move(args))
     {
     }
 
-    LambdaCallExpr(ExprNodeVariant &&callable,
-                   std::vector<ExprNodeVariant> &&args,
+    LambdaCallExpr(ExprNodePtr &&callable, std::vector<ExprNodePtr> &&args,
                    const Position &position)
         : ExprNode(position), callable(std::move(callable)),
           args(std::move(args))
@@ -230,16 +228,16 @@ struct LambdaCallExpr : public ExprNode
 
 struct IndexExpr : public ExprNode
 {
-    ExprNodeVariant expr, index_value;
+    ExprNodePtr expr, index_value;
 
-    IndexExpr(ExprNodeVariant &expr, ExprNodeVariant &index_value,
+    IndexExpr(ExprNodePtr &expr, ExprNodePtr &index_value,
               const Position &position)
         : ExprNode(position), expr(std::move(expr)),
           index_value(std::move(index_value))
     {
     }
 
-    IndexExpr(ExprNodeVariant &&expr, ExprNodeVariant &&index_value,
+    IndexExpr(ExprNodePtr &&expr, ExprNodePtr &&index_value,
               const Position &position)
         : ExprNode(position), expr(std::move(expr)),
           index_value(std::move(index_value))
@@ -254,10 +252,10 @@ struct IndexExpr : public ExprNode
 
 struct CastExpr : public ExprNode
 {
-    ExprNodeVariant expr;
+    ExprNodePtr expr;
     TypePtr type;
 
-    CastExpr(ExprNodeVariant &expr, TypePtr &type, const Position &position)
+    CastExpr(ExprNodePtr &expr, TypePtr &type, const Position &position)
         : ExprNode(position), expr(std::move(expr)), type(std::move(type))
     {
     }
@@ -348,82 +346,18 @@ struct BoolExpr : public ExprNode
     }
 };
 
-Position get_position(const ExprNodeVariant &variant)
+inline Position get_expr_position(const ExprNodeVariant &variant)
 {
     return std::visit(
-        // Dynamic dispatch doesn't work there - you can't just use AstNode
-        // instead of the derived classes. Boilerplate ensues.
-        overloaded{
-            [](const VariableExprPtr &node) -> Position {
-                return node->position;
-            },
-            [](const BinaryExprPtr &node) -> Position {
-                return node->position;
-            },
-            [](const UnaryExprPtr &node) -> Position {
-                return node->position;
-            },
-            [](const CastExprPtr &node) -> Position { return node->position; },
-            [](const IndexExprPtr &node) -> Position {
-                return node->position;
-            },
-            [](const CallExprPtr &node) -> Position { return node->position; },
-            [](const LambdaCallExprPtr &node) -> Position {
-                return node->position;
-            },
-            [](const I32ExprPtr &node) -> Position { return node->position; },
-            [](const F64ExprPtr &node) -> Position { return node->position; },
-            [](const StringExprPtr &node) -> Position {
-                return node->position;
-            },
-            [](const CharExprPtr &node) -> Position { return node->position; },
-            [](const BoolExprPtr &node) -> Position { return node->position; },
-            [](const std::monostate &) -> Position {
-                throw std::exception();
-                return Position(-1, -1);
-            }},
+        [](const AstNode &node) -> Position { return node.position; },
         variant);
 }
 
-void set_position(ExprNodeVariant &variant, const Position &position)
+inline void set_expr_position(ExprNodeVariant &variant,
+                              const Position &position)
 {
-    // More boilerplate!
-    std::visit(
-        overloaded{
-            [&position](const VariableExprPtr &node) {
-                node->position = position;
-            },
-            [&position](const BinaryExprPtr &node) {
-                node->position = position;
-            },
-            [&position](const UnaryExprPtr &node) {
-                node->position = position;
-            },
-            [&position](const CastExprPtr &node) {
-                node->position = position;
-            },
-            [&position](const IndexExprPtr &node) {
-                node->position = position;
-            },
-            [&position](const CallExprPtr &node) {
-                node->position = position;
-            },
-            [&position](const LambdaCallExprPtr &node) {
-                node->position = position;
-            },
-            [&position](const I32ExprPtr &node) { node->position = position; },
-            [&position](const F64ExprPtr &node) { node->position = position; },
-            [&position](const StringExprPtr &node) {
-                node->position = position;
-            },
-            [&position](const CharExprPtr &node) {
-                node->position = position;
-            },
-            [&position](const BoolExprPtr &node) {
-                node->position = position;
-            },
-            [](const std::monostate &) {}},
-        variant);
+    std::visit([&position](AstNode &node) { node.position = position; },
+               variant);
 }
 
 struct Statement : public AstNode
@@ -464,18 +398,18 @@ using BlockPtr = std::unique_ptr<Block>;
 
 struct ReturnStmt : public Statement
 {
-    ExprNodeVariant expr;
+    ExprNodePtr expr;
 
     ReturnStmt(const Position &position) : Statement(position), expr()
     {
     }
 
-    ReturnStmt(ExprNodeVariant &expr, const Position &position)
+    ReturnStmt(ExprNodePtr &expr, const Position &position)
         : Statement(position), expr(std::move(expr))
     {
     }
 
-    ReturnStmt(ExprNodeVariant &&expr, const Position &position)
+    ReturnStmt(ExprNodePtr &&expr, const Position &position)
         : Statement(position), expr(std::move(expr))
     {
     }
@@ -514,18 +448,17 @@ struct VarDeclStmt : public Statement
 {
     std::wstring name;
     TypePtr type;
-    ExprNodeVariant initial_value;
+    ExprNodePtr initial_value;
     bool is_mut;
 
-    VarDeclStmt(const std::wstring &name, TypePtr &type,
-                ExprNodeVariant &value, const bool &is_mut,
-                const Position &position)
+    VarDeclStmt(const std::wstring &name, TypePtr &type, ExprNodePtr &value,
+                const bool &is_mut, const Position &position)
         : Statement(position), name(name), type(std::move(type)),
           initial_value(std::move(value)), is_mut(is_mut)
     {
     }
 
-    VarDeclStmt(std::wstring &&name, TypePtr &&type, ExprNodeVariant &&value,
+    VarDeclStmt(std::wstring &&name, TypePtr &&type, ExprNodePtr &&value,
                 bool &&is_mut, Position &&position)
         : Statement(position), name(name), type(std::move(type)),
           initial_value(std::move(value)), is_mut(is_mut)
@@ -560,19 +493,19 @@ enum class AssignType
 
 struct AssignStmt : public Statement
 {
-    ExprNodeVariant lhs;
+    ExprNodePtr lhs;
     AssignType type;
-    ExprNodeVariant rhs;
+    ExprNodePtr rhs;
 
-    AssignStmt(ExprNodeVariant &lhs, const AssignType &type,
-               ExprNodeVariant &rhs, const Position &position)
+    AssignStmt(ExprNodePtr &lhs, const AssignType &type, ExprNodePtr &rhs,
+               const Position &position)
         : Statement(position), lhs(std::move(lhs)), type(type),
           rhs(std::move(rhs))
     {
     }
 
-    AssignStmt(ExprNodeVariant &&lhs, const AssignType &type,
-               ExprNodeVariant &&rhs, const Position &position)
+    AssignStmt(ExprNodePtr &&lhs, const AssignType &type, ExprNodePtr &&rhs,
+               const Position &position)
         : Statement(position), lhs(std::move(lhs)), type(type),
           rhs(std::move(rhs))
     {
@@ -586,14 +519,14 @@ struct AssignStmt : public Statement
 
 struct ExprStmt : public Statement
 {
-    ExprNodeVariant expr;
+    ExprNodePtr expr;
 
-    ExprStmt(ExprNodeVariant &expr, const Position &position)
+    ExprStmt(ExprNodePtr &expr, const Position &position)
         : Statement(position), expr(std::move(expr))
     {
     }
 
-    ExprStmt(ExprNodeVariant &&expr, const Position &position)
+    ExprStmt(ExprNodePtr &&expr, const Position &position)
         : Statement(position), expr(std::move(expr))
     {
     }
@@ -606,17 +539,17 @@ struct ExprStmt : public Statement
 
 struct WhileStmt : public Statement
 {
-    ExprNodeVariant condition_expr;
+    ExprNodePtr condition_expr;
     StmtPtr statement;
 
-    WhileStmt(ExprNodeVariant &condition_expr, StmtPtr &statement,
+    WhileStmt(ExprNodePtr &condition_expr, StmtPtr &statement,
               const Position &position)
         : Statement(position), condition_expr(std::move(condition_expr)),
           statement(std::move(statement))
     {
     }
 
-    WhileStmt(ExprNodeVariant &&condition_expr, StmtPtr &&statement,
+    WhileStmt(ExprNodePtr &&condition_expr, StmtPtr &&statement,
               const Position &position)
         : Statement(position), condition_expr(std::move(condition_expr)),
           statement(std::move(statement))
@@ -631,18 +564,18 @@ struct WhileStmt : public Statement
 
 struct IfStmt : public Statement
 {
-    ExprNodeVariant condition_expr;
+    ExprNodePtr condition_expr;
     StmtPtr then_block;
     StmtPtr else_block;
 
-    IfStmt(ExprNodeVariant &condition_expr, StmtPtr &then_block,
+    IfStmt(ExprNodePtr &condition_expr, StmtPtr &then_block,
            StmtPtr &else_block, const Position &position)
         : Statement(position), condition_expr(std::move(condition_expr)),
           then_block(std::move(then_block)), else_block(std::move(else_block))
     {
     }
 
-    IfStmt(ExprNodeVariant &&condition_expr, StmtPtr &&then_block,
+    IfStmt(ExprNodePtr &&condition_expr, StmtPtr &&then_block,
            StmtPtr &&else_block, const Position &position)
         : Statement(position), condition_expr(std::move(condition_expr)),
           then_block(std::move(then_block)), else_block(std::move(else_block))
@@ -689,15 +622,15 @@ struct ElseArm : public MatchArm
 
 struct GuardArm : public MatchArm
 {
-    ExprNodeVariant condition_expr;
+    ExprNodePtr condition_expr;
 
-    GuardArm(ExprNodeVariant &condition_expr, StmtPtr &block,
+    GuardArm(ExprNodePtr &condition_expr, StmtPtr &block,
              const Position &position)
         : MatchArm(block, position), condition_expr(std::move(condition_expr))
     {
     }
 
-    GuardArm(ExprNodeVariant &&condition_expr, StmtPtr &&block,
+    GuardArm(ExprNodePtr &&condition_expr, StmtPtr &&block,
              const Position &position)
         : MatchArm(block, position), condition_expr(std::move(condition_expr))
     {
@@ -711,15 +644,15 @@ struct GuardArm : public MatchArm
 
 struct LiteralArm : public MatchArm
 {
-    std::vector<ExprNodeVariant> literals;
+    std::vector<ExprNodePtr> literals;
 
-    LiteralArm(std::vector<ExprNodeVariant> &literals, StmtPtr &block,
+    LiteralArm(std::vector<ExprNodePtr> &literals, StmtPtr &block,
                const Position &position)
         : MatchArm(block, position), literals(std::move(literals))
     {
     }
 
-    LiteralArm(std::vector<ExprNodeVariant> &&literals, StmtPtr &&block,
+    LiteralArm(std::vector<ExprNodePtr> &&literals, StmtPtr &&block,
                const Position &position)
         : MatchArm(block, position), literals(std::move(literals))
     {
@@ -733,17 +666,17 @@ struct LiteralArm : public MatchArm
 
 struct MatchStmt : public Statement
 {
-    ExprNodeVariant matched_expr;
+    ExprNodePtr matched_expr;
     std::vector<MatchArmPtr> match_arms;
 
-    MatchStmt(ExprNodeVariant &matched_expr,
-              std::vector<MatchArmPtr> &match_arms, const Position &position)
+    MatchStmt(ExprNodePtr &matched_expr, std::vector<MatchArmPtr> &match_arms,
+              const Position &position)
         : Statement(position), matched_expr(std::move(matched_expr)),
           match_arms(std::move(match_arms))
     {
     }
 
-    MatchStmt(ExprNodeVariant &&matched_expr,
+    MatchStmt(ExprNodePtr &&matched_expr,
               std::vector<MatchArmPtr> &&match_arms, const Position &position)
         : Statement(position), matched_expr(std::move(matched_expr)),
           match_arms(std::move(match_arms))

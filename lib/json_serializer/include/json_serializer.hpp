@@ -1,5 +1,5 @@
-#ifndef __PRINT_VISITOR_HPP__
-#define __PRINT_VISITOR_HPP__
+#ifndef __JSON_SERIALIZER_HPP__
+#define __JSON_SERIALIZER_HPP__
 #include "ast.hpp"
 #include "nlohmann/json.hpp"
 #include "visitor.hpp"

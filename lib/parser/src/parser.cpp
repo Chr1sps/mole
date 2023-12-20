@@ -212,14 +212,14 @@ TypePtr Parser::parse_type_specifier()
 }
 
 // INITIAL_VALUE = ASSIGN, BINARY_EXPR;
-ExprNodeVariant Parser::parse_initial_value()
+ExprNodePtr Parser::parse_initial_value()
 {
-    ExprNodeVariant value;
+    ExprNodePtr value;
     if (this->current_token == TokenType::ASSIGN)
     {
         this->next_token();
         value = this->parse_binary_expr();
-        if (std::holds_alternative<std::monostate>(value))
+        if (!value)
         {
             this->report_error(L"no initial value read");
         }
@@ -493,18 +493,17 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_stmt()
 std::unique_ptr<Statement> Parser::parse_assign_or_expr_stmt()
 {
     StmtPtr result = nullptr;
-    ExprNodeVariant lhs = this->parse_binary_expr();
-    if (std::holds_alternative<BinaryExprPtr>(lhs))
+    ExprNodePtr lhs = this->parse_binary_expr();
+    if (lhs)
     {
         if (auto op_and_rhs = this->parse_assign_part())
         {
             auto [op, rhs] = std::move(*op_and_rhs);
-            result = std::make_unique<AssignStmt>(
-                lhs, op, rhs, (std::get<BinaryExprPtr>(lhs))->position);
+            result = std::make_unique<AssignStmt>(lhs, op, rhs,
+                                                  get_expr_position(*lhs));
         }
         else
-            result = std::make_unique<ExprStmt>(
-                lhs, (std::get<BinaryExprPtr>(lhs))->position);
+            result = std::make_unique<ExprStmt>(lhs, get_expr_position(*lhs));
         if (!this->assert_current_and_eat(
                 TokenType::SEMICOLON, L"semicolon expected after an "
                                       L"assignment or expression statement"))
@@ -514,8 +513,7 @@ std::unique_ptr<Statement> Parser::parse_assign_or_expr_stmt()
 }
 
 // ASSIGN_PART = ASSIGN_OP, BINARY_EXPR;
-std::optional<std::tuple<AssignType, ExprNodeVariant>> Parser::
-    parse_assign_part()
+std::optional<std::tuple<AssignType, ExprNodePtr>> Parser::parse_assign_part()
 {
     if (auto op = this->parse_assign_op())
     {
@@ -578,7 +576,7 @@ std::unique_ptr<IfStmt> Parser::parse_if_stmt()
     this->next_token();
 
     auto condition = this->parse_paren_expr();
-    if (std::holds_alternative<std::monostate>(condition))
+    if (!condition)
     {
         this->report_error(
             L"no condition expression found in an if statement");
@@ -615,7 +613,7 @@ std::unique_ptr<WhileStmt> Parser::parse_while_stmt()
     auto position = this->current_token->position;
     this->next_token();
     auto condition_expr = this->parse_paren_expr();
-    if (std::holds_alternative<std::monostate>(condition_expr))
+    if (!condition_expr)
     {
         this->report_error(
             L"no condition expression found in the while loop statement");
@@ -638,7 +636,7 @@ std::unique_ptr<MatchStmt> Parser::parse_match_stmt()
     auto position = this->current_token->position;
     this->next_token();
     auto matched_expr = this->parse_paren_expr();
-    if (std::holds_alternative<std::monostate>(matched_expr))
+    if (!matched_expr)
     {
         this->report_error(
             L"no parenthesis expression found in a match statement");
@@ -688,20 +686,20 @@ std::unique_ptr<LiteralArm> Parser::parse_literal_arm()
 }
 
 // LITERAL_CONDITION = UNARY_EXPR, {BIT_OR, UNARY_EXPR};
-std::optional<std::tuple<Position, std::vector<ExprNodeVariant>>> Parser::
+std::optional<std::tuple<Position, std::vector<ExprNodePtr>>> Parser::
     parse_literal_condition()
 {
-    ExprNodeVariant expr = this->parse_unary_expr();
-    if (std::holds_alternative<UnaryExprPtr>(expr))
+    ExprNodePtr expr = this->parse_unary_expr();
+    if (expr)
     {
-        auto position = std::get<UnaryExprPtr>(expr)->position;
-        std::vector<ExprNodeVariant> conditions;
+        auto position = get_expr_position(*expr);
+        std::vector<ExprNodePtr> conditions;
         conditions.push_back(std::move(expr));
         while (this->current_token == TokenType::BIT_OR)
         {
             this->next_token();
             expr = this->parse_unary_expr();
-            if (std::holds_alternative<UnaryExprPtr>(expr))
+            if (expr)
             {
                 conditions.push_back(std::move(expr));
             }
@@ -735,7 +733,7 @@ std::unique_ptr<GuardArm> Parser::parse_guard_arm()
 }
 
 // GUARD_CONDITION = KW_IF, PAREN_EXPR;
-std::optional<std::tuple<Position, ExprNodeVariant>> Parser::
+std::optional<std::tuple<Position, ExprNodePtr>> Parser::
     parse_guard_condition()
 {
     if (this->current_token != TokenType::KW_IF)
@@ -774,74 +772,75 @@ StmtPtr Parser::parse_match_arm_block()
 }
 
 // VARIABLE_EXPR = IDENTIFIER;
-std::unique_ptr<VariableExpr> Parser::parse_variable_expr()
+ExprNodePtr Parser::parse_variable_expr()
 {
     if (this->current_token != TokenType::IDENTIFIER)
         return nullptr;
-    auto result = std::make_unique<VariableExpr>(
-        std::get<std::wstring>(this->current_token->value),
-        this->current_token->position);
+    auto result = std::make_unique<ExprNodeVariant>(
+        VariableExpr(std::get<std::wstring>(this->current_token->value),
+                     this->current_token->position));
     this->next_token();
     return result;
 }
 
 // F64 = DOUBLE;
-std::unique_ptr<F64Expr> Parser::parse_f64_expr()
+ExprNodePtr Parser::parse_f64_expr()
 {
     if (this->current_token != TokenType::DOUBLE)
         return nullptr;
-    auto result =
-        std::make_unique<F64Expr>(std::get<double>(this->current_token->value),
-                                  this->current_token->position);
+    auto result = std::make_unique<ExprNodeVariant>(
+        F64Expr(std::get<double>(this->current_token->value),
+                this->current_token->position));
     this->next_token();
     return result;
 }
 
 // U32_EXPR = INT;
-std::unique_ptr<I32Expr> Parser::parse_u32_expr()
+ExprNodePtr Parser::parse_u32_expr()
 {
     if (this->current_token != TokenType::INT)
         return nullptr;
-    auto result = std::make_unique<I32Expr>(
-        std::get<unsigned long long>(this->current_token->value),
-        this->current_token->position);
+    auto result = std::make_unique<ExprNodeVariant>(
+        I32Expr(std::get<unsigned long long>(this->current_token->value),
+                this->current_token->position));
     this->next_token();
     return result;
 }
 
 // STRING_EXPR = STRING;
-std::unique_ptr<StringExpr> Parser::parse_string_expr()
+ExprNodePtr Parser::parse_string_expr()
 {
     if (this->current_token != TokenType::STRING)
         return nullptr;
-    auto result = std::make_unique<StringExpr>(
-        std::get<std::wstring>(this->current_token->value),
-        this->current_token->position);
+    auto result = std::make_unique<ExprNodeVariant>(
+        StringExpr(std::get<std::wstring>(this->current_token->value),
+                   this->current_token->position));
     this->next_token();
     return result;
 }
 
 // CHAR_EXPR = CHAR;
-std::unique_ptr<CharExpr> Parser::parse_char_expr()
+ExprNodePtr Parser::parse_char_expr()
 {
     if (this->current_token != TokenType::CHAR)
         return nullptr;
-    auto result = std::make_unique<CharExpr>(
-        std::get<wchar_t>(this->current_token->value),
-        this->current_token->position);
+    auto result = std::make_unique<ExprNodeVariant>(
+        CharExpr(std::get<wchar_t>(this->current_token->value),
+                 this->current_token->position));
     this->next_token();
     return result;
 }
 
 // BOOL_EXPR = KW_FALSE | KW_TRUE;
-std::unique_ptr<BoolExpr> Parser::parse_bool_expr()
+ExprNodePtr Parser::parse_bool_expr()
 {
     if (this->current_token == TokenType::KW_TRUE ||
         this->current_token == TokenType::KW_FALSE)
     {
         auto value = this->current_token == TokenType::KW_TRUE;
         auto position = this->current_token->position;
-        auto result = std::make_unique<BoolExpr>(value, position);
+        auto result =
+            std::make_unique<ExprNodeVariant>(BoolExpr(value, position));
         this->next_token();
         return result;
     }
@@ -849,7 +848,7 @@ std::unique_ptr<BoolExpr> Parser::parse_bool_expr()
         return nullptr;
 }
 
-bool join_into_binary_op(std::stack<ExprNodeVariant> &values,
+bool join_into_binary_op(std::stack<ExprNodePtr> &values,
                          std::stack<BinOpData> &ops)
 {
     auto op = ops.top().type;
@@ -868,23 +867,23 @@ bool join_into_binary_op(std::stack<ExprNodeVariant> &values,
         auto lhs = std::move(values.top());
         values.pop();
 
-        auto position = get_position(lhs);
-        auto new_expr = std::make_unique<BinaryExpr>(lhs, rhs, op, position);
+        auto position = get_expr_position(*lhs);
+        auto new_expr = std::make_unique<ExprNodeVariant>(
+            BinaryExpr(lhs, rhs, op, position));
         values.push(std::move(new_expr));
         return true;
     }
 }
 
 // BINARY_EXPR = CAST_EXPR, {BINARY_OP, CAST_EXPR};
-ExprNodeVariant Parser::parse_binary_expr()
+ExprNodePtr Parser::parse_binary_expr()
 {
-    std::stack<ExprNodeVariant> values;
+    std::stack<ExprNodePtr> values;
     std::stack<BinOpData> ops;
     decltype(this->binary_map)::iterator iter;
     while (true)
     {
-        auto expr = this->parse_cast_expr();
-        if (std::holds_alternative<CastExprPtr>(expr))
+        if (auto expr = this->parse_cast_expr())
         {
             values.push(std::move(expr));
         }
@@ -932,34 +931,35 @@ ExprNodeVariant Parser::parse_binary_expr()
 }
 
 // CAST_EXPR = UNARY_EXPR , {KW_AS, SIMPLE_TYPE};
-ExprNodeVariant Parser::parse_cast_expr()
+ExprNodePtr Parser::parse_cast_expr()
 {
     auto lhs = this->parse_unary_expr();
-    if (std::holds_alternative<std::monostate>(lhs))
+    if (!lhs)
     {
         this->report_error(
             L"no expression found on the left side of the cast expression");
         return {};
     }
-    auto position = std::get<UnaryExprPtr>(lhs)->position;
+    auto position = get_expr_position(*lhs);
     while (this->current_token == TokenType::KW_AS)
     {
         this->next_token();
         if (auto type = this->parse_simple_type())
         {
-            lhs = std::make_unique<CastExpr>(lhs, type, position);
+            lhs = std::make_unique<ExprNodeVariant>(
+                CastExpr(lhs, type, position));
         }
         else
         {
             this->report_error(L"no type name given in a cast expression");
         }
-        position = std::get<CastExprPtr>(lhs)->position;
+        position = get_expr_position(*lhs);
     }
     return lhs;
 }
 
 // UNARY_EXPR = {UNARY_OP}, (INDEX_LAMBDA_OR_CALL);
-ExprNodeVariant Parser::parse_unary_expr()
+ExprNodePtr Parser::parse_unary_expr()
 {
     std::stack<UnaryOpEnum> ops;
     std::stack<Position> positions;
@@ -973,12 +973,12 @@ ExprNodeVariant Parser::parse_unary_expr()
         this->next_token();
     }
     auto inner = this->parse_index_lambda_or_call();
-    if (!std::holds_alternative<std::monostate>(inner))
+    if (inner)
     {
         while (!ops.empty())
         {
-            inner =
-                std::make_unique<UnaryExpr>(inner, ops.top(), positions.top());
+            inner = std::make_unique<ExprNodeVariant>(
+                UnaryExpr(inner, ops.top(), positions.top()));
             ops.pop();
             positions.pop();
         }
@@ -992,25 +992,32 @@ ExprNodeVariant Parser::parse_unary_expr()
 }
 
 // INDEX_LAMBDA_OR_CALL = FACTOR, {CALL_PART | LAMBDA_CALL_PART | INDEX_PART};
-ExprNodeVariant Parser::parse_index_lambda_or_call()
+ExprNodePtr Parser::parse_index_lambda_or_call()
 {
     auto result = this->parse_factor();
-    auto position = get_position(result);
+    if (!result)
+    {
+        this->report_error(
+            L"no expression found in an index, lambda or call expression");
+        return nullptr;
+    }
+    auto position = get_expr_position(*result);
     while (true)
     {
         if (auto params = this->parse_call_part())
         {
-            result = std::make_unique<CallExpr>(result, *params, position);
+            result = std::make_unique<ExprNodeVariant>(
+                CallExpr(result, *params, position));
         }
         else if (auto params = this->parse_lambda_call_part())
         {
-            result =
-                std::make_unique<LambdaCallExpr>(result, *params, position);
+            result = std::make_unique<ExprNodeVariant>(
+                LambdaCallExpr(result, *params, position));
         }
-        else if (auto param = this->parse_index_part();
-                 !std::holds_alternative<std::monostate>(param))
+        else if (auto param = this->parse_index_part())
         {
-            result = std::make_unique<IndexExpr>(result, param, position);
+            result = std::make_unique<ExprNodeVariant>(
+                IndexExpr(result, param, position));
         }
         else
             break;
@@ -1019,7 +1026,7 @@ ExprNodeVariant Parser::parse_index_lambda_or_call()
 }
 
 // CALL_PART = L_PAREN, [ARGS], R_PAREN;
-std::optional<std::vector<ExprNodeVariant>> Parser::parse_call_part()
+std::optional<std::vector<ExprNodePtr>> Parser::parse_call_part()
 {
     if (this->current_token != TokenType::L_PAREN)
         return std::nullopt;
@@ -1033,19 +1040,17 @@ std::optional<std::vector<ExprNodeVariant>> Parser::parse_call_part()
 }
 
 // ARGS = BINARY_EXPR, {COMMA, BINARY_EXPR};
-std::vector<ExprNodeVariant> Parser::parse_args()
+std::vector<ExprNodePtr> Parser::parse_args()
 {
-    ExprNodeVariant arg;
-    std::vector<ExprNodeVariant> args;
-    arg = this->parse_binary_expr();
-    if (!std::holds_alternative<std::monostate>(arg))
+    ExprNodePtr arg;
+    std::vector<ExprNodePtr> args;
+    if ((arg = this->parse_binary_expr()))
     {
         args.push_back(std::move(arg));
         while (this->current_token == TokenType::COMMA)
         {
             this->next_token();
-            arg = this->parse_binary_expr();
-            if (std::holds_alternative<std::monostate>(arg))
+            if ((arg = this->parse_binary_expr()))
             {
                 args.push_back(std::move(arg));
             }
@@ -1060,7 +1065,7 @@ std::vector<ExprNodeVariant> Parser::parse_args()
 }
 
 // LAMBDA_CALL_PART = AT, L_PAREN, [LAMBDA_ARGS], R_PAREN;
-std::optional<std::vector<ExprNodeVariant>> Parser::parse_lambda_call_part()
+std::optional<std::vector<ExprNodePtr>> Parser::parse_lambda_call_part()
 {
     if (this->current_token != TokenType::AT)
         return std::nullopt;
@@ -1084,10 +1089,10 @@ std::optional<std::vector<ExprNodeVariant>> Parser::parse_lambda_call_part()
 }
 
 // LAMBDA_ARGS = LAMBDA_ARG, {COMMA, LAMBDA_ARG};
-std::optional<std::vector<ExprNodeVariant>> Parser::parse_lambda_args()
+std::optional<std::vector<ExprNodePtr>> Parser::parse_lambda_args()
 {
-    std::optional<ExprNodeVariant> arg;
-    std::vector<ExprNodeVariant> args;
+    std::optional<ExprNodePtr> arg;
+    std::vector<ExprNodePtr> args;
     if ((arg = this->parse_lambda_arg()))
     {
         args.push_back(std::move(*arg));
@@ -1111,10 +1116,10 @@ std::optional<std::vector<ExprNodeVariant>> Parser::parse_lambda_args()
 }
 
 // LAMBDA_ARG = BINARY_EXPR | PLACEHOLDER;
-std::optional<ExprNodeVariant> Parser::parse_lambda_arg()
+std::optional<ExprNodePtr> Parser::parse_lambda_arg()
 {
     auto arg = this->parse_binary_expr();
-    if (!std::holds_alternative<std::monostate>(arg))
+    if (arg)
         return arg;
     else if (this->current_token == TokenType::PLACEHOLDER)
     {
@@ -1126,13 +1131,13 @@ std::optional<ExprNodeVariant> Parser::parse_lambda_arg()
 }
 
 // INDEX_PART = L_SQ_BRACKET, BINARY_EXPR, R_SQ_BRACKET;
-ExprNodeVariant Parser::parse_index_part()
+ExprNodePtr Parser::parse_index_part()
 {
     if (this->current_token != TokenType::L_SQ_BRACKET)
         return {};
     this->next_token();
     auto result = this->parse_binary_expr();
-    if (std::holds_alternative<std::monostate>(result))
+    if (!result)
     {
         this->report_error(L"no index value expression found in the index "
                            L"expression's square brackets");
@@ -1147,7 +1152,7 @@ ExprNodeVariant Parser::parse_index_part()
 
 // FACTOR = PAREN_EXPR | U32_EXPR | F64_EXPR | STRING_EXPR | CHAR_EXPR |
 // BOOL_EXPR;
-ExprNodeVariant Parser::parse_factor()
+ExprNodePtr Parser::parse_factor()
 {
     if (auto result = this->parse_u32_expr())
         return result;
@@ -1159,16 +1164,15 @@ ExprNodeVariant Parser::parse_factor()
         return result;
     else if (auto result = this->parse_bool_expr())
         return result;
-    else if (auto result = this->parse_paren_expr();
-             !std::holds_alternative<std::monostate>(result))
-        return result;
     else if (auto result = this->parse_variable_expr())
+        return result;
+    else if (auto result = this->parse_paren_expr())
         return result;
     return {};
 }
 
 // PAREN_EXPR = L_PAREN, BINARY_EXPR, R_PAREN;
-ExprNodeVariant Parser::parse_paren_expr()
+ExprNodePtr Parser::parse_paren_expr()
 {
     if (this->current_token != TokenType::L_PAREN)
         return {};
@@ -1176,7 +1180,7 @@ ExprNodeVariant Parser::parse_paren_expr()
     this->next_token();
 
     auto expr = this->parse_binary_expr();
-    if (std::holds_alternative<std::monostate>(expr))
+    if (!expr)
     {
         this->report_error(L"no expression found after a left parenthesis");
         return {};
@@ -1186,7 +1190,7 @@ ExprNodeVariant Parser::parse_paren_expr()
             L"expected a right bracket in a parenthesis expression"))
         return {};
 
-    set_position(expr, position);
+    set_expr_position(*expr, position);
     return expr;
 }
 
