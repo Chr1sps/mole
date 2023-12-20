@@ -55,6 +55,12 @@ bool equal_or_null(const std::shared_ptr<T> &first,
            (first && other && *first == *other);
 }
 
+bool equal_or_null(const ExprNodeVariant &first, const ExprNodeVariant &other)
+{
+    return first == other || (std::holds_alternative<std::monostate>(first) &&
+                              std::holds_alternative<std::monostate>(other));
+}
+
 template <typename T> bool equal_or_null(const T *first, const T *other)
 {
     return (first == nullptr && other == nullptr) ||
@@ -78,125 +84,89 @@ bool compare_ptr_vectors(const std::vector<std::unique_ptr<T>> &first,
         });
 }
 
-GENERATE_VISITOR(
-    ExprVisitor, VariableExpr,
-    {
-        this->value = this->expr.name == node.name &&
-                      this->expr.position == node.position;
-    },
-    I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, BinaryExpr, UnaryExpr,
-    CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
+bool compare_variant_vectors(const std::vector<ExprNodeVariant> &first,
+                             const std::vector<ExprNodeVariant> &other)
+{
+    return std::equal(first.begin(), first.end(), other.begin(), other.end(),
+                      [](const ExprNodeVariant &a, const ExprNodeVariant &b) {
+                          return a == b;
+                      });
+}
 
-GENERATE_VISITOR(
-    ExprVisitor, I32Expr,
-    {
-        this->value = this->expr.value == node.value &&
-                      this->expr.position == node.position;
-    },
-    VariableExpr, F64Expr, StringExpr, CharExpr, BoolExpr, BinaryExpr,
-    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
-
-GENERATE_VISITOR(
-    ExprVisitor, F64Expr,
-    {
-        this->value = this->expr.value == node.value &&
-                      this->expr.position == node.position;
-    },
-    VariableExpr, I32Expr, StringExpr, CharExpr, BoolExpr, BinaryExpr,
-    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
-
-GENERATE_VISITOR(
-    ExprVisitor, StringExpr,
-    {
-        this->value = this->expr.value == node.value &&
-                      this->expr.position == node.position;
-    },
-    VariableExpr, I32Expr, F64Expr, CharExpr, BoolExpr, BinaryExpr, UnaryExpr,
-    CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
-
-GENERATE_VISITOR(
-    ExprVisitor, CharExpr,
-    {
-        this->value = this->expr.value == node.value &&
-                      this->expr.position == node.position;
-    },
-    VariableExpr, I32Expr, F64Expr, StringExpr, BoolExpr, BinaryExpr,
-    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
-
-GENERATE_VISITOR(
-    ExprVisitor, BoolExpr,
-    {
-        this->value = this->expr.value == node.value &&
-                      this->expr.position == node.position;
-    },
-    VariableExpr, I32Expr, F64Expr, StringExpr, CharExpr, BinaryExpr,
-    UnaryExpr, CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
-
-GENERATE_VISITOR(
-    ExprVisitor, UnaryExpr,
-    {
-        this->value = (*this->expr.expr) == (*node.expr) &&
-                      this->expr.op == node.op &&
-                      this->expr.position == node.position;
-    },
-    I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, BinaryExpr, VariableExpr,
-    CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
-
-GENERATE_VISITOR(
-    ExprVisitor, BinaryExpr,
-    {
-        this->value = (*this->expr.lhs) == (*node.lhs) &&
-                      (*this->expr.rhs) == (*node.rhs) &&
-                      this->expr.op == node.op &&
-                      this->expr.position == node.position;
-    },
-    I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
-    CallExpr, LambdaCallExpr, IndexExpr, CastExpr)
-
-GENERATE_VISITOR(
-    ExprVisitor, CallExpr,
-    {
-        this->value = *this->expr.callable == *node.callable &&
-                      compare_ptr_vectors(this->expr.args, node.args) &&
-                      this->expr.position == node.position;
-    },
-    I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
-    BinaryExpr, LambdaCallExpr, IndexExpr, CastExpr)
-
-GENERATE_VISITOR(
-    ExprVisitor, LambdaCallExpr,
-    {
-        auto are_args_equal =
-            std::equal(this->expr.args.begin(), this->expr.args.end(),
-                       node.args.begin(), node.args.end(),
-                       [](const ExprNodeVariant &a, const ExprNodeVariant &b) {
-                           return equal_or_null(a, b);
-                       });
-        this->value = *this->expr.callable == *node.callable &&
-                      are_args_equal && this->expr.position == node.position;
-    },
-    I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
-    BinaryExpr, CallExpr, IndexExpr, CastExpr)
-
-GENERATE_VISITOR(
-    ExprVisitor, IndexExpr,
-    {
-        this->value = *this->expr.expr == *node.expr &&
-                      *this->expr.index_value == *node.index_value &&
-                      this->expr.position == node.position;
-    },
-    I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
-    BinaryExpr, CallExpr, LambdaCallExpr, CastExpr)
-
-GENERATE_VISITOR(
-    ExprVisitor, CastExpr,
-    {
-        this->value = *this->expr.expr == *node.expr &&
-                      *this->expr.type == *node.type &&
-                      this->expr.position == node.position;
-    },
-    I32Expr, F64Expr, StringExpr, CharExpr, BoolExpr, UnaryExpr, VariableExpr,
-    BinaryExpr, CallExpr, LambdaCallExpr, IndexExpr)
+bool operator==(const ExprNodeVariant &first, const ExprNodeVariant &other)
+{
+    return std::visit(
+        overloaded{
+            [](const VariableExprPtr &first,
+               const VariableExprPtr &other) -> bool {
+                return first->name == other->name &&
+                       first->position == other->position;
+            },
+            [](const I32ExprPtr &first, const I32ExprPtr &other) -> bool {
+                return first->value == other->value &&
+                       first->position == other->position;
+            },
+            [](const F64ExprPtr &first, const F64ExprPtr &other) -> bool {
+                return first->value == other->value &&
+                       first->position == other->position;
+            },
+            [](const StringExprPtr &first,
+               const StringExprPtr &other) -> bool {
+                return first->value == other->value &&
+                       first->position == other->position;
+            },
+            [](const CharExprPtr &first, const CharExprPtr &other) -> bool {
+                return first->value == other->value &&
+                       first->position == other->position;
+            },
+            [](const BoolExprPtr &first, const BoolExprPtr &other) -> bool {
+                return first->value == other->value &&
+                       first->position == other->position;
+            },
+            [](const UnaryExprPtr &first, const UnaryExprPtr &other) -> bool {
+                return first->expr == other->expr && first->op == other->op &&
+                       first->position == other->position;
+            },
+            [](const BinaryExprPtr &first,
+               const BinaryExprPtr &other) -> bool {
+                return first->lhs == other->lhs && first->rhs == other->rhs &&
+                       first->op == other->op &&
+                       first->position == other->position;
+            },
+            [](const CallExprPtr &first, const CallExprPtr &other) -> bool {
+                return first->callable == other->callable &&
+                       compare_variant_vectors(first->args, other->args) &&
+                       first->position == other->position;
+            },
+            [](const CallExprPtr &first, const CallExprPtr &other) -> bool {
+                return first->callable == other->callable &&
+                       compare_variant_vectors(first->args, other->args) &&
+                       first->position == other->position;
+            },
+            [](const LambdaCallExprPtr &first,
+               const LambdaCallExprPtr &other) -> bool {
+                return first->callable == other->callable &&
+                       std::equal(first->args.begin(), first->args.end(),
+                                  other->args.begin(), other->args.end(),
+                                  [](const ExprNodeVariant &a,
+                                     const ExprNodeVariant &b) {
+                                      return equal_or_null(a, b);
+                                  }) &&
+                       first->position == other->position;
+            },
+            [](const IndexExprPtr &first, const IndexExprPtr &other) -> bool {
+                return first->expr == other->expr &&
+                       first->index_value == other->index_value &&
+                       first->position == other->position;
+            },
+            [](const CastExprPtr &first, const CastExprPtr &other) -> bool {
+                return first->expr == other->expr &&
+                       first->type == other->type &&
+                       first->position == other->position;
+            },
+            [](const auto &, const auto &) -> bool { return false; }},
+        first, other);
+}
 
 #define MAKE_EQUATION_VISIT(type)                                             \
     void visit(const type &other) override                                    \
@@ -206,32 +176,6 @@ GENERATE_VISITOR(
         value = visitor.value;                                                \
     }
 #define MAKE_EQUATION_VISITS(...) FOR_EACH(MAKE_EQUATION_VISIT, __VA_ARGS__)
-
-struct ExprEquationVisitor : ExprVisitor
-{
-    bool value;
-
-    ExprEquationVisitor(const ExprNode &expr) : expr(expr)
-    {
-    }
-    MAKE_EQUATION_VISITS(VariableExpr, I32Expr, F64Expr, StringExpr, CharExpr,
-                         BoolExpr, BinaryExpr, UnaryExpr, CallExpr,
-                         LambdaCallExpr, IndexExpr, CastExpr)
-  private:
-    const ExprNode &expr;
-};
-
-bool operator==(const ExprNode &first, const ExprNode &second)
-{
-    auto visitor = ExprEquationVisitor(first);
-    second.accept(visitor);
-    return visitor.value;
-}
-
-bool operator!=(const ExprNode &first, const ExprNode &other)
-{
-    return !(first == other);
-}
 
 GENERATE_VISITOR(
     MatchArmVisitor, LiteralArm,

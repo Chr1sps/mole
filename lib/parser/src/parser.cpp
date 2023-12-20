@@ -868,7 +868,7 @@ bool join_into_binary_op(std::stack<ExprNodeVariant> &values,
         auto lhs = std::move(values.top());
         values.pop();
 
-        auto position = lhs->position;
+        auto position = get_position(lhs);
         auto new_expr = std::make_unique<BinaryExpr>(lhs, rhs, op, position);
         values.push(std::move(new_expr));
         return true;
@@ -1007,7 +1007,8 @@ ExprNodeVariant Parser::parse_index_lambda_or_call()
             result =
                 std::make_unique<LambdaCallExpr>(result, *params, position);
         }
-        else if (auto param = this->parse_index_part())
+        else if (auto param = this->parse_index_part();
+                 !std::holds_alternative<std::monostate>(param))
         {
             result = std::make_unique<IndexExpr>(result, param, position);
         }
@@ -1140,7 +1141,7 @@ ExprNodeVariant Parser::parse_index_part()
     if (!this->assert_current_and_eat(
             TokenType::R_SQ_BRACKET,
             L"expected right square bracket in an index expression"))
-        return nullptr;
+        return {};
     return result;
 }
 
@@ -1158,7 +1159,8 @@ ExprNodeVariant Parser::parse_factor()
         return result;
     else if (auto result = this->parse_bool_expr())
         return result;
-    else if (auto result = this->parse_paren_expr())
+    else if (auto result = this->parse_paren_expr();
+             !std::holds_alternative<std::monostate>(result))
         return result;
     else if (auto result = this->parse_variable_expr())
         return result;
@@ -1182,11 +1184,9 @@ ExprNodeVariant Parser::parse_paren_expr()
     if (!this->assert_current_and_eat(
             TokenType::R_PAREN,
             L"expected a right bracket in a parenthesis expression"))
-        return nullptr;
+        return {};
 
-    std::visit(
-        [&position](const AstNodePtr &node) { node->position = position; },
-        expr);
+    set_position(expr, position);
     return expr;
 }
 

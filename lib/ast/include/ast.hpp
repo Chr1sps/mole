@@ -38,7 +38,18 @@ struct ExprNode : public AstNode
     }
 };
 
-// using ExprNodeVariant = std::unique_ptr<ExprNode>;
+// struct VariableExpr;
+// struct BinaryExpr;
+// struct UnaryExpr;
+// struct CallExpr;
+// struct LambdaCallExpr;
+// struct IndexExpr;
+// struct CastExpr;
+// struct I32Expr;
+// struct F64Expr;
+// struct StringExpr;
+// struct CharExpr;
+// struct BoolExpr;
 
 using VariableExprPtr = std::unique_ptr<VariableExpr>;
 using BinaryExprPtr = std::unique_ptr<BinaryExpr>;
@@ -65,31 +76,6 @@ template <typename... Ts> struct overloaded : Ts...
 };
 
 template <typename... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
-struct PositionVisitor
-{
-    Position &operator()(const AstNodePtr &node)
-    {
-        return node->position;
-    }
-
-    Position &operator()(const std::monostate &)
-    {
-        throw std::exception();
-    }
-};
-
-Position &get_position(const ExprNodeVariant &value)
-{
-    // Position result(1, 1);
-    // std::visit(overloaded{[&result](const std::unique_ptr<AstNode> &node) {
-    //                           result = node->position;
-    //                       },
-    //                       [](const std::monostate &) {}},
-    //            value);
-    // return result;
-    return std::visit(PositionVisitor(), value);
-}
 
 struct VariableExpr : public ExprNode
 {
@@ -361,6 +347,84 @@ struct BoolExpr : public ExprNode
         visitor.visit(*this);
     }
 };
+
+Position get_position(const ExprNodeVariant &variant)
+{
+    return std::visit(
+        // Dynamic dispatch doesn't work there - you can't just use AstNode
+        // instead of the derived classes. Boilerplate ensues.
+        overloaded{
+            [](const VariableExprPtr &node) -> Position {
+                return node->position;
+            },
+            [](const BinaryExprPtr &node) -> Position {
+                return node->position;
+            },
+            [](const UnaryExprPtr &node) -> Position {
+                return node->position;
+            },
+            [](const CastExprPtr &node) -> Position { return node->position; },
+            [](const IndexExprPtr &node) -> Position {
+                return node->position;
+            },
+            [](const CallExprPtr &node) -> Position { return node->position; },
+            [](const LambdaCallExprPtr &node) -> Position {
+                return node->position;
+            },
+            [](const I32ExprPtr &node) -> Position { return node->position; },
+            [](const F64ExprPtr &node) -> Position { return node->position; },
+            [](const StringExprPtr &node) -> Position {
+                return node->position;
+            },
+            [](const CharExprPtr &node) -> Position { return node->position; },
+            [](const BoolExprPtr &node) -> Position { return node->position; },
+            [](const std::monostate &) -> Position {
+                throw std::exception();
+                return Position(-1, -1);
+            }},
+        variant);
+}
+
+void set_position(ExprNodeVariant &variant, const Position &position)
+{
+    // More boilerplate!
+    std::visit(
+        overloaded{
+            [&position](const VariableExprPtr &node) {
+                node->position = position;
+            },
+            [&position](const BinaryExprPtr &node) {
+                node->position = position;
+            },
+            [&position](const UnaryExprPtr &node) {
+                node->position = position;
+            },
+            [&position](const CastExprPtr &node) {
+                node->position = position;
+            },
+            [&position](const IndexExprPtr &node) {
+                node->position = position;
+            },
+            [&position](const CallExprPtr &node) {
+                node->position = position;
+            },
+            [&position](const LambdaCallExprPtr &node) {
+                node->position = position;
+            },
+            [&position](const I32ExprPtr &node) { node->position = position; },
+            [&position](const F64ExprPtr &node) { node->position = position; },
+            [&position](const StringExprPtr &node) {
+                node->position = position;
+            },
+            [&position](const CharExprPtr &node) {
+                node->position = position;
+            },
+            [&position](const BoolExprPtr &node) {
+                node->position = position;
+            },
+            [](const std::monostate &) {}},
+        variant);
+}
 
 struct Statement : public AstNode
 {
@@ -816,4 +880,5 @@ struct Program : public AstNode
 };
 
 using ProgramPtr = std::unique_ptr<Program>;
+
 #endif
