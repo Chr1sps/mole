@@ -12,7 +12,6 @@ bool equal_or_null(const std::unique_ptr<T> &first,
     return (first == nullptr && other == nullptr) ||
            (first && other && *first == *other);
 }
-} // namespace
 
 template <typename T>
 bool compare_ptr_vectors(const std::vector<std::unique_ptr<T>> &first,
@@ -24,6 +23,7 @@ bool compare_ptr_vectors(const std::vector<std::unique_ptr<T>> &first,
             return a && b && *a == *b;
         });
 }
+} // namespace
 
 bool operator==(const Type &first, const Type &other)
 {

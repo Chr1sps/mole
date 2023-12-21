@@ -201,8 +201,13 @@ void JsonSerializer::JsonVisitor::visit(const IfStmt &node)
     output["condition"] = this->last_object;
     this->visit(*node.then_block);
     output["then_block"] = this->last_object;
-    this->visit(*node.else_block);
-    output["else_block"] = this->last_object;
+    if (node.else_block)
+    {
+        this->visit(*node.else_block);
+        output["else_block"] = this->last_object;
+    }
+    else
+        output["else_block"] = nullptr;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
 }
