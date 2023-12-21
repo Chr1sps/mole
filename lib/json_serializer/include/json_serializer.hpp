@@ -31,18 +31,20 @@ class JsonSerializer
 
         void visit(const ExprNode &node);
 
-        void visit(const Block &node) override;
-        void visit(const IfStmt &node) override;
-        void visit(const WhileStmt &node) override;
-        void visit(const MatchStmt &node) override;
-        void visit(const ReturnStmt &node) override;
-        void visit(const BreakStmt &node) override;
-        void visit(const ContinueStmt &node) override;
-        void visit(const FuncDefStmt &node) override;
-        void visit(const AssignStmt &node) override;
-        void visit(const ExprStmt &node) override;
-        void visit(const VarDeclStmt &node) override;
-        void visit(const ExternStmt &node) override;
+        void visit(const Block &node);
+        void visit(const IfStmt &node);
+        void visit(const WhileStmt &node);
+        void visit(const MatchStmt &node);
+        void visit(const ReturnStmt &node);
+        void visit(const BreakStmt &node);
+        void visit(const ContinueStmt &node);
+        void visit(const FuncDefStmt &node);
+        void visit(const AssignStmt &node);
+        void visit(const ExprStmt &node);
+        void visit(const VarDeclStmt &node);
+        void visit(const ExternStmt &node);
+
+        void visit(const Statement &node);
 
         void visit(const LiteralArm &node) override;
         void visit(const GuardArm &node) override;

@@ -28,18 +28,18 @@ struct AstNode
 
 using AstNodePtr = std::unique_ptr<AstNode>;
 
-using VariableExprPtr = std::unique_ptr<VariableExpr>;
-using BinaryExprPtr = std::unique_ptr<BinaryExpr>;
-using UnaryExprPtr = std::unique_ptr<UnaryExpr>;
-using CallExprPtr = std::unique_ptr<CallExpr>;
-using LambdaCallExprPtr = std::unique_ptr<LambdaCallExpr>;
-using IndexExprPtr = std::unique_ptr<IndexExpr>;
-using CastExprPtr = std::unique_ptr<CastExpr>;
-using I32ExprPtr = std::unique_ptr<I32Expr>;
-using F64ExprPtr = std::unique_ptr<F64Expr>;
-using StringExprPtr = std::unique_ptr<StringExpr>;
-using CharExprPtr = std::unique_ptr<CharExpr>;
-using BoolExprPtr = std::unique_ptr<BoolExpr>;
+struct VariableExpr;
+struct BinaryExpr;
+struct UnaryExpr;
+struct CallExpr;
+struct LambdaCallExpr;
+struct IndexExpr;
+struct CastExpr;
+struct I32Expr;
+struct F64Expr;
+struct StringExpr;
+struct CharExpr;
+struct BoolExpr;
 
 using ExprNode = std::variant<VariableExpr, BinaryExpr, UnaryExpr, CallExpr,
                               LambdaCallExpr, IndexExpr, CastExpr, I32Expr,
@@ -275,6 +275,18 @@ inline void set_expr_position(ExprNode &variant, const Position &position)
                variant);
 }
 
+struct Block;
+struct IfStmt;
+struct WhileStmt;
+struct MatchStmt;
+struct BreakStmt;
+struct ContinueStmt;
+struct ReturnStmt;
+struct FuncDefStmt;
+struct AssignStmt;
+struct ExprStmt;
+struct VarDeclStmt;
+struct ExternStmt;
 using Statement = std::variant<Block, ReturnStmt, ContinueStmt, BreakStmt,
                                VarDeclStmt, AssignStmt, ExprStmt, WhileStmt,
                                IfStmt, MatchStmt, FuncDefStmt, ExternStmt>;
