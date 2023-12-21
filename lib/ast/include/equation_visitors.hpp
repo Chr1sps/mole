@@ -3,6 +3,8 @@
 #include "ast.hpp"
 #include "visitor.hpp"
 
+namespace
+{
 template <typename T>
 bool equal_or_null(const std::unique_ptr<T> &first,
                    const std::unique_ptr<T> &other)
@@ -10,20 +12,7 @@ bool equal_or_null(const std::unique_ptr<T> &first,
     return (first == nullptr && other == nullptr) ||
            (first && other && *first == *other);
 }
-
-template <typename T>
-bool equal_or_null(const std::shared_ptr<T> &first,
-                   const std::shared_ptr<T> &other)
-{
-    return (first == nullptr && other == nullptr) ||
-           (first && other && *first == *other);
-}
-
-template <typename T> bool equal_or_null(const T *first, const T *other)
-{
-    return (first == nullptr && other == nullptr) ||
-           (first && other && *first == *other);
-}
+} // namespace
 
 bool operator==(const MatchArm &first, const MatchArm &second);
 bool operator==(const Statement &first, const Statement &second);
@@ -41,12 +30,21 @@ bool compare_ptr_vectors(const std::vector<std::unique_ptr<T>> &first,
         });
 }
 
-bool compare_variant_vectors(const std::vector<ExprNodePtr> &first,
-                             const std::vector<ExprNodePtr> &other)
+bool operator==(const Type &first, const Type &other)
 {
-    return std::equal(
-        first.begin(), first.end(), other.begin(), other.end(),
-        [](const ExprNodePtr &a, const ExprNodePtr &b) { return a == b; });
+    return std::visit(
+        overloaded{
+            [](const SimpleType &first, const SimpleType &other) -> bool {
+                return first.ref_spec == other.ref_spec &&
+                       first.type == other.type;
+            },
+            [](const FunctionType &first, const FunctionType &other) -> bool {
+                return compare_ptr_vectors(first.arg_types, other.arg_types) &&
+                       equal_or_null(first.return_type, other.return_type) &&
+                       first.is_const == other.is_const;
+            },
+            [](const auto &, const auto &) -> bool { return false; }},
+        first, other);
 }
 
 bool operator==(const ExprNode &first, const ExprNode &other)
@@ -135,11 +133,6 @@ bool operator==(const MatchArm &first, const MatchArm &other)
         first, other);
 }
 
-bool operator!=(const MatchArm &first, const MatchArm &other)
-{
-    return !(first == other);
-}
-
 bool operator==(const Block &first, const Block &other)
 {
     return compare_ptr_vectors(first.statements, other.statements) &&
@@ -226,20 +219,10 @@ bool operator==(const Statement &first, const Statement &second)
         first, second);
 }
 
-bool operator!=(const Statement &first, const Statement &other)
-{
-    return !(first == other);
-}
-
 bool operator==(const Parameter &first, const Parameter &other)
 {
     return first.name == other.name && *first.type == *other.type &&
            first.position == other.position;
-}
-
-bool operator!=(const Parameter &first, const Parameter &other)
-{
-    return !(first == other);
 }
 
 bool operator==(const Program &first, const Program &other)
@@ -248,10 +231,5 @@ bool operator==(const Program &first, const Program &other)
            compare_ptr_vectors(first.functions, other.functions) &&
            compare_ptr_vectors(first.globals, other.globals) &&
            first.position == other.position; // not needed, but whatever
-}
-
-bool operator!=(const Program &first, const Program &other)
-{
-    return !(first == other);
 }
 #endif

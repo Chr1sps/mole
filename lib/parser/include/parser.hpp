@@ -40,7 +40,7 @@ class Parser : public Reporter
     TypePtr parse_simple_type();
     std::vector<TypePtr> parse_types();
     TypePtr parse_return_type();
-    std::unique_ptr<FunctionType> parse_function_type();
+    TypePtr parse_function_type();
 
     // function parameters
 

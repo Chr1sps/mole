@@ -1,8 +1,6 @@
 #ifndef __AST_HPP__
 #define __AST_HPP__
 #include "position.hpp"
-#include "types.hpp"
-#include "visitor.hpp"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -10,6 +8,97 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+
+enum class TypeEnum
+{
+    BOOL,
+
+    I32,
+
+    U32,
+
+    F64,
+
+    CHAR,
+    STR,
+};
+
+enum class RefSpecifier
+{
+    NON_REF,
+    REF,
+    MUT_REF
+};
+
+struct SimpleType;
+struct FunctionType;
+using Type = std::variant<SimpleType, FunctionType>;
+using TypePtr = std::unique_ptr<Type>;
+
+struct SimpleType
+{
+    TypeEnum type;
+    RefSpecifier ref_spec;
+
+    SimpleType(const TypeEnum &type, const RefSpecifier &ref_spec) noexcept
+        : type(type), ref_spec(ref_spec)
+    {
+    }
+};
+
+struct FunctionType
+{
+    std::vector<TypePtr> arg_types;
+    TypePtr return_type;
+    bool is_const;
+
+    FunctionType(std::vector<TypePtr> &arg_types, TypePtr &return_type,
+                 const bool &is_const) noexcept
+        : arg_types(std::move(arg_types)), return_type(std::move(return_type)),
+          is_const(is_const)
+    {
+    }
+
+    FunctionType(std::vector<TypePtr> &&arg_types, TypePtr &&return_type,
+                 const bool &is_const) noexcept
+        : arg_types(std::move(arg_types)), return_type(std::move(return_type)),
+          is_const(is_const)
+    {
+    }
+};
+
+template <typename... Ts> struct overloaded : Ts...
+{
+    using Ts::operator()...;
+};
+
+inline TypePtr clone_type_ptr(const TypePtr &type) noexcept;
+
+inline Type clone_type(const Type &type) noexcept
+{
+    return std::visit(
+        overloaded{
+            [](const SimpleType &type) noexcept -> Type {
+                return Type(SimpleType(type.type, type.ref_spec));
+            },
+            [](const FunctionType &type) noexcept -> Type {
+                std::vector<TypePtr> args_copy;
+                for (const auto &arg : type.arg_types)
+                {
+                    args_copy.push_back(clone_type_ptr(arg));
+                }
+                auto return_type = clone_type_ptr(type.return_type);
+                return Type(
+                    FunctionType(args_copy, return_type, type.is_const));
+            },
+        },
+        type);
+}
+
+inline TypePtr clone_type_ptr(const TypePtr &type) noexcept
+{
+    return std::make_unique<Type>(clone_type(*type));
+}
 
 struct AstNode
 {
@@ -45,13 +134,6 @@ using ExprNode = std::variant<VariableExpr, BinaryExpr, UnaryExpr, CallExpr,
                               LambdaCallExpr, IndexExpr, CastExpr, I32Expr,
                               F64Expr, BoolExpr, StringExpr, CharExpr>;
 using ExprNodePtr = std::unique_ptr<ExprNode>;
-
-template <typename... Ts> struct overloaded : Ts...
-{
-    using Ts::operator()...;
-};
-
-template <typename... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 struct VariableExpr : public AstNode
 {
@@ -557,11 +639,6 @@ struct Parameter : public AstNode
         : AstNode(position), name(name), type(std::move(type))
     {
     }
-
-    void accept(AstVisitor &visitor) const
-    {
-        visitor.visit(*this);
-    }
 };
 
 using ParamPtr = std::unique_ptr<Parameter>;
@@ -592,12 +669,13 @@ struct FuncDefStmt : public AstNode
     {
     }
 
-    std::shared_ptr<FunctionType> get_type()
+    std::unique_ptr<FunctionType> get_type()
     {
         std::vector<TypePtr> param_types;
         for (auto &param_ptr : this->params)
-            param_types.push_back(param_ptr->type);
-        return std::make_shared<FunctionType>(param_types, this->return_type,
+            param_types.push_back(clone_type_ptr(param_ptr->type));
+        auto cloned_type = clone_type_ptr(this->return_type);
+        return std::make_unique<FunctionType>(param_types, cloned_type,
                                               this->is_const);
     }
 };
@@ -626,9 +704,9 @@ struct ExternStmt : public AstNode
     {
         std::vector<TypePtr> param_types;
         for (auto &param_ptr : this->params)
-            param_types.push_back(param_ptr->type);
-        return std::make_shared<FunctionType>(param_types, this->return_type,
-                                              false);
+            param_types.push_back(clone_type_ptr(param_ptr->type));
+        auto cloned_type = clone_type_ptr(this->return_type);
+        return std::make_shared<FunctionType>(param_types, cloned_type, false);
     }
 };
 
@@ -652,11 +730,6 @@ struct Program : public AstNode
         : AstNode(Position(1, 1)), globals(std::move(globals)),
           functions(std::move(functions)), externs(std::move(externs))
     {
-    }
-
-    void accept(AstVisitor &visitor) const
-    {
-        visitor.visit(*this);
     }
 };
 

@@ -55,15 +55,11 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
 #define POS(line, col) Position(line, col)
 
 #define STYPE(type, ref_spec)                                                 \
-    std::make_unique<SimpleType>(TypeEnum::type, RefSpecifier::ref_spec)
+    std::make_unique<Type>(SimpleType(TypeEnum::type, RefSpecifier::ref_spec))
 #define FTYPE(arg_types, return_type, is_const)                               \
-    std::make_unique<FunctionType>(arg_types, return_type, is_const)
+    std::make_unique<Type>(FunctionType(arg_types, return_type, is_const))
 
-#define TYPES(...)                                                            \
-    std::vector<TypePtr>                                                      \
-    {                                                                         \
-        __VA_ARGS__                                                           \
-    }
+#define TYPES(...) make_uniques_vector<Type>(__VA_ARGS__)
 
 #define VAREXPR(name, position)                                               \
     std::make_unique<ExprNode>(VariableExpr(name, position))

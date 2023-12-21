@@ -369,8 +369,8 @@ TypePtr Parser::parse_simple_type()
     }
     if (this->type_map.contains(this->current_token->type))
     {
-        auto result = std::make_unique<SimpleType>(
-            this->type_map[this->current_token->type], ref_spec);
+        auto result = std::make_unique<Type>(
+            SimpleType(this->type_map[this->current_token->type], ref_spec));
         this->next_token();
         return result;
     }
@@ -380,7 +380,7 @@ TypePtr Parser::parse_simple_type()
 }
 
 // FUNCTION_TYPE = KW_FN, L_PAREN, [TYPES], R_PAREN, [RETURN_TYPE]
-std::unique_ptr<FunctionType> Parser::parse_function_type()
+TypePtr Parser::parse_function_type()
 {
     if (this->current_token != TokenType::KW_FN)
         return nullptr;
@@ -404,7 +404,7 @@ std::unique_ptr<FunctionType> Parser::parse_function_type()
         return nullptr;
 
     TypePtr return_type = this->parse_return_type();
-    return std::make_unique<FunctionType>(types, return_type, is_const);
+    return std::make_unique<Type>(FunctionType(types, return_type, is_const));
 }
 
 // TYPES = TYPE_WITH_REF_SPEC, {COMMA, TYPE_WITH_REF_SPEC}
