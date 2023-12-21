@@ -660,7 +660,7 @@ StmtPtr Parser::parse_match_stmt()
 }
 
 // MATCH_CASE = MATCH_SPECIFIER, LAMBDA_ARROW, BLOCK;
-std::unique_ptr<MatchArm> Parser::parse_match_arm()
+MatchArmPtr Parser::parse_match_arm()
 {
     if (auto arm = this->parse_literal_arm())
         return arm;
@@ -672,7 +672,7 @@ std::unique_ptr<MatchArm> Parser::parse_match_arm()
 }
 
 // LITERAL_ARM = LITERAL_CONDITION, MATCH_ARM_BLOCK;
-std::unique_ptr<LiteralArm> Parser::parse_literal_arm()
+MatchArmPtr Parser::parse_literal_arm()
 {
     if (auto literals = this->parse_literal_condition())
     {
@@ -683,7 +683,8 @@ std::unique_ptr<LiteralArm> Parser::parse_literal_arm()
             this->report_error(L"no block found in a literal guard arm");
             return nullptr;
         }
-        return std::make_unique<LiteralArm>(conditions, block, position);
+        return std::make_unique<MatchArm>(
+            LiteralArm(conditions, block, position));
     }
     return nullptr;
 }
@@ -720,7 +721,7 @@ std::optional<std::tuple<Position, std::vector<ExprNodePtr>>> Parser::
 }
 
 // GUARD_ARM = GUARD_CONDITION, MATCH_ARM_BLOCK;
-std::unique_ptr<GuardArm> Parser::parse_guard_arm()
+MatchArmPtr Parser::parse_guard_arm()
 {
     if (auto guard = this->parse_guard_condition())
     {
@@ -730,7 +731,8 @@ std::unique_ptr<GuardArm> Parser::parse_guard_arm()
         {
             this->report_error(L"no block found in a guard match arm");
         }
-        return std::make_unique<GuardArm>(condition, block, position);
+        return std::make_unique<MatchArm>(
+            GuardArm(condition, block, position));
     }
     return nullptr;
 }
@@ -747,7 +749,7 @@ std::optional<std::tuple<Position, ExprNodePtr>> Parser::
 }
 
 // PLACEHOLDER_ARM = PLACEHOLDER, MATCH_ARM_BLOCK;
-std::unique_ptr<ElseArm> Parser::parse_else_arm()
+MatchArmPtr Parser::parse_else_arm()
 {
     if (this->current_token != TokenType::KW_ELSE)
         return nullptr;
@@ -759,7 +761,7 @@ std::unique_ptr<ElseArm> Parser::parse_else_arm()
         this->report_error(L"no block found in an else arm");
         return nullptr;
     }
-    return std::make_unique<ElseArm>(block, position);
+    return std::make_unique<MatchArm>(ElseArm(block, position));
 }
 
 // MATCH_ARM_BLOCK = LAMBDA_ARROW, BLOCK;

@@ -77,25 +77,23 @@ class TypeVisitor : public Visitor
 //     // virtual void visit(const ExternStmt &node) = 0;
 // };
 
-class MatchArmVisitor : Visitor
-{
-  public:
-    virtual void visit(const LiteralArm &node) = 0;
-    virtual void visit(const GuardArm &node) = 0;
-    virtual void visit(const ElseArm &node) = 0;
-};
+// class MatchArmVisitor : Visitor
+// {
+//   public:
+//     virtual void visit(const MatchArm& node) = 0;
+// };
 
 class AstVisitor :
     //  public ExprVisitor,
     //  public StmtVisitor,
-    public MatchArmVisitor,
+    // public MatchArmVisitor,
     public TypeVisitor
 {
   public:
     virtual void visit(const Program &node) = 0;
     virtual void visit(const Parameter &node) = 0;
     // using ExprVisitor::visit;
-    using MatchArmVisitor::visit;
+    // using MatchArmVisitor::visit;
     // using StmtVisitor::visit;
     using TypeVisitor::visit;
 };

@@ -228,7 +228,7 @@ void JsonSerializer::JsonVisitor::visit(const MatchStmt &node)
     output["arms"] = nlohmann::json::array();
     for (const auto &arm : node.match_arms)
     {
-        arm->accept(*this);
+        this->visit(*arm);
         output["arms"].push_back(this->last_object);
     }
     output["position"] = this->get_position(node.position);
@@ -363,7 +363,6 @@ void JsonSerializer::JsonVisitor::visit(const ExternStmt &node)
 
 void JsonSerializer::JsonVisitor::visit(const Statement &node)
 {
-
     std::visit(
         overloaded{[this](const Block &node) { this->visit(node); },
                    [this](const IfStmt &node) { this->visit(node); },
@@ -378,43 +377,6 @@ void JsonSerializer::JsonVisitor::visit(const Statement &node)
                    [this](const VarDeclStmt &node) { this->visit(node); },
                    [this](const ExternStmt &node) { this->visit(node); }},
         node);
-}
-
-void JsonSerializer::JsonVisitor::visit(const Program &node)
-{
-    nlohmann::json output;
-    output["type"] = "Program";
-    output["externs"] = nlohmann::json::array();
-    for (auto &ext : node.externs)
-    {
-        this->visit(*ext);
-        output["externs"].push_back(this->last_object);
-    }
-    output["globals"] = nlohmann::json::array();
-    for (auto &var : node.globals)
-    {
-        this->visit(*var);
-        output["globals"].push_back(this->last_object);
-    }
-    output["functions"] = nlohmann::json::array();
-    for (auto &function : node.functions)
-    {
-        this->visit(*function);
-        output["functions"].push_back(this->last_object);
-    }
-    output["position"] = this->get_position(node.position);
-    this->last_object = output;
-}
-
-void JsonSerializer::JsonVisitor::visit(const Parameter &node)
-{
-    nlohmann::json output;
-    output["type"] = "Program";
-    output["name"] = node.name;
-    node.type->accept(*this);
-    output["param_type"] = this->last_object;
-    output["position"] = this->get_position(node.position);
-    this->last_object = output;
 }
 
 void JsonSerializer::JsonVisitor::visit(const LiteralArm &node)
@@ -451,6 +413,52 @@ void JsonSerializer::JsonVisitor::visit(const ElseArm &node)
     output["type"] = "ElseArm";
     this->visit(*node.block);
     output["block"] = this->last_object;
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
+}
+
+void JsonSerializer::JsonVisitor::visit(const MatchArm &node)
+{
+    std::visit(
+        overloaded{[this](const LiteralArm &node) { this->visit(node); },
+                   [this](const GuardArm &node) { this->visit(node); },
+                   [this](const ElseArm &node) { this->visit(node); }},
+        node);
+}
+
+void JsonSerializer::JsonVisitor::visit(const Program &node)
+{
+    nlohmann::json output;
+    output["type"] = "Program";
+    output["externs"] = nlohmann::json::array();
+    for (auto &ext : node.externs)
+    {
+        this->visit(*ext);
+        output["externs"].push_back(this->last_object);
+    }
+    output["globals"] = nlohmann::json::array();
+    for (auto &var : node.globals)
+    {
+        this->visit(*var);
+        output["globals"].push_back(this->last_object);
+    }
+    output["functions"] = nlohmann::json::array();
+    for (auto &function : node.functions)
+    {
+        this->visit(*function);
+        output["functions"].push_back(this->last_object);
+    }
+    output["position"] = this->get_position(node.position);
+    this->last_object = output;
+}
+
+void JsonSerializer::JsonVisitor::visit(const Parameter &node)
+{
+    nlohmann::json output;
+    output["type"] = "Program";
+    output["name"] = node.name;
+    node.type->accept(*this);
+    output["param_type"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
 }

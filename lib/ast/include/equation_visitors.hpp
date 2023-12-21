@@ -3,42 +3,6 @@
 #include "ast.hpp"
 #include "visitor.hpp"
 
-#define PARENS ()
-
-#define EXPAND(...) EXPAND4(EXPAND4(EXPAND4(EXPAND4(__VA_ARGS__))))
-#define EXPAND4(...) EXPAND3(EXPAND3(EXPAND3(EXPAND3(__VA_ARGS__))))
-#define EXPAND3(...) EXPAND2(EXPAND2(EXPAND2(EXPAND2(__VA_ARGS__))))
-#define EXPAND2(...) EXPAND1(EXPAND1(EXPAND1(EXPAND1(__VA_ARGS__))))
-#define EXPAND1(...) __VA_ARGS__
-
-#define FOR_EACH(macro, ...)                                                  \
-    __VA_OPT__(EXPAND(FOR_EACH_HELPER(macro, __VA_ARGS__)))
-#define FOR_EACH_HELPER(macro, a1, ...)                                       \
-    macro(a1) __VA_OPT__(FOR_EACH_AGAIN PARENS(macro, __VA_ARGS__))
-#define FOR_EACH_AGAIN() FOR_EACH_HELPER
-
-#define FALSE_VISIT(type)                                                     \
-    void visit(const type &other) override                                    \
-    {                                                                         \
-        this->value = false;                                                  \
-    }
-#define GENERATE_FALSE_VISITS(...) FOR_EACH(FALSE_VISIT, __VA_ARGS__)
-
-#define GENERATE_VISITOR(base, type, visit_body, ...)                         \
-    struct type##Visitor : base                                               \
-    {                                                                         \
-        bool value;                                                           \
-        type##Visitor(const type &expr) : expr(expr)                          \
-        {                                                                     \
-        }                                                                     \
-        GENERATE_FALSE_VISITS(__VA_ARGS__)                                    \
-        void visit(const type &node) override                                 \
-                                                                              \
-            visit_body                                                        \
-                                                                              \
-            private : const type &expr;                                       \
-    };
-
 template <typename T>
 bool equal_or_null(const std::unique_ptr<T> &first,
                    const std::unique_ptr<T> &other)
@@ -152,55 +116,23 @@ bool operator==(const ExprNode &first, const ExprNode &other)
         first, other);
 }
 
-#define MAKE_EQUATION_VISIT(type)                                             \
-    void visit(const type &other) override                                    \
-    {                                                                         \
-        type##Visitor visitor(other);                                         \
-        this->expr.accept(visitor);                                           \
-        value = visitor.value;                                                \
-    }
-#define MAKE_EQUATION_VISITS(...) FOR_EACH(MAKE_EQUATION_VISIT, __VA_ARGS__)
-
-GENERATE_VISITOR(
-    MatchArmVisitor, LiteralArm,
-    {
-        this->value =
-            compare_ptr_vectors(this->expr.literals, node.literals) &&
-            this->expr.position == node.position;
-    },
-    GuardArm, ElseArm)
-
-GENERATE_VISITOR(
-    MatchArmVisitor, GuardArm,
-    {
-        this->value = *this->expr.condition_expr == *node.condition_expr &&
-                      this->expr.position == node.position;
-    },
-    LiteralArm, ElseArm)
-
-GENERATE_VISITOR(
-    MatchArmVisitor, ElseArm,
-    { this->value = this->expr.position == node.position; }, LiteralArm,
-    GuardArm)
-
-struct MatchArmEquationVisitor : MatchArmVisitor
+bool operator==(const MatchArm &first, const MatchArm &other)
 {
-    bool value;
-
-    MatchArmEquationVisitor(const MatchArm &expr) : expr(expr)
-    {
-    }
-
-    MAKE_EQUATION_VISITS(LiteralArm, GuardArm, ElseArm)
-  private:
-    const MatchArm &expr;
-};
-
-bool operator==(const MatchArm &first, const MatchArm &second)
-{
-    auto visitor = MatchArmEquationVisitor(first);
-    second.accept(visitor);
-    return visitor.value;
+    return std::visit(
+        overloaded{
+            [](const LiteralArm &first, const LiteralArm &other) -> bool {
+                return compare_ptr_vectors(first.literals, other.literals) &&
+                       first.position == other.position;
+            },
+            [](const GuardArm &first, const GuardArm &other) -> bool {
+                return *first.condition_expr == *other.condition_expr &&
+                       first.position == other.position;
+            },
+            [](const ElseArm &first, const ElseArm &other) -> bool {
+                return first.position == other.position;
+            },
+            [](const auto &, const auto &) -> bool { return false; }},
+        first, other);
 }
 
 bool operator!=(const MatchArm &first, const MatchArm &other)

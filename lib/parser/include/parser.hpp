@@ -78,11 +78,11 @@ class Parser : public Reporter
     std::optional<std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr>>
     parse_func_name_and_params();
 
-    std::unique_ptr<MatchArm> parse_match_arm();
+    MatchArmPtr parse_match_arm();
 
-    std::unique_ptr<LiteralArm> parse_literal_arm();
-    std::unique_ptr<GuardArm> parse_guard_arm();
-    std::unique_ptr<ElseArm> parse_else_arm();
+    MatchArmPtr parse_literal_arm();
+    MatchArmPtr parse_guard_arm();
+    MatchArmPtr parse_else_arm();
 
     std::optional<std::tuple<Position, std::vector<ExprNodePtr>>>
     parse_literal_condition();

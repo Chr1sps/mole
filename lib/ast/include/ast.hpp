@@ -461,79 +461,69 @@ struct IfStmt : public AstNode
     }
 };
 
-struct MatchArm : public AstNode
+struct LiteralArm;
+struct GuardArm;
+struct ElseArm;
+
+using MatchArm = std::variant<LiteralArm, GuardArm, ElseArm>;
+using MatchArmPtr = std::unique_ptr<MatchArm>;
+
+struct MatchArmBase : public AstNode
 {
     StmtPtr block;
 
-    MatchArm(StmtPtr &block, const Position &position)
+    MatchArmBase(StmtPtr &block, const Position &position)
         : AstNode(position), block(std::move(block))
     {
     }
-
-    virtual void accept(MatchArmVisitor &visitor) const = 0;
 };
 
-using MatchArmPtr = std::unique_ptr<MatchArm>;
-
-struct ElseArm : public MatchArm
+struct ElseArm : public MatchArmBase
 {
     ElseArm(StmtPtr &block, const Position &position)
-        : MatchArm(block, position)
+        : MatchArmBase(block, position)
     {
     }
 
     ElseArm(StmtPtr &&block, const Position &position)
-        : MatchArm(block, position)
+        : MatchArmBase(block, position)
     {
-    }
-
-    void accept(MatchArmVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct GuardArm : public MatchArm
+struct GuardArm : public MatchArmBase
 {
     ExprNodePtr condition_expr;
 
     GuardArm(ExprNodePtr &condition_expr, StmtPtr &block,
              const Position &position)
-        : MatchArm(block, position), condition_expr(std::move(condition_expr))
+        : MatchArmBase(block, position),
+          condition_expr(std::move(condition_expr))
     {
     }
 
     GuardArm(ExprNodePtr &&condition_expr, StmtPtr &&block,
              const Position &position)
-        : MatchArm(block, position), condition_expr(std::move(condition_expr))
+        : MatchArmBase(block, position),
+          condition_expr(std::move(condition_expr))
     {
-    }
-
-    void accept(MatchArmVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct LiteralArm : public MatchArm
+struct LiteralArm : public MatchArmBase
 {
     std::vector<ExprNodePtr> literals;
 
     LiteralArm(std::vector<ExprNodePtr> &literals, StmtPtr &block,
                const Position &position)
-        : MatchArm(block, position), literals(std::move(literals))
+        : MatchArmBase(block, position), literals(std::move(literals))
     {
     }
 
     LiteralArm(std::vector<ExprNodePtr> &&literals, StmtPtr &&block,
                const Position &position)
-        : MatchArm(block, position), literals(std::move(literals))
+        : MatchArmBase(block, position), literals(std::move(literals))
     {
-    }
-
-    void accept(MatchArmVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
