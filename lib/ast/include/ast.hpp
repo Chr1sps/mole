@@ -275,91 +275,62 @@ inline void set_expr_position(ExprNode &variant, const Position &position)
                variant);
 }
 
-struct Statement : public AstNode
-{
-    virtual void accept(StmtVisitor &visitor) const = 0;
-
-  protected:
-    // Position position;
-
-    Statement(const Position &position) : AstNode(position)
-    {
-    }
-};
-
+using Statement = std::variant<Block, ReturnStmt, ContinueStmt, BreakStmt,
+                               VarDeclStmt, AssignStmt, ExprStmt, WhileStmt,
+                               IfStmt, MatchStmt, FuncDefStmt, ExternStmt>;
 using StmtPtr = std::unique_ptr<Statement>;
 
-struct Block : public Statement
+struct Block : public AstNode
 {
     std::vector<StmtPtr> statements;
 
     Block(std::vector<StmtPtr> &statements, const Position &position)
-        : Statement(position), statements(std::move(statements))
+        : AstNode(position), statements(std::move(statements))
     {
     }
 
     Block(std::vector<StmtPtr> &&statements, const Position &position)
-        : Statement(position), statements(std::move(statements))
+        : AstNode(position), statements(std::move(statements))
     {
-    }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
 using BlockPtr = std::unique_ptr<Block>;
 
-struct ReturnStmt : public Statement
+struct ReturnStmt : public AstNode
 {
     ExprNodePtr expr;
 
-    ReturnStmt(const Position &position) : Statement(position), expr()
+    ReturnStmt(const Position &position) : AstNode(position), expr()
     {
     }
 
     ReturnStmt(ExprNodePtr &expr, const Position &position)
-        : Statement(position), expr(std::move(expr))
+        : AstNode(position), expr(std::move(expr))
     {
     }
 
     ReturnStmt(ExprNodePtr &&expr, const Position &position)
-        : Statement(position), expr(std::move(expr))
+        : AstNode(position), expr(std::move(expr))
     {
-    }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct ContinueStmt : public Statement
+struct ContinueStmt : public AstNode
 {
-    ContinueStmt(const Position &position) : Statement(position)
+    ContinueStmt(const Position &position) : AstNode(position)
     {
-    }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct BreakStmt : public Statement
+struct BreakStmt : public AstNode
 {
-    BreakStmt(const Position &position) : Statement(position)
+    BreakStmt(const Position &position) : AstNode(position)
     {
-    }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct VarDeclStmt : public Statement
+struct VarDeclStmt : public AstNode
 {
     std::wstring name;
     TypePtr type;
@@ -368,21 +339,16 @@ struct VarDeclStmt : public Statement
 
     VarDeclStmt(const std::wstring &name, TypePtr &type, ExprNodePtr &value,
                 const bool &is_mut, const Position &position)
-        : Statement(position), name(name), type(std::move(type)),
+        : AstNode(position), name(name), type(std::move(type)),
           initial_value(std::move(value)), is_mut(is_mut)
     {
     }
 
     VarDeclStmt(std::wstring &&name, TypePtr &&type, ExprNodePtr &&value,
                 bool &&is_mut, Position &&position)
-        : Statement(position), name(name), type(std::move(type)),
+        : AstNode(position), name(name), type(std::move(type)),
           initial_value(std::move(value)), is_mut(is_mut)
     {
-    }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
@@ -406,7 +372,7 @@ enum class AssignType
     SHR,
 };
 
-struct AssignStmt : public Statement
+struct AssignStmt : public AstNode
 {
     ExprNodePtr lhs;
     AssignType type;
@@ -414,70 +380,55 @@ struct AssignStmt : public Statement
 
     AssignStmt(ExprNodePtr &lhs, const AssignType &type, ExprNodePtr &rhs,
                const Position &position)
-        : Statement(position), lhs(std::move(lhs)), type(type),
+        : AstNode(position), lhs(std::move(lhs)), type(type),
           rhs(std::move(rhs))
     {
     }
 
     AssignStmt(ExprNodePtr &&lhs, const AssignType &type, ExprNodePtr &&rhs,
                const Position &position)
-        : Statement(position), lhs(std::move(lhs)), type(type),
+        : AstNode(position), lhs(std::move(lhs)), type(type),
           rhs(std::move(rhs))
     {
     }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
-    }
 };
 
-struct ExprStmt : public Statement
+struct ExprStmt : public AstNode
 {
     ExprNodePtr expr;
 
     ExprStmt(ExprNodePtr &expr, const Position &position)
-        : Statement(position), expr(std::move(expr))
+        : AstNode(position), expr(std::move(expr))
     {
     }
 
     ExprStmt(ExprNodePtr &&expr, const Position &position)
-        : Statement(position), expr(std::move(expr))
+        : AstNode(position), expr(std::move(expr))
     {
-    }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
-struct WhileStmt : public Statement
+struct WhileStmt : public AstNode
 {
     ExprNodePtr condition_expr;
     StmtPtr statement;
 
     WhileStmt(ExprNodePtr &condition_expr, StmtPtr &statement,
               const Position &position)
-        : Statement(position), condition_expr(std::move(condition_expr)),
+        : AstNode(position), condition_expr(std::move(condition_expr)),
           statement(std::move(statement))
     {
     }
 
     WhileStmt(ExprNodePtr &&condition_expr, StmtPtr &&statement,
               const Position &position)
-        : Statement(position), condition_expr(std::move(condition_expr)),
+        : AstNode(position), condition_expr(std::move(condition_expr)),
           statement(std::move(statement))
     {
     }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
-    }
 };
 
-struct IfStmt : public Statement
+struct IfStmt : public AstNode
 {
     ExprNodePtr condition_expr;
     StmtPtr then_block;
@@ -485,21 +436,16 @@ struct IfStmt : public Statement
 
     IfStmt(ExprNodePtr &condition_expr, StmtPtr &then_block,
            StmtPtr &else_block, const Position &position)
-        : Statement(position), condition_expr(std::move(condition_expr)),
+        : AstNode(position), condition_expr(std::move(condition_expr)),
           then_block(std::move(then_block)), else_block(std::move(else_block))
     {
     }
 
     IfStmt(ExprNodePtr &&condition_expr, StmtPtr &&then_block,
            StmtPtr &&else_block, const Position &position)
-        : Statement(position), condition_expr(std::move(condition_expr)),
+        : AstNode(position), condition_expr(std::move(condition_expr)),
           then_block(std::move(then_block)), else_block(std::move(else_block))
     {
-    }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
@@ -579,28 +525,23 @@ struct LiteralArm : public MatchArm
     }
 };
 
-struct MatchStmt : public Statement
+struct MatchStmt : public AstNode
 {
     ExprNodePtr matched_expr;
     std::vector<MatchArmPtr> match_arms;
 
     MatchStmt(ExprNodePtr &matched_expr, std::vector<MatchArmPtr> &match_arms,
               const Position &position)
-        : Statement(position), matched_expr(std::move(matched_expr)),
+        : AstNode(position), matched_expr(std::move(matched_expr)),
           match_arms(std::move(match_arms))
     {
     }
 
     MatchStmt(ExprNodePtr &&matched_expr,
               std::vector<MatchArmPtr> &&match_arms, const Position &position)
-        : Statement(position), matched_expr(std::move(matched_expr)),
+        : AstNode(position), matched_expr(std::move(matched_expr)),
           match_arms(std::move(match_arms))
     {
-    }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 
@@ -623,7 +564,7 @@ struct Parameter : public AstNode
 
 using ParamPtr = std::unique_ptr<Parameter>;
 
-struct FuncDefStmt : public Statement
+struct FuncDefStmt : public AstNode
 {
     std::wstring name;
     std::vector<ParamPtr> params;
@@ -634,7 +575,7 @@ struct FuncDefStmt : public Statement
     FuncDefStmt(const std::wstring &name, std::vector<ParamPtr> &params,
                 TypePtr &return_type, BlockPtr &block, const bool &is_const,
                 const Position &position)
-        : Statement(position), name(name), params(std::move(params)),
+        : AstNode(position), name(name), params(std::move(params)),
           return_type(std::move(return_type)), block(std::move(block)),
           is_const(is_const)
     {
@@ -643,7 +584,7 @@ struct FuncDefStmt : public Statement
     FuncDefStmt(const std::wstring &name, std::vector<ParamPtr> &&params,
                 TypePtr &&return_type, BlockPtr &&block, const bool &is_const,
                 const Position &position)
-        : Statement(position), name(name), params(std::move(params)),
+        : AstNode(position), name(name), params(std::move(params)),
           return_type(std::move(return_type)), block(std::move(block)),
           is_const(is_const)
     {
@@ -657,14 +598,9 @@ struct FuncDefStmt : public Statement
         return std::make_shared<FunctionType>(param_types, this->return_type,
                                               this->is_const);
     }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
-    }
 };
 
-struct ExternStmt : public Statement
+struct ExternStmt : public AstNode
 {
     std::wstring name;
     std::vector<ParamPtr> params;
@@ -672,14 +608,14 @@ struct ExternStmt : public Statement
 
     ExternStmt(const std::wstring &name, std::vector<ParamPtr> &params,
                TypePtr &return_type, const Position &position)
-        : Statement(position), name(name), params(std::move(params)),
+        : AstNode(position), name(name), params(std::move(params)),
           return_type(std::move(return_type))
     {
     }
 
     ExternStmt(const std::wstring &name, std::vector<ParamPtr> &&params,
                TypePtr &&return_type, const Position &position)
-        : Statement(position), name(name), params(std::move(params)),
+        : AstNode(position), name(name), params(std::move(params)),
           return_type(std::move(return_type))
     {
     }
@@ -691,11 +627,6 @@ struct ExternStmt : public Statement
             param_types.push_back(param_ptr->type);
         return std::make_shared<FunctionType>(param_types, this->return_type,
                                               false);
-    }
-
-    void accept(StmtVisitor &visitor) const override
-    {
-        visitor.visit(*this);
     }
 };
 

@@ -49,7 +49,7 @@ class Parser : public Reporter
 
     // statements
 
-    std::unique_ptr<Statement> parse_else_block();
+    StmtPtr parse_else_block();
 
     TypePtr parse_type_specifier();
     ExprNodePtr parse_initial_value();
@@ -58,15 +58,17 @@ class Parser : public Reporter
 
     std::optional<std::tuple<AssignType, ExprNodePtr>> parse_assign_part();
 
-    std::unique_ptr<ReturnStmt> parse_return_stmt();
-    std::unique_ptr<Statement> parse_assign_or_expr_stmt();
-    std::unique_ptr<Statement> parse_non_func_stmt();
+    StmtPtr parse_return_stmt();
+    StmtPtr parse_assign_or_expr_stmt();
+    StmtPtr parse_non_func_stmt();
+    StmtPtr parse_continue_stmt();
+    StmtPtr parse_break_stmt();
+    StmtPtr parse_while_stmt();
+    StmtPtr parse_if_stmt();
+    StmtPtr parse_match_stmt();
+
     std::unique_ptr<Block> parse_block();
-    std::unique_ptr<ContinueStmt> parse_continue_stmt();
-    std::unique_ptr<BreakStmt> parse_break_stmt();
-    std::unique_ptr<WhileStmt> parse_while_stmt();
-    std::unique_ptr<IfStmt> parse_if_stmt();
-    std::unique_ptr<MatchStmt> parse_match_stmt();
+
     std::unique_ptr<VarDeclStmt> parse_var_decl_stmt();
     std::unique_ptr<FuncDefStmt> parse_func_def_stmt();
     std::unique_ptr<ExternStmt> parse_extern_stmt();

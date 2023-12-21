@@ -208,147 +208,90 @@ bool operator!=(const MatchArm &first, const MatchArm &other)
     return !(first == other);
 }
 
-GENERATE_VISITOR(
-    StmtVisitor, Block,
-    {
-        this->value =
-            compare_ptr_vectors(this->expr.statements, node.statements) &&
-            this->expr.position == node.position;
-    },
-    IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, IfStmt,
-    {
-        this->value = *this->expr.condition_expr == *node.condition_expr &&
-                      *this->expr.then_block == *node.then_block &&
-                      equal_or_null(this->expr.else_block, node.else_block) &&
-                      this->expr.position == node.position;
-    },
-    Block, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, WhileStmt,
-    {
-        this->value = *this->expr.condition_expr == *node.condition_expr &&
-                      *this->expr.statement == *node.statement &&
-                      this->expr.position == node.position;
-    },
-    Block, IfStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt, FuncDefStmt,
-    AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, MatchStmt,
-    {
-        this->value =
-            *this->expr.matched_expr == *node.matched_expr &&
-            compare_ptr_vectors(this->expr.match_arms, node.match_arms) &&
-            this->expr.position == node.position;
-    },
-    Block, IfStmt, WhileStmt, ReturnStmt, BreakStmt, ContinueStmt, FuncDefStmt,
-    AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, ReturnStmt,
-    {
-        this->value = equal_or_null(this->expr.expr, node.expr) &&
-                      this->expr.position == node.position;
-    },
-    Block, IfStmt, WhileStmt, MatchStmt, BreakStmt, ContinueStmt, FuncDefStmt,
-    AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, BreakStmt,
-    { this->value = this->expr.position == node.position; }, Block, IfStmt,
-    WhileStmt, MatchStmt, ReturnStmt, ContinueStmt, FuncDefStmt, AssignStmt,
-    VarDeclStmt, ExternStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, ContinueStmt,
-    { this->value = this->expr.position == node.position; }, Block, IfStmt,
-    WhileStmt, MatchStmt, ReturnStmt, BreakStmt, FuncDefStmt, AssignStmt,
-    VarDeclStmt, ExternStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, FuncDefStmt,
-    {
-        this->value =
-            this->expr.name == node.name &&
-            compare_ptr_vectors(this->expr.params, node.params) &&
-            equal_or_null(this->expr.return_type, node.return_type) &&
-            *this->expr.block == *node.block &&
-            this->expr.is_const == node.is_const &&
-            this->expr.position == node.position;
-    },
-    Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    AssignStmt, VarDeclStmt, ExternStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, AssignStmt,
-    {
-        this->value = *this->expr.lhs == *node.lhs &&
-                      this->expr.type == node.type &&
-                      *this->expr.rhs == *node.rhs &&
-                      this->expr.position == node.position;
-    },
-    Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, VarDeclStmt, ExternStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, VarDeclStmt,
-    {
-        this->value =
-            this->expr.name == node.name &&
-            equal_or_null(this->expr.type, node.type) &&
-            equal_or_null(this->expr.initial_value, node.initial_value) &&
-            this->expr.is_mut == node.is_mut &&
-            this->expr.position == node.position;
-    },
-    Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, AssignStmt, ExternStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, ExternStmt,
-    {
-        this->value =
-            this->expr.name == node.name &&
-            compare_ptr_vectors(this->expr.params, node.params) &&
-            equal_or_null(this->expr.return_type, node.return_type) &&
-            this->expr.position == node.position;
-    },
-    Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, AssignStmt, VarDeclStmt, ExprStmt)
-
-GENERATE_VISITOR(
-    StmtVisitor, ExprStmt,
-    {
-        this->value = *this->expr.expr == *node.expr &&
-                      this->expr.position == node.position;
-    },
-    Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt, BreakStmt, ContinueStmt,
-    FuncDefStmt, AssignStmt, VarDeclStmt, ExternStmt)
-
-struct StmtEquationVisitor : StmtVisitor
+bool operator==(const Block &first, const Block &other)
 {
-    bool value;
+    return compare_ptr_vectors(first.statements, other.statements) &&
+           first.position == other.position;
+}
 
-    StmtEquationVisitor(const Statement &expr) : expr(expr)
-    {
-    }
-    MAKE_EQUATION_VISITS(Block, IfStmt, WhileStmt, MatchStmt, ReturnStmt,
-                         BreakStmt, ContinueStmt, FuncDefStmt, AssignStmt,
-                         VarDeclStmt, ExternStmt, ExprStmt)
-  private:
-    const Statement &expr;
-};
+bool operator==(const FuncDefStmt &first, const FuncDefStmt &other)
+{
+    return first.name == other.name &&
+           compare_ptr_vectors(first.params, other.params) &&
+           equal_or_null(first.return_type, other.return_type) &&
+           *first.block == *other.block && first.is_const == other.is_const &&
+           first.position == other.position;
+}
+
+bool operator==(const VarDeclStmt &first, const VarDeclStmt &other)
+{
+    return first.name == other.name && equal_or_null(first.type, other.type) &&
+           equal_or_null(first.initial_value, other.initial_value) &&
+           first.is_mut == other.is_mut && first.position == other.position;
+}
+
+bool operator==(const ExternStmt &first, const ExternStmt &other)
+{
+    return first.name == other.name &&
+           compare_ptr_vectors(first.params, other.params) &&
+           equal_or_null(first.return_type, other.return_type) &&
+           first.position == other.position;
+}
 
 bool operator==(const Statement &first, const Statement &second)
 {
-    auto visitor = StmtEquationVisitor(first);
-    second.accept(visitor);
-    return visitor.value;
+    return std::visit(
+        overloaded{
+            [](const Block &first, const Block &other) -> bool {
+                return first == other;
+            },
+            [](const IfStmt &first, const IfStmt &other) -> bool {
+                return *first.condition_expr == *other.condition_expr &&
+                       *first.then_block == *other.then_block &&
+                       equal_or_null(first.else_block, other.else_block) &&
+                       first.position == other.position;
+            },
+            [](const WhileStmt &first, const WhileStmt &other) -> bool {
+                return *first.condition_expr == *other.condition_expr &&
+                       *first.statement == *other.statement &&
+                       first.position == other.position;
+            },
+            [](const MatchStmt &first, const MatchStmt &other) -> bool {
+                return *first.matched_expr == *other.matched_expr &&
+                       compare_ptr_vectors(first.match_arms,
+                                           other.match_arms) &&
+                       first.position == other.position;
+            },
+            [](const ReturnStmt &first, const ReturnStmt &other) -> bool {
+                return equal_or_null(first.expr, other.expr) &&
+                       first.position == other.position;
+            },
+            [](const ContinueStmt &first, const ContinueStmt &other) -> bool {
+                return first.position == other.position;
+            },
+            [](const BreakStmt &first, const BreakStmt &other) -> bool {
+                return first.position == other.position;
+            },
+            [](const ExprStmt &first, const ExprStmt &other) -> bool {
+                return *first.expr == *other.expr &&
+                       first.position == other.position;
+            },
+            [](const AssignStmt &first, const AssignStmt &other) -> bool {
+                return *first.lhs == *other.lhs && first.type == other.type &&
+                       *first.rhs == *other.rhs &&
+                       first.position == other.position;
+            },
+            [](const FuncDefStmt &first, const FuncDefStmt &other) -> bool {
+                return first == other;
+            },
+            [](const VarDeclStmt &first, const VarDeclStmt &other) -> bool {
+                return first == other;
+            },
+            [](const ExternStmt &first, const ExternStmt &other) -> bool {
+                return first == other;
+            },
+            [](const auto &, const auto &) -> bool { return false; }},
+        first, second);
 }
 
 bool operator!=(const Statement &first, const Statement &other)

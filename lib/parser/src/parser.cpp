@@ -446,32 +446,31 @@ std::unique_ptr<Block> Parser::parse_block()
 
 // NON_FUNC_STMT = RETURN_STMT | ASSIGN_STMT | VAR_DECL_STMT | IF_STMT |
 // WHILE_STMT | MATCH_STMT | CONTINUE_STMT | BREAK_STMT | BLOCK;
-std::unique_ptr<Statement> Parser::parse_non_func_stmt()
+StmtPtr Parser::parse_non_func_stmt()
 {
-    std::unique_ptr<Statement> result;
-    if ((result = this->parse_return_stmt()))
+    if (auto result = this->parse_return_stmt())
         return result;
-    if ((result = this->parse_assign_or_expr_stmt()))
+    if (auto result = this->parse_assign_or_expr_stmt())
         return result;
-    if ((result = this->parse_var_decl_stmt()))
+    if (auto result = this->parse_if_stmt())
         return result;
-    if ((result = this->parse_if_stmt()))
+    if (auto result = this->parse_while_stmt())
         return result;
-    if ((result = this->parse_while_stmt()))
+    if (auto result = this->parse_match_stmt())
         return result;
-    if ((result = this->parse_match_stmt()))
+    if (auto result = this->parse_continue_stmt())
         return result;
-    if ((result = this->parse_continue_stmt()))
+    if (auto result = this->parse_break_stmt())
         return result;
-    if ((result = this->parse_break_stmt()))
-        return result;
-    if ((result = this->parse_block()))
-        return result;
+    if (auto result = this->parse_block())
+        return std::make_unique<Statement>(std::move(*result));
+    if (auto result = this->parse_var_decl_stmt())
+        return std::make_unique<Statement>(std::move(*result));
     return nullptr;
 }
 
 // RETURN_STMT = KW_RETURN, [BINARY_EXPR], SEMICOLON;
-std::unique_ptr<ReturnStmt> Parser::parse_return_stmt()
+StmtPtr Parser::parse_return_stmt()
 {
     if (this->current_token != TokenType::KW_RETURN)
         return nullptr;
@@ -480,17 +479,17 @@ std::unique_ptr<ReturnStmt> Parser::parse_return_stmt()
     if (this->current_token == TokenType::SEMICOLON)
     {
         this->next_token();
-        return std::make_unique<ReturnStmt>(position);
+        return std::make_unique<Statement>(ReturnStmt(position));
     }
     auto expr = this->parse_binary_expr();
     if (!this->assert_current_and_eat(
             TokenType::SEMICOLON, L"no semicolon found in a return statement"))
         return nullptr;
-    return std::make_unique<ReturnStmt>(expr, position);
+    return std::make_unique<Statement>(ReturnStmt(expr, position));
 }
 
 // ASSIGN_OR_EXPR_STMT = BINARY_STMT, [ASSIGN_PART], SEMICOLON;
-std::unique_ptr<Statement> Parser::parse_assign_or_expr_stmt()
+StmtPtr Parser::parse_assign_or_expr_stmt()
 {
     StmtPtr result = nullptr;
     ExprNodePtr lhs = this->parse_binary_expr();
@@ -499,11 +498,12 @@ std::unique_ptr<Statement> Parser::parse_assign_or_expr_stmt()
         if (auto op_and_rhs = this->parse_assign_part())
         {
             auto [op, rhs] = std::move(*op_and_rhs);
-            result = std::make_unique<AssignStmt>(lhs, op, rhs,
-                                                  get_expr_position(*lhs));
+            result = std::make_unique<Statement>(
+                AssignStmt(lhs, op, rhs, get_expr_position(*lhs)));
         }
         else
-            result = std::make_unique<ExprStmt>(lhs, get_expr_position(*lhs));
+            result = std::make_unique<Statement>(
+                ExprStmt(lhs, get_expr_position(*lhs)));
         if (!this->assert_current_and_eat(
                 TokenType::SEMICOLON, L"semicolon expected after an "
                                       L"assignment or expression statement"))
@@ -540,7 +540,7 @@ std::optional<AssignType> Parser::parse_assign_op()
 }
 
 // CONTINUE_STMT = KW_CONTINUE, SEMICOLON;
-std::unique_ptr<ContinueStmt> Parser::parse_continue_stmt()
+StmtPtr Parser::parse_continue_stmt()
 {
     if (this->current_token != TokenType::KW_CONTINUE)
         return nullptr;
@@ -550,11 +550,11 @@ std::unique_ptr<ContinueStmt> Parser::parse_continue_stmt()
             TokenType::SEMICOLON,
             L"no semicolon found in a continue statement"))
         return nullptr;
-    return std::make_unique<ContinueStmt>(position);
+    return std::make_unique<Statement>(ContinueStmt(position));
 }
 
 // BREAK_STMT = KW_BREAK, SEMICOLON;
-std::unique_ptr<BreakStmt> Parser::parse_break_stmt()
+StmtPtr Parser::parse_break_stmt()
 {
     if (this->current_token != TokenType::KW_BREAK)
         return nullptr;
@@ -564,11 +564,11 @@ std::unique_ptr<BreakStmt> Parser::parse_break_stmt()
             TokenType::SEMICOLON,
             L"no semicolon found in a continue statement"))
         return nullptr;
-    return std::make_unique<BreakStmt>(position);
+    return std::make_unique<Statement>(BreakStmt(position));
 }
 
 // IF_STMT = KW_IF, PAREN_EXPR, BLOCK, [ELSE_BLOCK];
-std::unique_ptr<IfStmt> Parser::parse_if_stmt()
+StmtPtr Parser::parse_if_stmt()
 {
     if (this->current_token != TokenType::KW_IF)
         return nullptr;
@@ -590,11 +590,12 @@ std::unique_ptr<IfStmt> Parser::parse_if_stmt()
         return nullptr;
     }
     auto else_stmt = this->parse_else_block();
-    return std::make_unique<IfStmt>(condition, then_stmt, else_stmt, position);
+    return std::make_unique<Statement>(
+        IfStmt(condition, then_stmt, else_stmt, position));
 }
 
 // ELSE_BLOCK = KW_ELSE, BLOCK;
-std::unique_ptr<Statement> Parser::parse_else_block()
+StmtPtr Parser::parse_else_block()
 {
     if (this->current_token != TokenType::KW_ELSE)
         return nullptr;
@@ -606,7 +607,7 @@ std::unique_ptr<Statement> Parser::parse_else_block()
 }
 
 // WHILE_STMT = KW_WHILE, PAREN_EXPR, BLOCK;
-std::unique_ptr<WhileStmt> Parser::parse_while_stmt()
+StmtPtr Parser::parse_while_stmt()
 {
     if (this->current_token != TokenType::KW_WHILE)
         return nullptr;
@@ -625,11 +626,12 @@ std::unique_ptr<WhileStmt> Parser::parse_while_stmt()
         this->report_error(L"no block found in the while loop statement");
         return nullptr;
     }
-    return std::make_unique<WhileStmt>(condition_expr, statement, position);
+    return std::make_unique<Statement>(
+        WhileStmt(condition_expr, statement, position));
 }
 
 // MATCH_STMT = KW_MATCH, PAREN_EXPR, L_BRACKET, {MATCH_CASE}, R_BRACKET;
-std::unique_ptr<MatchStmt> Parser::parse_match_stmt()
+StmtPtr Parser::parse_match_stmt()
 {
     if (this->current_token != TokenType::KW_MATCH)
         return nullptr;
@@ -653,7 +655,8 @@ std::unique_ptr<MatchStmt> Parser::parse_match_stmt()
     if (!this->assert_current_and_eat(TokenType::R_BRACKET,
                                       L"no left bracket in a match statement"))
         return nullptr;
-    return std::make_unique<MatchStmt>(matched_expr, match_cases, position);
+    return std::make_unique<Statement>(
+        MatchStmt(matched_expr, match_cases, position));
 }
 
 // MATCH_CASE = MATCH_SPECIFIER, LAMBDA_ARROW, BLOCK;
