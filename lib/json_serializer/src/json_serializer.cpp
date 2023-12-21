@@ -153,7 +153,7 @@ void JsonSerializer::JsonVisitor::visit(const CastExpr &node)
     output["type"] = "CastExpr";
     this->visit(*node.expr);
     output["expr"] = this->last_object;
-    node.type->accept(*this);
+    this->visit(*node.type);
     output["cast_type"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
@@ -277,12 +277,12 @@ void JsonSerializer::JsonVisitor::visit(const FuncDefStmt &node)
     output["params"] = nlohmann::json::array();
     for (const auto &param : node.params)
     {
-        param->accept(*this);
+        this->visit(*param);
         output["params"] = this->last_object;
     }
     if (node.return_type)
     {
-        node.return_type->accept(*this);
+        this->visit(*node.return_type);
         output["return_type"] = this->last_object;
     }
     this->visit(*node.block);
@@ -322,7 +322,7 @@ void JsonSerializer::JsonVisitor::visit(const VarDeclStmt &node)
     output["name"] = node.name;
     if (node.type)
     {
-        node.type->accept(*this);
+        this->visit(*node.type);
         output["var_type"] = this->last_object;
     }
     else
@@ -350,11 +350,11 @@ void JsonSerializer::JsonVisitor::visit(const ExternStmt &node)
     output["name"] = node.name;
     for (const auto &param : node.params)
     {
-        param->accept(*this);
+        this->visit(*param);
     }
     if (node.return_type)
     {
-        node.return_type->accept(*this);
+        this->visit(*node.return_type);
         output["return_type"] = this->last_object;
     }
     output["position"] = this->get_position(node.position);
@@ -457,7 +457,7 @@ void JsonSerializer::JsonVisitor::visit(const Parameter &node)
     nlohmann::json output;
     output["type"] = "Program";
     output["name"] = node.name;
-    node.type->accept(*this);
+    this->visit(*node.type);
     output["param_type"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
@@ -481,12 +481,12 @@ void JsonSerializer::JsonVisitor::visit(const FunctionType &type)
     output["const"] = type.is_const;
     for (const auto &arg_type : type.arg_types)
     {
-        arg_type->accept(*this);
+        this->visit(*arg_type);
         output["args"] = this->last_object;
     }
     if (type.return_type)
     {
-        type.return_type->accept(*this);
+        this->visit(*type.return_type);
         output["return_type"] = this->last_object;
     }
     else
@@ -496,8 +496,16 @@ void JsonSerializer::JsonVisitor::visit(const FunctionType &type)
     this->last_object = output;
 }
 
+void JsonSerializer::JsonVisitor::visit(const Type &type)
+{
+    std::visit(
+        overloaded{[this](const SimpleType &type) { this->visit(type); },
+                   [this](const FunctionType &type) { this->visit(type); }},
+        type);
+}
+
 nlohmann::json JsonSerializer::serialize(const Program &program)
 {
-    program.accept(this->visitor);
+    this->visitor.visit(program);
     return this->visitor.last_object;
 }

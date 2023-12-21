@@ -14,11 +14,6 @@ bool equal_or_null(const std::unique_ptr<T> &first,
 }
 } // namespace
 
-bool operator==(const MatchArm &first, const MatchArm &second);
-bool operator==(const Statement &first, const Statement &second);
-bool operator==(const Parameter &first, const Parameter &other);
-bool operator==(const Program &first, const Program &other);
-
 template <typename T>
 bool compare_ptr_vectors(const std::vector<std::unique_ptr<T>> &first,
                          const std::vector<std::unique_ptr<T>> &second)

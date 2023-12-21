@@ -29,7 +29,7 @@ class JsonSerializer
         void visit(const IndexExpr &node);
         void visit(const CastExpr &node);
 
-        void visit(const ExprNode &node);
+        void visit(const ExprNode &node) override;
 
         void visit(const Block &node);
         void visit(const IfStmt &node);
@@ -44,16 +44,17 @@ class JsonSerializer
         void visit(const VarDeclStmt &node);
         void visit(const ExternStmt &node);
 
-        void visit(const Statement &node);
+        void visit(const Statement &node) override;
 
         void visit(const LiteralArm &node);
         void visit(const GuardArm &node);
         void visit(const ElseArm &node);
 
-        void visit(const MatchArm &node);
+        void visit(const MatchArm &node) override;
 
-        void visit(const SimpleType &type) override;
-        void visit(const FunctionType &type) override;
+        void visit(const SimpleType &type);
+        void visit(const FunctionType &type);
+        void visit(const Type &type) override;
 
         void visit(const Program &node) override;
         void visit(const Parameter &node) override;
