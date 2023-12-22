@@ -18,7 +18,7 @@ struct CharNode
 class Lexer;
 using LexerPtr = std::unique_ptr<Lexer>;
 
-class Lexer
+class Lexer : public Reporter
 {
     static const std::map<std::wstring, TokenType> keywords;
     static const std::map<wchar_t, CharNode> char_nodes;
@@ -27,13 +27,14 @@ class Lexer
     const unsigned long long max_var_name_size;
     const unsigned long long max_str_length;
 
-    std::optional<wchar_t> last_char;
     Position position;
-
+    std::optional<wchar_t> last_char;
     std::vector<Logger *> loggers;
 
-    std::optional<wchar_t> get_new_char();
+    std::wstring wrap_error_msg(const std::wstring &msg) const override;
+    Token report_and_consume(const std::wstring &msg);
 
+    std::optional<wchar_t> get_new_char();
     std::optional<wchar_t> get_nonempty_char();
 
     std::optional<unsigned long long> parse_integral();
@@ -58,9 +59,6 @@ class Lexer
     bool is_identifier_char() const;
     bool is_an_operator_char() const;
     bool is_alpha_char() const;
-
-    Token report_error(const std::wstring &msg);
-    Token report_and_consume(const std::wstring &msg);
 
   public:
     Lexer(ReaderPtr &reader, const unsigned long long &max_var_name_size,
@@ -88,9 +86,6 @@ class Lexer
                               const unsigned long long &max_str_length);
 
     std::optional<Token> get_token();
-
-    void add_logger(Logger *logger);
-    void remove_logger(Logger *logger);
 };
 
 #endif

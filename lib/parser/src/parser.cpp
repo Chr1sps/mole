@@ -83,7 +83,7 @@ std::map<TokenType, AssignType> Parser::assign_map{
 };
 #undef ASSIGN_TYPE
 
-std::wstring Parser::wrap_error_msg(const std::wstring &msg)
+std::wstring Parser::wrap_error_msg(const std::wstring &msg) const
 {
     return build_wstring(
         L"Parser error at [", this->current_token->position.line, ",",
