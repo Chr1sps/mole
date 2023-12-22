@@ -806,7 +806,7 @@ ExprNodePtr Parser::parse_u32_expr()
     if (this->current_token != TokenType::INT)
         return nullptr;
     auto result = std::make_unique<ExprNode>(
-        I32Expr(std::get<unsigned long long>(this->current_token->value),
+        U32Expr(std::get<unsigned long long>(this->current_token->value),
                 this->current_token->position));
     this->next_token();
     return result;

@@ -124,14 +124,14 @@ struct CallExpr;
 struct LambdaCallExpr;
 struct IndexExpr;
 struct CastExpr;
-struct I32Expr;
+struct U32Expr;
 struct F64Expr;
 struct StringExpr;
 struct CharExpr;
 struct BoolExpr;
 
 using ExprNode = std::variant<VariableExpr, BinaryExpr, UnaryExpr, CallExpr,
-                              LambdaCallExpr, IndexExpr, CastExpr, I32Expr,
+                              LambdaCallExpr, IndexExpr, CastExpr, U32Expr,
                               F64Expr, BoolExpr, StringExpr, CharExpr>;
 using ExprNodePtr = std::unique_ptr<ExprNode>;
 
@@ -289,12 +289,12 @@ struct CastExpr : public AstNode
     }
 };
 
-struct I32Expr : public AstNode
+struct U32Expr : public AstNode
 {
     static const std::shared_ptr<SimpleType> type;
     unsigned long long value;
 
-    I32Expr(const unsigned long long &value, const Position &position)
+    U32Expr(const unsigned long long &value, const Position &position)
         : AstNode(position), value(value)
     {
     }

@@ -297,9 +297,9 @@ void SemanticChecker::visit(const VariableExpr &node)
         this->report_error(L"variable `", node.name, L"` not found in scope");
 }
 
-void SemanticChecker::visit(const I32Expr &node)
+void SemanticChecker::visit(const U32Expr &node)
 {
-    this->last_type = I32Expr::type;
+    this->last_type = U32Expr::type;
 }
 
 void SemanticChecker::visit(const F64Expr &node)

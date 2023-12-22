@@ -65,7 +65,7 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
     std::make_unique<ExprNode>(VariableExpr(name, position))
 
 #define I32EXPR(value, position)                                              \
-    std::make_unique<ExprNode>(I32Expr(value, position))
+    std::make_unique<ExprNode>(U32Expr(value, position))
 #define F64EXPR(value, position)                                              \
     std::make_unique<ExprNode>(F64Expr(value, position))
 #define STREXPR(value, position)                                              \

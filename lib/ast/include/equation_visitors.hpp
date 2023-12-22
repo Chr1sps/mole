@@ -50,7 +50,7 @@ bool operator==(const ExprNode &first, const ExprNode &other)
                 return first.name == other.name &&
                        first.position == other.position;
             },
-            [](const I32Expr &first, const I32Expr &other) -> bool {
+            [](const U32Expr &first, const U32Expr &other) -> bool {
                 return first.value == other.value &&
                        first.position == other.position;
             },

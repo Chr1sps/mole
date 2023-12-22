@@ -86,7 +86,7 @@ class SemanticChecker : public AstVisitor
 
   public:
     void visit(const VariableExpr &node) override; // tu trzeba dać
-    void visit(const I32Expr &node) override;
+    void visit(const U32Expr &node) override;
     void visit(const F64Expr &node) override;
     void visit(const BinaryExpr &node) override;
     void visit(const UnaryExpr &node) override;

@@ -3,21 +3,22 @@
 #include "ast.hpp"
 #include "nlohmann/json.hpp"
 #include "visitor.hpp"
-#include <map>
-#include <ostream>
+#include <unordered_map>
 
 class JsonSerializer
 {
-    class JsonVisitor : public AstVisitor
+    class Visitor : public AstVisitor
     {
+        static std::unordered_map<BinOpEnum, std::wstring> binop_map;
+        static std::unordered_map<UnaryOpEnum, std::wstring> unop_map;
+        static std::unordered_map<AssignType, std::wstring> assign_map;
+        static std::unordered_map<RefSpecifier, std::wstring> ref_spec_map;
+        static std::unordered_map<TypeEnum, std::wstring> type_map;
+
         nlohmann::json get_position(const Position &position);
 
-      public:
-        nlohmann::json last_object;
-        JsonVisitor() = default;
-
         void visit(const VariableExpr &node);
-        void visit(const I32Expr &node);
+        void visit(const U32Expr &node);
         void visit(const F64Expr &node);
         void visit(const StringExpr &node);
         void visit(const CharExpr &node);
@@ -28,8 +29,6 @@ class JsonSerializer
         void visit(const LambdaCallExpr &node);
         void visit(const IndexExpr &node);
         void visit(const CastExpr &node);
-
-        void visit(const ExprNode &node) override;
 
         void visit(const Block &node);
         void visit(const IfStmt &node);
@@ -44,16 +43,21 @@ class JsonSerializer
         void visit(const VarDeclStmt &node);
         void visit(const ExternStmt &node);
 
-        void visit(const Statement &node) override;
-
         void visit(const LiteralArm &node);
         void visit(const GuardArm &node);
         void visit(const ElseArm &node);
 
-        void visit(const MatchArm &node) override;
-
         void visit(const SimpleType &type);
         void visit(const FunctionType &type);
+
+      public:
+        nlohmann::json last_object;
+        Visitor() = default;
+
+        void visit(const ExprNode &node) override;
+
+        void visit(const Statement &node) override;
+        void visit(const MatchArm &node) override;
         void visit(const Type &type) override;
 
         void visit(const Program &node) override;

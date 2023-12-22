@@ -15,8 +15,52 @@ template <> struct adl_serializer<std::wstring>
 };
 } // namespace nlohmann
 
-nlohmann::json JsonSerializer::JsonVisitor::get_position(
-    const Position &position)
+std::unordered_map<BinOpEnum, std::wstring>
+    JsonSerializer::Visitor::binop_map = {
+        {BinOpEnum::ADD, L"ADD"},         {BinOpEnum::AND, L"AND"},
+        {BinOpEnum::BIT_AND, L"BIT_AND"}, {BinOpEnum::BIT_OR, L"BIT_OR"},
+        {BinOpEnum::BIT_XOR, L"BIT_XOR"}, {BinOpEnum::DIV, L"DIV"},
+        {BinOpEnum::EQ, L"EQ"},           {BinOpEnum::EXP, L"EXP"},
+        {BinOpEnum::GE, L"GE"},           {BinOpEnum::GT, L"GT"},
+        {BinOpEnum::LE, L"LE"},           {BinOpEnum::LT, L"LT"},
+        {BinOpEnum::MOD, L"MOD"},         {BinOpEnum::MUL, L"MUL"},
+        {BinOpEnum::NEQ, L"NEQ"},         {BinOpEnum::OR, L"OR"},
+        {BinOpEnum::SHL, L"SHL"},         {BinOpEnum::SHR, L"SHR"},
+        {BinOpEnum::SUB, L"SUB"},
+
+};
+
+std::unordered_map<UnaryOpEnum, std::wstring>
+    JsonSerializer::Visitor::unop_map = {
+        {UnaryOpEnum::BIT_NEG, L"BIT_NEG"}, {UnaryOpEnum::DEC, L"DEC"},
+        {UnaryOpEnum::INC, L"INC"},         {UnaryOpEnum::NEG, L"NEG"},
+        {UnaryOpEnum::REF, L"REF"},         {UnaryOpEnum::MINUS, L"MINUS"},
+};
+
+std::unordered_map<RefSpecifier, std::wstring>
+    JsonSerializer::Visitor::ref_spec_map = {
+        {RefSpecifier::NON_REF, L"NON_REF"},
+        {RefSpecifier::REF, L"REF"},
+        {RefSpecifier::MUT_REF, L"MUT_REF"},
+};
+std::unordered_map<AssignType, std::wstring>
+    JsonSerializer::Visitor::assign_map = {
+        {AssignType::NORMAL, L"NORMAL"},   {AssignType::PLUS, L"PLUS"},
+        {AssignType::MINUS, L"MINUS"},     {AssignType::MUL, L"MUL"},
+        {AssignType::DIV, L"DIV"},         {AssignType::MOD, L"MOD"},
+        {AssignType::EXP, L"EXP"},         {AssignType::BIT_AND, L"BIT_AND"},
+        {AssignType::BIT_OR, L"BIT_OR"},   {AssignType::BIT_XOR, L"BIT_XOR"},
+        {AssignType::BIT_NEG, L"BIT_NEG"}, {AssignType::SHR, L"SHR"},
+        {AssignType::SHL, L"SHL"},
+};
+std::unordered_map<TypeEnum, std::wstring> JsonSerializer::Visitor::type_map =
+    {
+        {TypeEnum::BOOL, L"BOOL"}, {TypeEnum::I32, L"I32"},
+        {TypeEnum::I32, L"I32"},   {TypeEnum::F64, L"F64"},
+        {TypeEnum::CHAR, L"CHAR"}, {TypeEnum::STR, L"STR"},
+};
+
+nlohmann::json JsonSerializer::Visitor::get_position(const Position &position)
 {
     nlohmann::json result;
     result["line"] = position.line;
@@ -24,7 +68,7 @@ nlohmann::json JsonSerializer::JsonVisitor::get_position(
     return result;
 }
 
-void JsonSerializer::JsonVisitor::visit(const VariableExpr &node)
+void JsonSerializer::Visitor::visit(const VariableExpr &node)
 {
     nlohmann::json output;
     output["type"] = "VarExpr";
@@ -33,16 +77,16 @@ void JsonSerializer::JsonVisitor::visit(const VariableExpr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const I32Expr &node)
+void JsonSerializer::Visitor::visit(const U32Expr &node)
 {
     nlohmann::json output;
-    output["type"] = "I32Expr";
+    output["type"] = "U32Expr";
     output["value"] = node.value;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const F64Expr &node)
+void JsonSerializer::Visitor::visit(const F64Expr &node)
 {
     nlohmann::json output;
     output["type"] = "F64Expr";
@@ -51,7 +95,7 @@ void JsonSerializer::JsonVisitor::visit(const F64Expr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const StringExpr &node)
+void JsonSerializer::Visitor::visit(const StringExpr &node)
 {
     nlohmann::json output;
     output["type"] = "StringExpr";
@@ -60,7 +104,7 @@ void JsonSerializer::JsonVisitor::visit(const StringExpr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const CharExpr &node)
+void JsonSerializer::Visitor::visit(const CharExpr &node)
 {
     nlohmann::json output;
     output["type"] = "CharExpr";
@@ -69,7 +113,7 @@ void JsonSerializer::JsonVisitor::visit(const CharExpr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const BoolExpr &node)
+void JsonSerializer::Visitor::visit(const BoolExpr &node)
 {
     nlohmann::json output;
     output["type"] = "BoolExpr";
@@ -78,31 +122,31 @@ void JsonSerializer::JsonVisitor::visit(const BoolExpr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const BinaryExpr &node)
+void JsonSerializer::Visitor::visit(const BinaryExpr &node)
 {
     nlohmann::json output;
     output["type"] = "BinaryExpr";
     this->visit(*node.lhs);
     output["lhs"] = this->last_object;
-    // output["op"] = ;
+    output["op"] = this->binop_map.at(node.op);
     this->visit(*node.rhs);
     output["rhs"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const UnaryExpr &node)
+void JsonSerializer::Visitor::visit(const UnaryExpr &node)
 {
     nlohmann::json output;
     output["type"] = "UnaryExpr";
-    // output["op"] = ;
+    output["op"] = this->unop_map.at(node.op);
     this->visit(*node.expr);
     output["expr"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const CallExpr &node)
+void JsonSerializer::Visitor::visit(const CallExpr &node)
 {
     nlohmann::json output;
     output["type"] = "CallExpr";
@@ -116,7 +160,7 @@ void JsonSerializer::JsonVisitor::visit(const CallExpr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const LambdaCallExpr &node)
+void JsonSerializer::Visitor::visit(const LambdaCallExpr &node)
 {
     nlohmann::json output;
     output["type"] = "LambdaCallExpr";
@@ -135,7 +179,7 @@ void JsonSerializer::JsonVisitor::visit(const LambdaCallExpr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const IndexExpr &node)
+void JsonSerializer::Visitor::visit(const IndexExpr &node)
 {
     nlohmann::json output;
     output["type"] = "IndexExpr";
@@ -147,7 +191,7 @@ void JsonSerializer::JsonVisitor::visit(const IndexExpr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const CastExpr &node)
+void JsonSerializer::Visitor::visit(const CastExpr &node)
 {
     nlohmann::json output;
     output["type"] = "CastExpr";
@@ -159,13 +203,13 @@ void JsonSerializer::JsonVisitor::visit(const CastExpr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const ExprNode &node)
+void JsonSerializer::Visitor::visit(const ExprNode &node)
 {
     // this looks like a cheap, half-assed version of double-dispatch, but
     // whatever
     std::visit(
         overloaded{[this](const VariableExpr &node) { this->visit(node); },
-                   [this](const I32Expr &node) { this->visit(node); },
+                   [this](const U32Expr &node) { this->visit(node); },
                    [this](const F64Expr &node) { this->visit(node); },
                    [this](const StringExpr &node) { this->visit(node); },
                    [this](const CharExpr &node) { this->visit(node); },
@@ -179,7 +223,7 @@ void JsonSerializer::JsonVisitor::visit(const ExprNode &node)
         node);
 }
 
-void JsonSerializer::JsonVisitor::visit(const Block &node)
+void JsonSerializer::Visitor::visit(const Block &node)
 {
     nlohmann::json output;
     output["type"] = "Block";
@@ -193,7 +237,7 @@ void JsonSerializer::JsonVisitor::visit(const Block &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const IfStmt &node)
+void JsonSerializer::Visitor::visit(const IfStmt &node)
 {
     nlohmann::json output;
     output["type"] = "IfStmt";
@@ -212,7 +256,7 @@ void JsonSerializer::JsonVisitor::visit(const IfStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const WhileStmt &node)
+void JsonSerializer::Visitor::visit(const WhileStmt &node)
 {
     nlohmann::json output;
     output["type"] = "IfStmt";
@@ -224,7 +268,7 @@ void JsonSerializer::JsonVisitor::visit(const WhileStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const MatchStmt &node)
+void JsonSerializer::Visitor::visit(const MatchStmt &node)
 {
     nlohmann::json output;
     output["type"] = "MatchStmt";
@@ -240,7 +284,7 @@ void JsonSerializer::JsonVisitor::visit(const MatchStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const ReturnStmt &node)
+void JsonSerializer::Visitor::visit(const ReturnStmt &node)
 {
     nlohmann::json output;
     output["type"] = "ReturnStmt";
@@ -257,7 +301,7 @@ void JsonSerializer::JsonVisitor::visit(const ReturnStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const BreakStmt &node)
+void JsonSerializer::Visitor::visit(const BreakStmt &node)
 {
     nlohmann::json output;
     output["type"] = "BreakStmt";
@@ -265,7 +309,7 @@ void JsonSerializer::JsonVisitor::visit(const BreakStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const ContinueStmt &node)
+void JsonSerializer::Visitor::visit(const ContinueStmt &node)
 {
     nlohmann::json output;
     output["type"] = "ContinueStmt";
@@ -273,7 +317,7 @@ void JsonSerializer::JsonVisitor::visit(const ContinueStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const FuncDefStmt &node)
+void JsonSerializer::Visitor::visit(const FuncDefStmt &node)
 {
     nlohmann::json output;
     output["type"] = "FuncDefStmt";
@@ -296,21 +340,20 @@ void JsonSerializer::JsonVisitor::visit(const FuncDefStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const AssignStmt &node)
+void JsonSerializer::Visitor::visit(const AssignStmt &node)
 {
     nlohmann::json output;
     output["type"] = "AssignStmt";
     this->visit(*node.lhs);
     output["lhs"] = this->last_object;
-    // output["op"] = node.type
-    output["op"] = "TODO: OP TYPE";
+    output["op"] = this->assign_map.at(node.type);
     this->visit(*node.rhs);
     output["rhs"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const ExprStmt &node)
+void JsonSerializer::Visitor::visit(const ExprStmt &node)
 {
     nlohmann::json output;
     output["type"] = "AssignStmt";
@@ -320,7 +363,7 @@ void JsonSerializer::JsonVisitor::visit(const ExprStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const VarDeclStmt &node)
+void JsonSerializer::Visitor::visit(const VarDeclStmt &node)
 {
     nlohmann::json output;
     output["type"] = "VarDeclStmt";
@@ -348,7 +391,7 @@ void JsonSerializer::JsonVisitor::visit(const VarDeclStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const ExternStmt &node)
+void JsonSerializer::Visitor::visit(const ExternStmt &node)
 {
     nlohmann::json output;
     output["type"] = "ExternStmt";
@@ -366,7 +409,7 @@ void JsonSerializer::JsonVisitor::visit(const ExternStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const Statement &node)
+void JsonSerializer::Visitor::visit(const Statement &node)
 {
     std::visit(
         overloaded{[this](const Block &node) { this->visit(node); },
@@ -384,7 +427,7 @@ void JsonSerializer::JsonVisitor::visit(const Statement &node)
         node);
 }
 
-void JsonSerializer::JsonVisitor::visit(const LiteralArm &node)
+void JsonSerializer::Visitor::visit(const LiteralArm &node)
 {
     nlohmann::json output;
     output["type"] = "LiteralArm";
@@ -400,7 +443,7 @@ void JsonSerializer::JsonVisitor::visit(const LiteralArm &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const GuardArm &node)
+void JsonSerializer::Visitor::visit(const GuardArm &node)
 {
     nlohmann::json output;
     output["type"] = "GuardArm";
@@ -412,7 +455,7 @@ void JsonSerializer::JsonVisitor::visit(const GuardArm &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const ElseArm &node)
+void JsonSerializer::Visitor::visit(const ElseArm &node)
 {
     nlohmann::json output;
     output["type"] = "ElseArm";
@@ -422,7 +465,7 @@ void JsonSerializer::JsonVisitor::visit(const ElseArm &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const MatchArm &node)
+void JsonSerializer::Visitor::visit(const MatchArm &node)
 {
     std::visit(
         overloaded{[this](const LiteralArm &node) { this->visit(node); },
@@ -431,7 +474,7 @@ void JsonSerializer::JsonVisitor::visit(const MatchArm &node)
         node);
 }
 
-void JsonSerializer::JsonVisitor::visit(const Program &node)
+void JsonSerializer::Visitor::visit(const Program &node)
 {
     nlohmann::json output;
     output["type"] = "Program";
@@ -457,7 +500,7 @@ void JsonSerializer::JsonVisitor::visit(const Program &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const Parameter &node)
+void JsonSerializer::Visitor::visit(const Parameter &node)
 {
     nlohmann::json output;
     output["type"] = "Program";
@@ -468,18 +511,17 @@ void JsonSerializer::JsonVisitor::visit(const Parameter &node)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const SimpleType &type)
+void JsonSerializer::Visitor::visit(const SimpleType &type)
 {
     nlohmann::json output;
     output["type"] = "SimpleType";
-    output["ref_spec"] = "TODO";
-    // output["value"] = type.type;
-    output["value"] = "TODO";
+    output["ref_spec"] = this->ref_spec_map.at(type.ref_spec);
+    output["value"] = this->type_map.at(type.type);
     // output["position"] = this->get_position(node.position);
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const FunctionType &type)
+void JsonSerializer::Visitor::visit(const FunctionType &type)
 {
     nlohmann::json output;
     output["type"] = "FnType";
@@ -501,7 +543,7 @@ void JsonSerializer::JsonVisitor::visit(const FunctionType &type)
     this->last_object = output;
 }
 
-void JsonSerializer::JsonVisitor::visit(const Type &type)
+void JsonSerializer::Visitor::visit(const Type &type)
 {
     std::visit(
         overloaded{[this](const SimpleType &type) { this->visit(type); },
