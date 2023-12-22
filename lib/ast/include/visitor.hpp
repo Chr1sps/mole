@@ -49,4 +49,9 @@ class AstVisitor : public ExprVisitor,
     using StmtVisitor::visit;
     using TypeVisitor::visit;
 };
+
+template <typename... ts> struct overloaded : ts...
+{
+    using ts::operator()...;
+};
 #endif

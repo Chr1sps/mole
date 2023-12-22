@@ -1,10 +1,17 @@
 #ifndef __EQUATION_VISITORS_HPP__
 #define __EQUATION_VISITORS_HPP__
 #include "ast.hpp"
-#include "visitor.hpp"
 
 namespace
 {
+// Yes, `overloaded` exists inside the visitor.hpp header, but apart from this
+// header the only one that needs it and doesn't need to import the visitors
+// header is this one.
+template <typename... ts> struct overloaded : ts...
+{
+    using ts::operator()...;
+};
+
 template <typename T>
 bool equal_or_null(const std::unique_ptr<T> &first,
                    const std::unique_ptr<T> &other)

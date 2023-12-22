@@ -135,7 +135,8 @@ ProgramPtr Parser::parse()
             return nullptr;
         }
     }
-    return std::make_unique<Program>(globals, functions, externs);
+    return std::make_unique<Program>(std::move(globals), std::move(functions),
+                                     std::move(externs));
 }
 
 // EXTERN_STMT = KW_EXTERN, FUNC_NAME_AND_PARAMS, SEMICOLON;
@@ -159,7 +160,8 @@ std::unique_ptr<ExternStmt> Parser::parse_extern_stmt()
             TokenType::SEMICOLON, L"not a semicolon in an extern declaration"))
         return nullptr;
 
-    return std::make_unique<ExternStmt>(name, params, return_type, position);
+    return std::make_unique<ExternStmt>(name, std::move(params),
+                                        std::move(return_type), position);
 }
 
 // VAR_DECL_STMT = KW_LET, [KW_MUT], IDENTIFIER, [TYPE_SPECIFIER],
@@ -195,8 +197,8 @@ std::unique_ptr<VarDeclStmt> Parser::parse_var_decl_stmt()
             L"no semicolon found in a variable declaration"))
         return nullptr;
 
-    return std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut,
-                                         position);
+    return std::make_unique<VarDeclStmt>(
+        name, std::move(type), std::move(initial_value), is_mut, position);
 }
 
 // TYPE_SPECIFIER = COLON, TYPE;
@@ -257,8 +259,9 @@ std::unique_ptr<FuncDefStmt> Parser::parse_func_def_stmt()
         this->report_error(L"expected a block in a function definition");
         return nullptr;
     }
-    return std::make_unique<FuncDefStmt>(name, params, return_type, block,
-                                         is_const, position);
+    return std::make_unique<FuncDefStmt>(name, std::move(params),
+                                         std::move(return_type),
+                                         std::move(block), is_const, position);
 }
 
 // FUNC_NAME_AND_PARAMS = IDENTIFIER, L_PAREN, [PARAMS], R_PAREN,
@@ -404,7 +407,8 @@ TypePtr Parser::parse_function_type()
         return nullptr;
 
     TypePtr return_type = this->parse_return_type();
-    return std::make_unique<Type>(FunctionType(types, return_type, is_const));
+    return std::make_unique<Type>(
+        FunctionType(std::move(types), std::move(return_type), is_const));
 }
 
 // TYPES = TYPE_WITH_REF_SPEC, {COMMA, TYPE_WITH_REF_SPEC}
@@ -441,7 +445,7 @@ std::unique_ptr<Block> Parser::parse_block()
     if (!this->assert_current_and_eat(
             TokenType::R_BRACKET, L"block statement missing a right bracket"))
         return nullptr;
-    return std::make_unique<Block>(statements, position);
+    return std::make_unique<Block>(std::move(statements), position);
 }
 
 // NON_FUNC_STMT = RETURN_STMT | ASSIGN_STMT | VAR_DECL_STMT | IF_STMT |
@@ -485,7 +489,7 @@ StmtPtr Parser::parse_return_stmt()
     if (!this->assert_current_and_eat(
             TokenType::SEMICOLON, L"no semicolon found in a return statement"))
         return nullptr;
-    return std::make_unique<Statement>(ReturnStmt(expr, position));
+    return std::make_unique<Statement>(ReturnStmt(std::move(expr), position));
 }
 
 // ASSIGN_OR_EXPR_STMT = BINARY_STMT, [ASSIGN_PART], SEMICOLON;
@@ -498,12 +502,12 @@ StmtPtr Parser::parse_assign_or_expr_stmt()
         if (auto op_and_rhs = this->parse_assign_part())
         {
             auto [op, rhs] = std::move(*op_and_rhs);
-            result = std::make_unique<Statement>(
-                AssignStmt(lhs, op, rhs, get_expr_position(*lhs)));
+            result = std::make_unique<Statement>(AssignStmt(
+                std::move(lhs), op, std::move(rhs), get_expr_position(*lhs)));
         }
         else
             result = std::make_unique<Statement>(
-                ExprStmt(lhs, get_expr_position(*lhs)));
+                ExprStmt(std::move(lhs), get_expr_position(*lhs)));
         if (!this->assert_current_and_eat(
                 TokenType::SEMICOLON, L"semicolon expected after an "
                                       L"assignment or expression statement"))
@@ -590,8 +594,9 @@ StmtPtr Parser::parse_if_stmt()
         return nullptr;
     }
     auto else_stmt = this->parse_else_block();
-    return std::make_unique<Statement>(
-        IfStmt(condition, then_stmt, else_stmt, position));
+    return std::make_unique<Statement>(IfStmt(std::move(condition),
+                                              std::move(then_stmt),
+                                              std::move(else_stmt), position));
 }
 
 // ELSE_BLOCK = KW_ELSE, BLOCK;
@@ -627,7 +632,7 @@ StmtPtr Parser::parse_while_stmt()
         return nullptr;
     }
     return std::make_unique<Statement>(
-        WhileStmt(condition_expr, statement, position));
+        WhileStmt(std::move(condition_expr), std::move(statement), position));
 }
 
 // MATCH_STMT = KW_MATCH, PAREN_EXPR, L_BRACKET, {MATCH_CASE}, R_BRACKET;
@@ -656,7 +661,7 @@ StmtPtr Parser::parse_match_stmt()
                                       L"no left bracket in a match statement"))
         return nullptr;
     return std::make_unique<Statement>(
-        MatchStmt(matched_expr, match_cases, position));
+        MatchStmt(std::move(matched_expr), std::move(match_cases), position));
 }
 
 // MATCH_CASE = MATCH_SPECIFIER, LAMBDA_ARROW, BLOCK;
@@ -684,7 +689,7 @@ MatchArmPtr Parser::parse_literal_arm()
             return nullptr;
         }
         return std::make_unique<MatchArm>(
-            LiteralArm(conditions, block, position));
+            LiteralArm(std::move(conditions), std::move(block), position));
     }
     return nullptr;
 }
@@ -732,7 +737,7 @@ MatchArmPtr Parser::parse_guard_arm()
             this->report_error(L"no block found in a guard match arm");
         }
         return std::make_unique<MatchArm>(
-            GuardArm(condition, block, position));
+            GuardArm(std::move(condition), std::move(block), position));
     }
     return nullptr;
 }
@@ -761,7 +766,7 @@ MatchArmPtr Parser::parse_else_arm()
         this->report_error(L"no block found in an else arm");
         return nullptr;
     }
-    return std::make_unique<MatchArm>(ElseArm(block, position));
+    return std::make_unique<MatchArm>(ElseArm(std::move(block), position));
 }
 
 // MATCH_ARM_BLOCK = LAMBDA_ARROW, BLOCK;
@@ -872,8 +877,8 @@ bool join_into_binary_op(std::stack<ExprNodePtr> &values,
         values.pop();
 
         auto position = get_expr_position(*lhs);
-        auto new_expr =
-            std::make_unique<ExprNode>(BinaryExpr(lhs, rhs, op, position));
+        auto new_expr = std::make_unique<ExprNode>(
+            BinaryExpr(std::move(lhs), std::move(rhs), op, position));
         values.push(std::move(new_expr));
         return true;
     }
@@ -948,7 +953,8 @@ ExprNodePtr Parser::parse_cast_expr()
         this->next_token();
         if (auto type = this->parse_simple_type())
         {
-            lhs = std::make_unique<ExprNode>(CastExpr(lhs, type, position));
+            lhs = std::make_unique<ExprNode>(
+                CastExpr(std::move(lhs), std::move(type), position));
         }
         else
         {
@@ -979,7 +985,7 @@ ExprNodePtr Parser::parse_unary_expr()
         while (!ops.empty())
         {
             inner = std::make_unique<ExprNode>(
-                UnaryExpr(inner, ops.top(), positions.top()));
+                UnaryExpr(std::move(inner), ops.top(), positions.top()));
             ops.pop();
             positions.pop();
         }
@@ -1006,17 +1012,17 @@ ExprNodePtr Parser::parse_index_lambda_or_call()
         if (auto params = this->parse_call_part())
         {
             result = std::make_unique<ExprNode>(
-                CallExpr(result, *params, position));
+                CallExpr(std::move(result), std::move(*params), position));
         }
         else if (auto params = this->parse_lambda_call_part())
         {
-            result = std::make_unique<ExprNode>(
-                LambdaCallExpr(result, *params, position));
+            result = std::make_unique<ExprNode>(LambdaCallExpr(
+                std::move(result), std::move(*params), position));
         }
         else if (auto param = this->parse_index_part())
         {
-            result =
-                std::make_unique<ExprNode>(IndexExpr(result, param, position));
+            result = std::make_unique<ExprNode>(
+                IndexExpr(std::move(result), std::move(param), position));
         }
         else
             break;
