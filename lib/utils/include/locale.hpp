@@ -12,18 +12,18 @@ class Locale
     void operator=(const Locale &) = delete;
     void operator=(Locale &&) = delete;
 
-    std::locale current_locale;
+    std::locale last_locale, current_locale;
 
   public:
     Locale(const std::string &locale_name)
-        : current_locale(std::locale(locale_name))
+        : last_locale(std::locale()), current_locale(std::locale(locale_name))
     {
         std::locale::global(this->current_locale);
     }
 
     ~Locale()
     {
-        std::locale::global(std::locale::classic());
+        std::locale::global(this->last_locale);
     }
 };
 

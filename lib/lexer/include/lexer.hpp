@@ -31,7 +31,8 @@ class Lexer : public Reporter
     std::optional<wchar_t> last_char;
     std::vector<Logger *> loggers;
 
-    std::wstring wrap_error_msg(const std::wstring &msg) const override;
+    std::wstring wrap_error_msg(
+        const std::wstring &msg) const noexcept override;
     Token report_and_consume(const std::wstring &msg);
 
     std::optional<wchar_t> get_new_char();
@@ -61,7 +62,7 @@ class Lexer : public Reporter
     bool is_alpha_char() const;
 
   public:
-    Lexer(ReaderPtr &reader, const unsigned long long &max_var_name_size,
+    Lexer(ReaderPtr reader, const unsigned long long &max_var_name_size,
           const unsigned long long &max_str_length)
         : reader(std::move(reader)), max_var_name_size(max_var_name_size),
           max_str_length(max_str_length), position(0, 0)
@@ -72,9 +73,17 @@ class Lexer : public Reporter
         this->get_new_char();
     }
 
-    Lexer(ReaderPtr &reader) : Lexer(reader, (1 << 8) - 1, (1 << 16) - 1)
+    Lexer(ReaderPtr reader)
+        : Lexer(std::move(reader), (1 << 8) - 1, (1 << 16) - 1)
     {
     }
+
+    Lexer(const Lexer &) = delete;
+    Lexer(Lexer &&) = default;
+    Lexer &operator=(const Lexer &) = delete;
+    Lexer &operator=(Lexer &&) = default;
+
+    std::optional<Token> get_token();
 
     static LexerPtr from_wstring(const std::wstring &source);
     static LexerPtr from_wstring(const std::wstring &source,
@@ -84,8 +93,6 @@ class Lexer : public Reporter
     static LexerPtr from_file(const std::string &path,
                               const unsigned long long &max_var_name_size,
                               const unsigned long long &max_str_length);
-
-    std::optional<Token> get_token();
 };
 
 #endif

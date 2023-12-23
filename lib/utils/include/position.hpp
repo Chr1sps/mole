@@ -6,7 +6,7 @@ struct Position
 {
     unsigned line, column;
 
-    Position(const unsigned &line, const unsigned &column)
+    Position(const unsigned &line, const unsigned &column) noexcept
         : line(line), column(column)
     {
     }
@@ -15,11 +15,12 @@ struct Position
     // Position(Position &&) = default;
     // Position &operator=(const Position &other) = default;
 
-    friend bool operator==(const Position &first, const Position &other);
+    friend bool operator==(const Position &first,
+                           const Position &other) noexcept;
 };
 
 // for debugging purposes
 
-std::ostream &operator<<(std::ostream &os, const Position &pos);
+std::ostream &operator<<(std::ostream &os, const Position &pos) noexcept;
 
 #endif

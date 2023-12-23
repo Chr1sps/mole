@@ -97,7 +97,8 @@ class Reporter
 {
   protected:
     std::unordered_set<Logger *> loggers;
-    virtual std::wstring wrap_error_msg(const std::wstring &msg) const = 0;
+    virtual std::wstring wrap_error_msg(
+        const std::wstring &msg) const noexcept = 0;
 
   public:
     void report_error(const std::wstring &error_msg) const

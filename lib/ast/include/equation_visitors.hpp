@@ -1,20 +1,25 @@
 #ifndef __EQUATION_VISITORS_HPP__
 #define __EQUATION_VISITORS_HPP__
 #include "ast.hpp"
+#include <utility>
+
+bool operator==(const Parameter &first, const Parameter &other) noexcept;
 
 namespace
 {
-// Yes, `overloaded` exists inside the visitor.hpp header, but apart from this
-// header the only one that needs it and doesn't need to import the visitors
-// header is this one.
+// Yes, `overloaded` exists inside the visitor.hpp header, but apart from
+// this header the only one that needs it and doesn't need to import the
+// visitors header is this one.
 template <typename... ts> struct overloaded : ts...
 {
     using ts::operator()...;
 };
 
 template <typename T>
-bool equal_or_null(const std::unique_ptr<T> &first,
-                   const std::unique_ptr<T> &other)
+bool equal_or_null(
+    const std::unique_ptr<T> &first,
+    const std::unique_ptr<T> &other) noexcept(noexcept(std::declval<T>() ==
+                                                       std::declval<T>()))
 {
     return (first == nullptr && other == nullptr) ||
            (first && other && *first == *other);
@@ -22,7 +27,10 @@ bool equal_or_null(const std::unique_ptr<T> &first,
 
 template <typename T>
 bool compare_ptr_vectors(const std::vector<std::unique_ptr<T>> &first,
-                         const std::vector<std::unique_ptr<T>> &second)
+                         const std::vector<std::unique_ptr<T>>
+                             &second) noexcept(noexcept(std::declval<T>() ==
+                                                        std::declval<T>()))
+
 {
     return std::equal(
         first.begin(), first.end(), second.begin(), second.end(),
@@ -32,7 +40,7 @@ bool compare_ptr_vectors(const std::vector<std::unique_ptr<T>> &first,
 }
 } // namespace
 
-bool operator==(const Type &first, const Type &other)
+bool operator==(const Type &first, const Type &other) noexcept
 {
     return std::visit(
         overloaded{
@@ -49,7 +57,7 @@ bool operator==(const Type &first, const Type &other)
         first, other);
 }
 
-bool operator==(const ExprNode &first, const ExprNode &other)
+bool operator==(const ExprNode &first, const ExprNode &other) noexcept
 {
     return std::visit(
         overloaded{
@@ -116,7 +124,7 @@ bool operator==(const ExprNode &first, const ExprNode &other)
         first, other);
 }
 
-bool operator==(const MatchArm &first, const MatchArm &other)
+bool operator==(const MatchArm &first, const MatchArm &other) noexcept
 {
     return std::visit(
         overloaded{
@@ -135,13 +143,13 @@ bool operator==(const MatchArm &first, const MatchArm &other)
         first, other);
 }
 
-bool operator==(const Block &first, const Block &other)
+bool operator==(const Block &first, const Block &other) noexcept
 {
     return compare_ptr_vectors(first.statements, other.statements) &&
            first.position == other.position;
 }
 
-bool operator==(const FuncDefStmt &first, const FuncDefStmt &other)
+bool operator==(const FuncDefStmt &first, const FuncDefStmt &other) noexcept
 {
     return first.name == other.name &&
            compare_ptr_vectors(first.params, other.params) &&
@@ -150,14 +158,14 @@ bool operator==(const FuncDefStmt &first, const FuncDefStmt &other)
            first.position == other.position;
 }
 
-bool operator==(const VarDeclStmt &first, const VarDeclStmt &other)
+bool operator==(const VarDeclStmt &first, const VarDeclStmt &other) noexcept
 {
     return first.name == other.name && equal_or_null(first.type, other.type) &&
            equal_or_null(first.initial_value, other.initial_value) &&
            first.is_mut == other.is_mut && first.position == other.position;
 }
 
-bool operator==(const ExternStmt &first, const ExternStmt &other)
+bool operator==(const ExternStmt &first, const ExternStmt &other) noexcept
 {
     return first.name == other.name &&
            compare_ptr_vectors(first.params, other.params) &&
@@ -165,7 +173,7 @@ bool operator==(const ExternStmt &first, const ExternStmt &other)
            first.position == other.position;
 }
 
-bool operator==(const Statement &first, const Statement &second)
+bool operator==(const Statement &first, const Statement &second) noexcept
 {
     return std::visit(
         overloaded{
@@ -221,13 +229,13 @@ bool operator==(const Statement &first, const Statement &second)
         first, second);
 }
 
-bool operator==(const Parameter &first, const Parameter &other)
+bool operator==(const Parameter &first, const Parameter &other) noexcept
 {
     return first.name == other.name && *first.type == *other.type &&
            first.position == other.position;
 }
 
-bool operator==(const Program &first, const Program &other)
+bool operator==(const Program &first, const Program &other) noexcept
 {
     return compare_ptr_vectors(first.externs, other.externs) &&
            compare_ptr_vectors(first.functions, other.functions) &&

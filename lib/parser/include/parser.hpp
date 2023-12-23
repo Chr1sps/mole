@@ -117,28 +117,31 @@ class Parser : public Reporter
 
     ExprNodePtr parse_index_part();
 
-    std::wstring wrap_error_msg(const std::wstring &error_msg) const override;
+    // Reporter method override
+
+    std::wstring wrap_error_msg(
+        const std::wstring &error_msg) const noexcept override;
 
   public:
-    Parser() : lexer(nullptr)
+    Parser() noexcept : lexer(nullptr)
     {
     }
 
-    Parser(LexerPtr &lexer) : lexer(std::move(lexer))
+    Parser(LexerPtr lexer) noexcept : lexer(std::move(lexer))
     {
         this->next_token();
     }
 
-    Parser(LexerPtr &&lexer) : lexer(std::move(lexer))
-    {
-        this->next_token();
-    }
+    Parser(const Parser &) = delete;
+    Parser(Parser &&) = default;
+    Parser &operator=(const Parser &) = delete;
+    Parser &operator=(Parser &&) = default;
 
     ProgramPtr parse();
 
-    LexerPtr attach_lexer(LexerPtr &lexer);
-    LexerPtr detach_lexer();
-    bool is_lexer_attached() const;
+    LexerPtr attach_lexer(LexerPtr &lexer) noexcept;
+    LexerPtr detach_lexer() noexcept;
+    bool is_lexer_attached() const noexcept;
 };
 
 #endif

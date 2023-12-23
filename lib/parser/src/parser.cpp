@@ -83,7 +83,7 @@ std::map<TokenType, AssignType> Parser::assign_map{
 };
 #undef ASSIGN_TYPE
 
-std::wstring Parser::wrap_error_msg(const std::wstring &msg) const
+std::wstring Parser::wrap_error_msg(const std::wstring &msg) const noexcept
 {
     return build_wstring(
         L"Parser error at [", this->current_token->position.line, ",",
@@ -434,12 +434,9 @@ std::unique_ptr<Block> Parser::parse_block()
     this->next_token();
 
     std::vector<std::unique_ptr<Statement>> statements;
-    while (true)
+    while (auto stmt = this->parse_non_func_stmt())
     {
-        if (auto stmt = this->parse_non_func_stmt())
-            statements.push_back(std::move(stmt));
-        else
-            break;
+        statements.push_back(std::move(stmt));
     }
 
     if (!this->assert_current_and_eat(
@@ -532,7 +529,7 @@ std::optional<std::tuple<AssignType, ExprNodePtr>> Parser::parse_assign_part()
 // ASSIGN_BIT_OR | ASSIGN_BIT_XOR | ASSIGN_SHIFT_LEFT | ASSIGN_SHIFT_RIGHT;
 std::optional<AssignType> Parser::parse_assign_op()
 {
-    decltype(this->assign_map)::iterator iter;
+    decltype(this->assign_map)::const_iterator iter;
     if (this->current_token.has_value() &&
         (iter = this->assign_map.find(this->current_token->type)) !=
             this->assign_map.end())
@@ -889,7 +886,7 @@ ExprNodePtr Parser::parse_binary_expr()
 {
     std::stack<ExprNodePtr> values;
     std::stack<BinOpData> ops;
-    decltype(this->binary_map)::iterator iter;
+    decltype(this->binary_map)::const_iterator iter;
     while (true)
     {
         if (auto expr = this->parse_cast_expr())
@@ -970,7 +967,7 @@ ExprNodePtr Parser::parse_unary_expr()
 {
     std::stack<UnaryOpEnum> ops;
     std::stack<Position> positions;
-    decltype(this->unary_map)::iterator op_iter;
+    decltype(this->unary_map)::const_iterator op_iter;
     while (this->current_token.has_value() &&
            (op_iter = this->unary_map.find(this->current_token->type)) !=
                this->unary_map.end())
@@ -1199,7 +1196,7 @@ ExprNodePtr Parser::parse_paren_expr()
     return expr;
 }
 
-LexerPtr Parser::attach_lexer(LexerPtr &lexer)
+LexerPtr Parser::attach_lexer(LexerPtr &lexer) noexcept
 {
     auto temp = std::move(this->lexer);
     this->lexer = std::move(lexer);
@@ -1207,14 +1204,14 @@ LexerPtr Parser::attach_lexer(LexerPtr &lexer)
     return temp;
 }
 
-LexerPtr Parser::detach_lexer()
+LexerPtr Parser::detach_lexer() noexcept
 {
     auto temp = std::move(this->lexer);
     this->lexer = nullptr;
     return temp;
 }
 
-bool Parser::is_lexer_attached() const
+bool Parser::is_lexer_attached() const noexcept
 {
     return this->lexer != nullptr;
 }

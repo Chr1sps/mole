@@ -100,7 +100,7 @@ const std::map<wchar_t, CharNode> Lexer::char_nodes{
 #undef CHAR_NODE
 #undef EMPTY_NODE
 
-std::wstring Lexer::wrap_error_msg(const std::wstring &msg) const
+std::wstring Lexer::wrap_error_msg(const std::wstring &msg) const noexcept
 {
     return build_wstring(L"Lexer error at [", this->position.line, ",",
                          this->position.column, "]: ", msg, ".");
@@ -291,13 +291,14 @@ LexerPtr Lexer::from_wstring(const std::wstring &source,
                              const unsigned long long &max_str_length)
 {
     ReaderPtr reader = std::make_unique<StringReader>(source);
-    return std::make_unique<Lexer>(reader, max_var_name_size, max_str_length);
+    return std::make_unique<Lexer>(std::move(reader), max_var_name_size,
+                                   max_str_length);
 }
 
 LexerPtr Lexer::from_wstring(const std::wstring &source)
 {
     ReaderPtr reader = std::make_unique<StringReader>(source);
-    return std::make_unique<Lexer>(reader);
+    return std::make_unique<Lexer>(std::move(reader));
 }
 
 LexerPtr Lexer::from_file(const std::string &path,
@@ -305,13 +306,14 @@ LexerPtr Lexer::from_file(const std::string &path,
                           const unsigned long long &max_str_length)
 {
     ReaderPtr reader = std::make_unique<FileReader>(path);
-    return std::make_unique<Lexer>(reader, max_var_name_size, max_str_length);
+    return std::make_unique<Lexer>(std::move(reader), max_var_name_size,
+                                   max_str_length);
 }
 
 LexerPtr Lexer::from_file(const std::string &path)
 {
     ReaderPtr reader = std::make_unique<FileReader>(path);
-    return std::make_unique<Lexer>(reader);
+    return std::make_unique<Lexer>(std::move(reader));
 }
 
 std::optional<wchar_t> Lexer::parse_hex_escape_sequence()
