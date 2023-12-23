@@ -100,10 +100,13 @@ const std::map<wchar_t, CharNode> Lexer::char_nodes{
 #undef CHAR_NODE
 #undef EMPTY_NODE
 
-std::wstring Lexer::wrap_error_msg(const std::wstring &msg) const noexcept
+Token Lexer::report_and_consume(const std::wstring &msg)
 {
-    return build_wstring(L"Lexer error at [", this->position.line, ",",
-                         this->position.column, "]: ", msg, ".");
+    this->report(LogLevel::ERROR, L"Lexer error at [", this->position.line,
+                 ",", this->position.column, "]: ", msg, ".");
+    auto invalid = Token(TokenType::INVALID, this->position);
+    this->get_new_char();
+    return invalid;
 }
 
 std::optional<wchar_t> Lexer::get_new_char()
@@ -509,12 +512,4 @@ bool Lexer::is_alpha_char() const
 {
     return this->last_char.has_value() &&
            (std::iswalnum(*(this->last_char)) || this->last_char == L'_');
-}
-
-Token Lexer::report_and_consume(const std::wstring &msg)
-{
-    this->report_error(msg);
-    auto invalid = Token(TokenType::INVALID, this->position);
-    this->get_new_char();
-    return invalid;
 }

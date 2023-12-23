@@ -31,8 +31,6 @@ class Lexer : public Reporter
     std::optional<wchar_t> last_char;
     std::vector<Logger *> loggers;
 
-    std::wstring wrap_error_msg(
-        const std::wstring &msg) const noexcept override;
     Token report_and_consume(const std::wstring &msg);
 
     std::optional<wchar_t> get_new_char();

@@ -117,10 +117,7 @@ class Parser : public Reporter
 
     ExprNodePtr parse_index_part();
 
-    // Reporter method override
-
-    std::wstring wrap_error_msg(
-        const std::wstring &error_msg) const noexcept override;
+    void report_error(const std::wstring &msg);
 
   public:
     Parser() noexcept : lexer(nullptr)

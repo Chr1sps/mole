@@ -12,4 +12,5 @@ add_library(mole_logger
 )
 
 target_include_directories(mole_logger PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(mole_logger PUBLIC mole_utils)
 target_link_libraries(mole_logger PUBLIC compiler_flags)

@@ -7,7 +7,7 @@
 
 bool check_generated_ast(const std::wstring &source, ProgramPtr &&expected)
 {
-    auto locale = Locale("en_US.utf8");
+    auto locale = Locale("C.utf8");
     auto parser = Parser(Lexer::from_wstring(source));
     auto logger = DebugLogger();
     parser.add_logger(&logger);

@@ -1,5 +1,6 @@
 #ifndef __LOGGER_HPP__
 #define __LOGGER_HPP__
+#include "string_builder.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -97,20 +98,19 @@ class Reporter
 {
   protected:
     std::unordered_set<Logger *> loggers;
-    virtual std::wstring wrap_error_msg(
-        const std::wstring &msg) const noexcept = 0;
 
-  public:
-    void report_error(const std::wstring &error_msg) const
+    template <typename... Args>
+    void report(const LogLevel &log_level, Args &&...data)
     {
-        auto wrapped = this->wrap_error_msg(error_msg);
-        auto log_entry = LogMessage(wrapped, LogLevel::ERROR);
+        auto log_entry =
+            LogMessage{build_wstring(std::forward<Args>(data)...), log_level};
         for (const auto &logger : this->loggers)
         {
             logger->log(log_entry);
         }
     }
 
+  public:
     void add_logger(Logger *logger)
     {
         this->loggers.insert(logger);
