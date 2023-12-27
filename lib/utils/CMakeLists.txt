@@ -2,6 +2,7 @@ set(LIB_HEADERS
     "locale.hpp"
     "position.hpp"
     "string_builder.hpp"
+    "overloaded.hpp"
 )
 
 set(LIB_SOURCES

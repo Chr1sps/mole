@@ -1,6 +1,7 @@
 #ifndef __VISITOR_HPP__
 #define __VISITOR_HPP__
 #include "ast.hpp"
+#include "overloaded.hpp"
 
 struct Program;
 struct Parameter;
@@ -48,10 +49,5 @@ class AstVisitor : public ExprVisitor,
     using MatchArmVisitor::visit;
     using StmtVisitor::visit;
     using TypeVisitor::visit;
-};
-
-template <typename... ts> struct overloaded : ts...
-{
-    using ts::operator()...;
 };
 #endif

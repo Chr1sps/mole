@@ -499,12 +499,16 @@ StmtPtr Parser::parse_assign_or_expr_stmt()
         if (auto op_and_rhs = this->parse_assign_part())
         {
             auto [op, rhs] = std::move(*op_and_rhs);
-            result = std::make_unique<Statement>(AssignStmt(
-                std::move(lhs), op, std::move(rhs), get_expr_position(*lhs)));
+            auto position = get_expr_position(*lhs);
+            result = std::make_unique<Statement>(
+                AssignStmt(std::move(lhs), op, std::move(rhs), position));
         }
         else
+        {
+            auto position = get_expr_position(*lhs);
             result = std::make_unique<Statement>(
-                ExprStmt(std::move(lhs), get_expr_position(*lhs)));
+                ExprStmt(std::move(lhs), position));
+        }
         if (!this->assert_current_and_eat(
                 TokenType::SEMICOLON, L"semicolon expected after an "
                                       L"assignment or expression statement"))

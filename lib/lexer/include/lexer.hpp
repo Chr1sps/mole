@@ -79,7 +79,7 @@ class Lexer : public Reporter
     Lexer(const Lexer &) = delete;
     Lexer(Lexer &&) = default;
     Lexer &operator=(const Lexer &) = delete;
-    Lexer &operator=(Lexer &&) = default;
+    Lexer &operator=(Lexer &&) = delete;
 
     std::optional<Token> get_token();
 

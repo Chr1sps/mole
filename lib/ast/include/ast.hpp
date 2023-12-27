@@ -107,9 +107,9 @@ struct IndexExpr;
 struct CastExpr;
 struct U32Expr;
 struct F64Expr;
+struct BoolExpr;
 struct StringExpr;
 struct CharExpr;
-struct BoolExpr;
 
 using ExprNode = std::variant<VariableExpr, BinaryExpr, UnaryExpr, CallExpr,
                               LambdaCallExpr, IndexExpr, CastExpr, U32Expr,
@@ -120,10 +120,7 @@ struct VariableExpr : public AstNode
 {
     std::wstring name;
 
-    VariableExpr(const std::wstring &name, const Position &position) noexcept
-        : AstNode(position), name(name)
-    {
-    }
+    VariableExpr(const std::wstring &name, const Position &position) noexcept;
 };
 
 enum class BinOpEnum
@@ -170,10 +167,7 @@ struct BinaryExpr : public AstNode
     BinOpEnum op;
 
     BinaryExpr(ExprNodePtr lhs, ExprNodePtr rhs, const BinOpEnum &op,
-               const Position &position) noexcept
-        : AstNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
-    {
-    }
+               const Position &position) noexcept;
 };
 
 struct UnaryExpr : public AstNode
@@ -182,10 +176,7 @@ struct UnaryExpr : public AstNode
     UnaryOpEnum op;
 
     UnaryExpr(ExprNodePtr expr, const UnaryOpEnum &op,
-              const Position &position) noexcept
-        : AstNode(position), expr(std::move(expr)), op(op)
-    {
-    }
+              const Position &position) noexcept;
 };
 
 struct CallExpr : public AstNode
@@ -194,11 +185,7 @@ struct CallExpr : public AstNode
     std::vector<ExprNodePtr> args;
 
     CallExpr(ExprNodePtr callable, std::vector<ExprNodePtr> args,
-             const Position &position) noexcept
-        : AstNode(position), callable(std::move(callable)),
-          args(std::move(args))
-    {
-    }
+             const Position &position) noexcept;
 };
 
 struct LambdaCallExpr : public AstNode
@@ -207,11 +194,7 @@ struct LambdaCallExpr : public AstNode
     std::vector<ExprNodePtr> args;
 
     LambdaCallExpr(ExprNodePtr callable, std::vector<ExprNodePtr> args,
-                   const Position &position) noexcept
-        : AstNode(position), callable(std::move(callable)),
-          args(std::move(args))
-    {
-    }
+                   const Position &position) noexcept;
 };
 
 struct IndexExpr : public AstNode
@@ -219,11 +202,7 @@ struct IndexExpr : public AstNode
     ExprNodePtr expr, index_value;
 
     IndexExpr(ExprNodePtr expr, ExprNodePtr index_value,
-              const Position &position) noexcept
-        : AstNode(position), expr(std::move(expr)),
-          index_value(std::move(index_value))
-    {
-    }
+              const Position &position) noexcept;
 };
 
 struct CastExpr : public AstNode
@@ -231,10 +210,8 @@ struct CastExpr : public AstNode
     ExprNodePtr expr;
     TypePtr type;
 
-    CastExpr(ExprNodePtr expr, TypePtr type, const Position &position) noexcept
-        : AstNode(position), expr(std::move(expr)), type(std::move(type))
-    {
-    }
+    CastExpr(ExprNodePtr expr, TypePtr type,
+             const Position &position) noexcept;
 };
 
 struct U32Expr : public AstNode
@@ -242,10 +219,8 @@ struct U32Expr : public AstNode
     static const std::shared_ptr<SimpleType> type;
     unsigned long long value;
 
-    U32Expr(const unsigned long long &value, const Position &position) noexcept
-        : AstNode(position), value(value)
-    {
-    }
+    U32Expr(const unsigned long long &value,
+            const Position &position) noexcept;
 };
 
 struct F64Expr : public AstNode
@@ -327,10 +302,7 @@ struct Block : public AstNode
 {
     std::vector<StmtPtr> statements;
 
-    Block(std::vector<StmtPtr> statements, const Position &position) noexcept
-        : AstNode(position), statements(std::move(statements))
-    {
-    }
+    Block(std::vector<StmtPtr> statements, const Position &position) noexcept;
 };
 
 using BlockPtr = std::unique_ptr<Block>;
@@ -339,28 +311,18 @@ struct ReturnStmt : public AstNode
 {
     ExprNodePtr expr;
 
-    ReturnStmt(const Position &position) noexcept : AstNode(position), expr()
-    {
-    }
-
-    ReturnStmt(ExprNodePtr expr, const Position &position) noexcept
-        : AstNode(position), expr(std::move(expr))
-    {
-    }
+    ReturnStmt(const Position &position) noexcept;
+    ReturnStmt(ExprNodePtr expr, const Position &position) noexcept;
 };
 
 struct ContinueStmt : public AstNode
 {
-    ContinueStmt(const Position &position) noexcept : AstNode(position)
-    {
-    }
+    ContinueStmt(const Position &position) noexcept;
 };
 
 struct BreakStmt : public AstNode
 {
-    BreakStmt(const Position &position) noexcept : AstNode(position)
-    {
-    }
+    BreakStmt(const Position &position) noexcept;
 };
 
 struct VarDeclStmt : public AstNode
@@ -371,11 +333,7 @@ struct VarDeclStmt : public AstNode
     bool is_mut;
 
     VarDeclStmt(const std::wstring &name, TypePtr type, ExprNodePtr value,
-                const bool &is_mut, const Position &position) noexcept
-        : AstNode(position), name(name), type(std::move(type)),
-          initial_value(std::move(value)), is_mut(is_mut)
-    {
-    }
+                const bool &is_mut, const Position &position) noexcept;
 };
 
 enum class AssignType
@@ -404,21 +362,14 @@ struct AssignStmt : public AstNode
     AssignType type;
 
     AssignStmt(ExprNodePtr lhs, const AssignType &type, ExprNodePtr rhs,
-               const Position &position) noexcept
-        : AstNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)),
-          type(type)
-    {
-    }
+               const Position &position) noexcept;
 };
 
 struct ExprStmt : public AstNode
 {
     ExprNodePtr expr;
 
-    ExprStmt(ExprNodePtr expr, const Position &position) noexcept
-        : AstNode(position), expr(std::move(expr))
-    {
-    }
+    ExprStmt(ExprNodePtr expr, const Position &position) noexcept;
 };
 
 struct WhileStmt : public AstNode
@@ -427,11 +378,7 @@ struct WhileStmt : public AstNode
     StmtPtr statement;
 
     WhileStmt(ExprNodePtr condition_expr, StmtPtr statement,
-              const Position &position) noexcept
-        : AstNode(position), condition_expr(std::move(condition_expr)),
-          statement(std::move(statement))
-    {
-    }
+              const Position &position) noexcept;
 };
 
 struct IfStmt : public AstNode
@@ -441,11 +388,7 @@ struct IfStmt : public AstNode
     StmtPtr else_block;
 
     IfStmt(ExprNodePtr condition_expr, StmtPtr then_block, StmtPtr else_block,
-           const Position &position) noexcept
-        : AstNode(position), condition_expr(std::move(condition_expr)),
-          then_block(std::move(then_block)), else_block(std::move(else_block))
-    {
-    }
+           const Position &position) noexcept;
 };
 
 struct LiteralArm;
@@ -459,18 +402,12 @@ struct MatchArmBase : public AstNode
 {
     StmtPtr block;
 
-    MatchArmBase(StmtPtr block, const Position &position) noexcept
-        : AstNode(position), block(std::move(block))
-    {
-    }
+    MatchArmBase(StmtPtr block, const Position &position) noexcept;
 };
 
 struct ElseArm : public MatchArmBase
 {
-    ElseArm(StmtPtr block, const Position &position) noexcept
-        : MatchArmBase(std::move(block), position)
-    {
-    }
+    ElseArm(StmtPtr block, const Position &position) noexcept;
 };
 
 struct GuardArm : public MatchArmBase
@@ -478,23 +415,16 @@ struct GuardArm : public MatchArmBase
     ExprNodePtr condition_expr;
 
     GuardArm(ExprNodePtr condition_expr, StmtPtr block,
-             const Position &position) noexcept
-        : MatchArmBase(std::move(block), position),
-          condition_expr(std::move(condition_expr))
-    {
-    }
+             const Position &position) noexcept;
 };
 
 struct LiteralArm : public MatchArmBase
+
 {
     std::vector<ExprNodePtr> literals;
 
     LiteralArm(std::vector<ExprNodePtr> literals, StmtPtr block,
-               const Position &position) noexcept
-        : MatchArmBase(std::move(block), position),
-          literals(std::move(literals))
-    {
-    }
+               const Position &position) noexcept;
 };
 
 struct MatchStmt : public AstNode
@@ -503,11 +433,7 @@ struct MatchStmt : public AstNode
     std::vector<MatchArmPtr> match_arms;
 
     MatchStmt(ExprNodePtr matched_expr, std::vector<MatchArmPtr> match_arms,
-              const Position &position) noexcept
-        : AstNode(position), matched_expr(std::move(matched_expr)),
-          match_arms(std::move(match_arms))
-    {
-    }
+              const Position &position) noexcept;
 };
 
 struct Parameter : public AstNode
@@ -516,10 +442,7 @@ struct Parameter : public AstNode
     TypePtr type;
 
     Parameter(const std::wstring &name, TypePtr type,
-              const Position &position) noexcept
-        : AstNode(position), name(name), type(std::move(type))
-    {
-    }
+              const Position &position) noexcept;
 };
 
 using ParamPtr = std::unique_ptr<Parameter>;
@@ -534,12 +457,7 @@ struct FuncDefStmt : public AstNode
 
     FuncDefStmt(const std::wstring &name, std::vector<ParamPtr> params,
                 TypePtr return_type, BlockPtr block, const bool &is_const,
-                const Position &position) noexcept
-        : AstNode(position), name(name), params(std::move(params)),
-          return_type(std::move(return_type)), block(std::move(block)),
-          is_const(is_const)
-    {
-    }
+                const Position &position) noexcept;
 
     std::unique_ptr<FunctionType> get_type()
     {
@@ -559,11 +477,7 @@ struct ExternStmt : public AstNode
     TypePtr return_type;
 
     ExternStmt(const std::wstring &name, std::vector<ParamPtr> params,
-               TypePtr return_type, const Position &position) noexcept
-        : AstNode(position), name(name), params(std::move(params)),
-          return_type(std::move(return_type))
-    {
-    }
+               TypePtr return_type, const Position &position) noexcept;
 
     std::shared_ptr<FunctionType> get_type()
     {
@@ -584,11 +498,7 @@ struct Program : public AstNode
 
     Program(std::vector<std::unique_ptr<VarDeclStmt>> globals,
             std::vector<std::unique_ptr<FuncDefStmt>> functions,
-            std::vector<std::unique_ptr<ExternStmt>> externs) noexcept
-        : AstNode(Position(1, 1)), globals(std::move(globals)),
-          functions(std::move(functions)), externs(std::move(externs))
-    {
-    }
+            std::vector<std::unique_ptr<ExternStmt>> externs) noexcept;
 };
 
 using ProgramPtr = std::unique_ptr<Program>;

@@ -1,20 +1,13 @@
 #ifndef __EQUATION_VISITORS_HPP__
 #define __EQUATION_VISITORS_HPP__
 #include "ast.hpp"
+#include "overloaded.hpp"
 #include <utility>
 
 bool operator==(const Parameter &first, const Parameter &other) noexcept;
 
 namespace
 {
-// Yes, `overloaded` exists inside the visitor.hpp header, but apart from
-// this header the only one that needs it and doesn't need to import the
-// visitors header is this one.
-template <typename... ts> struct overloaded : ts...
-{
-    using ts::operator()...;
-};
-
 template <typename T>
 bool equal_or_null(
     const std::unique_ptr<T> &first,
@@ -178,7 +171,9 @@ bool operator==(const Statement &first, const Statement &second) noexcept
     return std::visit(
         overloaded{
             [](const Block &first, const Block &other) -> bool {
-                return first == other;
+                return compare_ptr_vectors(first.statements,
+                                           other.statements) &&
+                       first.position == other.position;
             },
             [](const IfStmt &first, const IfStmt &other) -> bool {
                 return *first.condition_expr == *other.condition_expr &&
