@@ -1,4 +1,3 @@
-#include "equation_visitors.hpp"
 #include "locale.hpp"
 #include "logger.hpp"
 #include "parser.hpp"

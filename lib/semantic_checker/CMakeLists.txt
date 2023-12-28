@@ -12,5 +12,5 @@ add_library(mole_semantic_checker
 )
 
 target_include_directories(mole_semantic_checker PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_link_libraries(mole_semantic_checker PUBLIC mole_ast mole_parser mole_utils)
+target_link_libraries(mole_semantic_checker PUBLIC mole_ast mole_parser mole_utils mole_logger)
 target_link_libraries(mole_semantic_checker PUBLIC compiler_flags)

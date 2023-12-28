@@ -23,6 +23,7 @@ target_compile_options(compiler_flags
     "-Werror"
     "-Wpedantic"
     "-Wformat=2"
+    "-ftemplate-backtrace-limit=0"
 
     # "-fno-exceptions"
 )
@@ -45,8 +46,7 @@ option(TESTS "Compile the tests executables." TRUE)
 if(NOT COVERAGE)
     add_executable(molec main.cpp)
 
-    # target_link_libraries(molec PRIVATE mole)
-    target_link_libraries(molec PRIVATE mole_ast mole_lexer mole_logger mole_parser mole_json_serializer mole_reader mole_utils)
+    target_link_libraries(molec PRIVATE mole)
     target_link_libraries(molec PRIVATE LLVM compiler_flags)
 endif()
 

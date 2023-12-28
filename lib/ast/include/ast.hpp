@@ -34,18 +34,13 @@ struct SimpleType;
 struct FunctionType;
 using Type = std::variant<SimpleType, FunctionType>;
 using TypePtr = std::unique_ptr<Type>;
-inline TypePtr clone_type_ptr(const TypePtr &) noexcept;
 
 struct SimpleType
 {
     TypeEnum type;
     RefSpecifier ref_spec;
 
-    SimpleType(const TypeEnum &type, const RefSpecifier &ref_spec) noexcept
-        : type(type), ref_spec(ref_spec)
-    {
-    }
-
+    SimpleType(const TypeEnum &type, const RefSpecifier &ref_spec) noexcept;
     SimpleType(const SimpleType &) noexcept = default;
     SimpleType(SimpleType &&) noexcept = default;
 };
@@ -57,29 +52,14 @@ struct FunctionType
     bool is_const;
 
     FunctionType(std::vector<TypePtr> arg_types, TypePtr return_type,
-                 const bool &is_const) noexcept
-        : arg_types(std::move(arg_types)), return_type(std::move(return_type)),
-          is_const(is_const)
-    {
-    }
+                 const bool &is_const) noexcept;
 
-    FunctionType(const FunctionType &other) noexcept
-        : arg_types(), return_type(clone_type_ptr(other.return_type)),
-          is_const(other.is_const)
-    {
-        for (const auto &arg : other.arg_types)
-        {
-            this->arg_types.push_back(clone_type_ptr(arg));
-        }
-    }
+    FunctionType(const FunctionType &other) noexcept;
 
     FunctionType(FunctionType &&) noexcept = default;
 };
 
-inline TypePtr clone_type_ptr(const TypePtr &type) noexcept
-{
-    return std::make_unique<Type>(*type);
-}
+bool operator==(const Type &, const Type &) noexcept;
 
 struct AstNode
 {
@@ -228,10 +208,7 @@ struct F64Expr : public AstNode
     static const std::shared_ptr<SimpleType> type;
     double value;
 
-    F64Expr(const double &value, const Position &position) noexcept
-        : AstNode(position), value(value)
-    {
-    }
+    F64Expr(const double &value, const Position &position) noexcept;
 };
 
 struct StringExpr : public AstNode
@@ -239,10 +216,7 @@ struct StringExpr : public AstNode
     // static const std::shared_ptr<SimpleType> type;
     std::wstring value;
 
-    StringExpr(const std::wstring &value, const Position &position) noexcept
-        : AstNode(position), value(value)
-    {
-    }
+    StringExpr(const std::wstring &value, const Position &position) noexcept;
 };
 
 struct CharExpr : public AstNode
@@ -250,10 +224,7 @@ struct CharExpr : public AstNode
     // static const std::shared_ptr<SimpleType> type;
     wchar_t value;
 
-    CharExpr(const wchar_t &value, const Position &position) noexcept
-        : AstNode(position), value(value)
-    {
-    }
+    CharExpr(const wchar_t &value, const Position &position) noexcept;
 };
 
 struct BoolExpr : public AstNode
@@ -261,25 +232,13 @@ struct BoolExpr : public AstNode
     // static const std::shared_ptr<SimpleType> type;
     bool value;
 
-    BoolExpr(const bool &value, const Position &position) noexcept
-        : AstNode(position), value(value)
-    {
-    }
+    BoolExpr(const bool &value, const Position &position) noexcept;
 };
 
-inline Position get_expr_position(const ExprNode &variant)
-{
-    return std::visit(
-        [](const AstNode &node) -> Position { return node.position; },
-        variant);
-}
+bool operator==(const ExprNode &, const ExprNode &) noexcept;
 
-inline void set_expr_position(ExprNode &variant,
-                              const Position &position) noexcept
-{
-    std::visit([&position](AstNode &node) { node.position = position; },
-               variant);
-}
+Position get_expr_position(const ExprNode &expr);
+void set_expr_position(ExprNode &expr, const Position &position) noexcept;
 
 struct Block;
 struct IfStmt;
@@ -297,6 +256,7 @@ using Statement = std::variant<Block, ReturnStmt, ContinueStmt, BreakStmt,
                                VarDeclStmt, AssignStmt, ExprStmt, WhileStmt,
                                IfStmt, MatchStmt, FuncDefStmt, ExternStmt>;
 using StmtPtr = std::unique_ptr<Statement>;
+using BlockPtr = std::unique_ptr<Block>;
 
 struct Block : public AstNode
 {
@@ -305,7 +265,7 @@ struct Block : public AstNode
     Block(std::vector<StmtPtr> statements, const Position &position) noexcept;
 };
 
-using BlockPtr = std::unique_ptr<Block>;
+bool operator==(const Block &, const Block &) noexcept;
 
 struct ReturnStmt : public AstNode
 {
@@ -323,17 +283,6 @@ struct ContinueStmt : public AstNode
 struct BreakStmt : public AstNode
 {
     BreakStmt(const Position &position) noexcept;
-};
-
-struct VarDeclStmt : public AstNode
-{
-    std::wstring name;
-    TypePtr type;
-    ExprNodePtr initial_value;
-    bool is_mut;
-
-    VarDeclStmt(const std::wstring &name, TypePtr type, ExprNodePtr value,
-                const bool &is_mut, const Position &position) noexcept;
 };
 
 enum class AssignType
@@ -398,6 +347,65 @@ struct ElseArm;
 using MatchArm = std::variant<LiteralArm, GuardArm, ElseArm>;
 using MatchArmPtr = std::unique_ptr<MatchArm>;
 
+struct MatchStmt : public AstNode
+{
+    ExprNodePtr matched_expr;
+    std::vector<MatchArmPtr> match_arms;
+
+    MatchStmt(ExprNodePtr matched_expr, std::vector<MatchArmPtr> match_arms,
+              const Position &position) noexcept;
+};
+
+struct VarDeclStmt : public AstNode
+{
+    std::wstring name;
+    TypePtr type;
+    ExprNodePtr initial_value;
+    bool is_mut;
+
+    VarDeclStmt(const std::wstring &name, TypePtr type, ExprNodePtr value,
+                const bool &is_mut, const Position &position) noexcept;
+};
+
+bool operator==(const VarDeclStmt &, const VarDeclStmt &) noexcept;
+
+struct Parameter;
+
+using ParamPtr = std::unique_ptr<Parameter>;
+
+struct FuncDefStmt : public AstNode
+{
+    std::wstring name;
+    std::vector<ParamPtr> params;
+    TypePtr return_type;
+    BlockPtr block;
+    bool is_const;
+
+    FuncDefStmt(const std::wstring &name, std::vector<ParamPtr> params,
+                TypePtr return_type, BlockPtr block, const bool &is_const,
+                const Position &position) noexcept;
+
+    std::unique_ptr<FunctionType> get_type() const noexcept;
+};
+
+bool operator==(const FuncDefStmt &, const FuncDefStmt &) noexcept;
+
+struct ExternStmt : public AstNode
+{
+    std::wstring name;
+    std::vector<ParamPtr> params;
+    TypePtr return_type;
+
+    ExternStmt(const std::wstring &name, std::vector<ParamPtr> params,
+               TypePtr return_type, const Position &position) noexcept;
+
+    std::unique_ptr<FunctionType> get_type() const noexcept;
+};
+
+bool operator==(const ExternStmt &, const ExternStmt &) noexcept;
+
+bool operator==(const Statement &, const Statement &) noexcept;
+
 struct MatchArmBase : public AstNode
 {
     StmtPtr block;
@@ -427,68 +435,7 @@ struct LiteralArm : public MatchArmBase
                const Position &position) noexcept;
 };
 
-struct MatchStmt : public AstNode
-{
-    ExprNodePtr matched_expr;
-    std::vector<MatchArmPtr> match_arms;
-
-    MatchStmt(ExprNodePtr matched_expr, std::vector<MatchArmPtr> match_arms,
-              const Position &position) noexcept;
-};
-
-struct Parameter : public AstNode
-{
-    std::wstring name;
-    TypePtr type;
-
-    Parameter(const std::wstring &name, TypePtr type,
-              const Position &position) noexcept;
-};
-
-using ParamPtr = std::unique_ptr<Parameter>;
-
-struct FuncDefStmt : public AstNode
-{
-    std::wstring name;
-    std::vector<ParamPtr> params;
-    TypePtr return_type;
-    BlockPtr block;
-    bool is_const;
-
-    FuncDefStmt(const std::wstring &name, std::vector<ParamPtr> params,
-                TypePtr return_type, BlockPtr block, const bool &is_const,
-                const Position &position) noexcept;
-
-    std::unique_ptr<FunctionType> get_type()
-    {
-        std::vector<TypePtr> param_types;
-        for (auto &param_ptr : this->params)
-            param_types.push_back(clone_type_ptr(param_ptr->type));
-        auto cloned_type = clone_type_ptr(this->return_type);
-        return std::make_unique<FunctionType>(
-            std::move(param_types), std::move(cloned_type), this->is_const);
-    }
-};
-
-struct ExternStmt : public AstNode
-{
-    std::wstring name;
-    std::vector<ParamPtr> params;
-    TypePtr return_type;
-
-    ExternStmt(const std::wstring &name, std::vector<ParamPtr> params,
-               TypePtr return_type, const Position &position) noexcept;
-
-    std::shared_ptr<FunctionType> get_type()
-    {
-        std::vector<TypePtr> param_types;
-        for (auto &param_ptr : this->params)
-            param_types.push_back(clone_type_ptr(param_ptr->type));
-        auto cloned_type = clone_type_ptr(this->return_type);
-        return std::make_shared<FunctionType>(std::move(param_types),
-                                              std::move(cloned_type), false);
-    }
-};
+bool operator==(const MatchArm &, const MatchArm &) noexcept;
 
 struct Program : public AstNode
 {
@@ -502,5 +449,18 @@ struct Program : public AstNode
 };
 
 using ProgramPtr = std::unique_ptr<Program>;
+
+bool operator==(const Program &, const Program &) noexcept;
+
+struct Parameter : public AstNode
+{
+    std::wstring name;
+    TypePtr type;
+
+    Parameter(const std::wstring &name, TypePtr type,
+              const Position &position) noexcept;
+};
+
+bool operator==(const Parameter &, const Parameter &) noexcept;
 
 #endif
