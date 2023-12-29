@@ -22,17 +22,18 @@ class Reader
 
     void update_position(const wchar_t &ch);
 
-    virtual wchar_t get_raw() = 0;
-    virtual wchar_t peek_raw() = 0;
+    virtual wchar_t get_raw() noexcept = 0;
+    virtual wchar_t peek_raw() noexcept = 0;
 
-    Reader(const std::locale &locale) : current_position(1, 1), locale(locale)
+    Reader(const std::locale &locale) noexcept
+        : current_position(1, 1), locale(locale)
     {
     }
 
   public:
     CharWithPos get();
 
-    const std::locale &get_locale() const
+    const std::locale &get_locale() const noexcept
     {
         return this->locale;
     }
@@ -51,12 +52,12 @@ template <DerivedFromWistream T> class IStreamReader : public Reader
   protected:
     T driver;
 
-    wchar_t get_raw() override
+    wchar_t get_raw() noexcept override
     {
         return this->driver.get();
     }
 
-    wchar_t peek_raw() override
+    wchar_t peek_raw() noexcept override
     {
         return this->driver.peek();
     }
@@ -69,12 +70,12 @@ template <DerivedFromWistream T> class IStreamReader : public Reader
 class ConsoleReader : public Reader
 {
   protected:
-    wchar_t get_raw() override
+    wchar_t get_raw() noexcept override
     {
         return std::wcin.get();
     }
 
-    wchar_t peek_raw() override
+    wchar_t peek_raw() noexcept override
     {
         return std::wcin.peek();
     }

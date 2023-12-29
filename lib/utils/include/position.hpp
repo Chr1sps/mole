@@ -6,13 +6,17 @@ struct Position
 {
     unsigned line, column;
 
-    Position(const unsigned &line, const unsigned &column) noexcept
+    constexpr Position(const unsigned &line, const unsigned &column) noexcept
         : line(line), column(column)
     {
     }
 };
 
-bool operator==(const Position &first, const Position &other) noexcept;
+inline constexpr bool operator==(const Position &first,
+                                 const Position &other) noexcept
+{
+    return first.line == other.line && first.column == other.column;
+}
 
 // for debugging purposes
 std::ostream &operator<<(std::ostream &os, const Position &pos) noexcept;

@@ -32,38 +32,7 @@ bool compare_ptr_vectors(const std::vector<std::unique_ptr<T>> &first,
         });
 }
 
-TypePtr clone_type_ptr(const TypePtr &type) noexcept
-{
-    return std::make_unique<Type>(*type);
-}
 } // namespace
-
-// =================
-// ===== TYPES =====
-// =================
-
-SimpleType::SimpleType(const TypeEnum &type,
-                       const RefSpecifier &ref_spec) noexcept
-    : type(type), ref_spec(ref_spec)
-{
-}
-
-FunctionType::FunctionType(std::vector<TypePtr> arg_types, TypePtr return_type,
-                           const bool &is_const) noexcept
-    : arg_types(std::move(arg_types)), return_type(std::move(return_type)),
-      is_const(is_const)
-{
-}
-
-FunctionType::FunctionType(const FunctionType &other) noexcept
-    : arg_types(), return_type(clone_type_ptr(other.return_type)),
-      is_const(other.is_const)
-{
-    for (const auto &arg : other.arg_types)
-    {
-        this->arg_types.push_back(clone_type_ptr(arg));
-    }
-}
 
 bool operator==(const Type &first, const Type &other) noexcept
 {
@@ -80,81 +49,6 @@ bool operator==(const Type &first, const Type &other) noexcept
             },
             [](const auto &, const auto &) -> bool { return false; }},
         first, other);
-}
-
-// =======================
-// ===== EXPRESSIONS =====
-// =======================
-
-VariableExpr::VariableExpr(const std::wstring &name,
-                           const Position &position) noexcept
-    : AstNode(position), name(name)
-{
-}
-
-BinaryExpr::BinaryExpr(ExprNodePtr lhs, ExprNodePtr rhs, const BinOpEnum &op,
-                       const Position &position) noexcept
-    : AstNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
-{
-}
-
-UnaryExpr::UnaryExpr(ExprNodePtr expr, const UnaryOpEnum &op,
-                     const Position &position) noexcept
-    : AstNode(position), expr(std::move(expr)), op(op)
-{
-}
-
-CallExpr::CallExpr(ExprNodePtr callable, std::vector<ExprNodePtr> args,
-                   const Position &position) noexcept
-    : AstNode(position), callable(std::move(callable)), args(std::move(args))
-{
-}
-
-LambdaCallExpr::LambdaCallExpr(ExprNodePtr callable,
-                               std::vector<ExprNodePtr> args,
-                               const Position &position) noexcept
-    : AstNode(position), callable(std::move(callable)), args(std::move(args))
-{
-}
-
-IndexExpr::IndexExpr(ExprNodePtr expr, ExprNodePtr index_value,
-                     const Position &position) noexcept
-    : AstNode(position), expr(std::move(expr)),
-      index_value(std::move(index_value))
-{
-}
-
-CastExpr::CastExpr(ExprNodePtr expr, TypePtr type,
-                   const Position &position) noexcept
-    : AstNode(position), expr(std::move(expr)), type(std::move(type))
-{
-}
-
-U32Expr::U32Expr(const unsigned long long &value,
-                 const Position &position) noexcept
-    : AstNode(position), value(value)
-{
-}
-
-F64Expr::F64Expr(const double &value, const Position &position) noexcept
-    : AstNode(position), value(value)
-{
-}
-
-StringExpr::StringExpr(const std::wstring &value,
-                       const Position &position) noexcept
-    : AstNode(position), value(value)
-{
-}
-
-CharExpr::CharExpr(const wchar_t &value, const Position &position) noexcept
-    : AstNode(position), value(value)
-{
-}
-
-BoolExpr::BoolExpr(const bool &value, const Position &position) noexcept
-    : AstNode(position), value(value)
-{
 }
 
 bool operator==(const ExprNode &first, const ExprNode &other) noexcept
@@ -224,91 +118,10 @@ bool operator==(const ExprNode &first, const ExprNode &other) noexcept
         first, other);
 }
 
-Position get_expr_position(const ExprNode &expr)
-{
-    return std::visit(
-        [](const AstNode &node) -> Position { return node.position; }, expr);
-}
-
-void set_expr_position(ExprNode &expr, const Position &position) noexcept
-{
-    std::visit([&position](AstNode &node) { node.position = position; }, expr);
-}
-
-// ======================
-// ===== STATEMENTS =====
-// ======================
-
-Block::Block(std::vector<StmtPtr> statements,
-             const Position &position) noexcept
-    : AstNode(position), statements(std::move(statements))
-{
-}
-
 bool operator==(const Block &first, const Block &other) noexcept
 {
     return compare_ptr_vectors(first.statements, other.statements) &&
            first.position == other.position;
-}
-
-ReturnStmt::ReturnStmt(const Position &position) noexcept
-    : AstNode(position), expr()
-{
-}
-
-ReturnStmt::ReturnStmt(ExprNodePtr expr, const Position &position) noexcept
-    : AstNode(position), expr(std::move(expr))
-{
-}
-
-ContinueStmt::ContinueStmt(const Position &position) noexcept
-    : AstNode(position)
-{
-}
-
-BreakStmt::BreakStmt(const Position &position) noexcept : AstNode(position)
-{
-}
-
-AssignStmt::AssignStmt(ExprNodePtr lhs, const AssignType &type,
-                       ExprNodePtr rhs, const Position &position) noexcept
-    : AstNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), type(type)
-{
-}
-
-ExprStmt::ExprStmt(ExprNodePtr expr, const Position &position) noexcept
-    : AstNode(position), expr(std::move(expr))
-{
-}
-
-WhileStmt::WhileStmt(ExprNodePtr condition_expr, StmtPtr statement,
-                     const Position &position) noexcept
-    : AstNode(position), condition_expr(std::move(condition_expr)),
-      statement(std::move(statement))
-{
-}
-
-IfStmt::IfStmt(ExprNodePtr condition_expr, StmtPtr then_block,
-               StmtPtr else_block, const Position &position) noexcept
-    : AstNode(position), condition_expr(std::move(condition_expr)),
-      then_block(std::move(then_block)), else_block(std::move(else_block))
-{
-}
-
-MatchStmt::MatchStmt(ExprNodePtr matched_expr,
-                     std::vector<MatchArmPtr> match_arms,
-                     const Position &position) noexcept
-    : AstNode(position), matched_expr(std::move(matched_expr)),
-      match_arms(std::move(match_arms))
-{
-}
-
-VarDeclStmt::VarDeclStmt(const std::wstring &name, TypePtr type,
-                         ExprNodePtr value, const bool &is_mut,
-                         const Position &position) noexcept
-    : AstNode(position), name(name), type(std::move(type)),
-      initial_value(std::move(value)), is_mut(is_mut)
-{
 }
 
 bool operator==(const VarDeclStmt &first, const VarDeclStmt &other) noexcept
@@ -316,16 +129,6 @@ bool operator==(const VarDeclStmt &first, const VarDeclStmt &other) noexcept
     return first.name == other.name && equal_or_null(first.type, other.type) &&
            equal_or_null(first.initial_value, other.initial_value) &&
            first.is_mut == other.is_mut && first.position == other.position;
-}
-
-FuncDefStmt::FuncDefStmt(const std::wstring &name,
-                         std::vector<ParamPtr> params, TypePtr return_type,
-                         BlockPtr block, const bool &is_const,
-                         const Position &position) noexcept
-    : AstNode(position), name(name), params(std::move(params)),
-      return_type(std::move(return_type)), block(std::move(block)),
-      is_const(is_const)
-{
 }
 
 bool operator==(const FuncDefStmt &first, const FuncDefStmt &other) noexcept
@@ -339,33 +142,6 @@ bool operator==(const FuncDefStmt &first, const FuncDefStmt &other) noexcept
            equal_or_null(first.return_type, other.return_type) &&
            equal_blocks && first.is_const == other.is_const &&
            first.position == other.position;
-}
-
-std::unique_ptr<FunctionType> FuncDefStmt::get_type() const noexcept
-{
-    std::vector<TypePtr> param_types;
-    for (auto &param_ptr : this->params)
-        param_types.push_back(clone_type_ptr(param_ptr->type));
-    auto cloned_type = clone_type_ptr(this->return_type);
-    return std::make_unique<FunctionType>(
-        std::move(param_types), std::move(cloned_type), this->is_const);
-}
-
-ExternStmt::ExternStmt(const std::wstring &name, std::vector<ParamPtr> params,
-                       TypePtr return_type, const Position &position) noexcept
-    : AstNode(position), name(name), params(std::move(params)),
-      return_type(std::move(return_type))
-{
-}
-
-std::unique_ptr<FunctionType> ExternStmt::get_type() const noexcept
-{
-    std::vector<TypePtr> param_types;
-    for (auto &param_ptr : this->params)
-        param_types.push_back(clone_type_ptr(param_ptr->type));
-    auto cloned_type = clone_type_ptr(this->return_type);
-    return std::make_unique<FunctionType>(std::move(param_types),
-                                          std::move(cloned_type), false);
 }
 
 bool operator==(const ExternStmt &first, const ExternStmt &other) noexcept
@@ -435,33 +211,6 @@ bool operator==(const Statement &first, const Statement &second) noexcept
         first, second);
 }
 
-// ======================
-// ===== MATCH ARMS =====
-// ======================
-
-MatchArmBase::MatchArmBase(StmtPtr block, const Position &position) noexcept
-    : AstNode(position), block(std::move(block))
-{
-}
-
-GuardArm::GuardArm(ExprNodePtr condition_expr, StmtPtr block,
-                   const Position &position) noexcept
-    : MatchArmBase(std::move(block), position),
-      condition_expr(std::move(condition_expr))
-{
-}
-
-LiteralArm::LiteralArm(std::vector<ExprNodePtr> literals, StmtPtr block,
-                       const Position &position) noexcept
-    : MatchArmBase(std::move(block), position), literals(std::move(literals))
-{
-}
-
-ElseArm::ElseArm(StmtPtr block, const Position &position) noexcept
-    : MatchArmBase(std::move(block), position)
-{
-}
-
 bool operator==(const MatchArm &first, const MatchArm &other) noexcept
 {
     return std::visit(
@@ -485,26 +234,12 @@ bool operator==(const MatchArm &first, const MatchArm &other) noexcept
 // ===== OTHERS =====
 // ==================
 
-Program::Program(std::vector<std::unique_ptr<VarDeclStmt>> globals,
-                 std::vector<std::unique_ptr<FuncDefStmt>> functions,
-                 std::vector<std::unique_ptr<ExternStmt>> externs) noexcept
-    : AstNode(Position(1, 1)), globals(std::move(globals)),
-      functions(std::move(functions)), externs(std::move(externs))
-{
-}
-
 bool operator==(const Program &first, const Program &other) noexcept
 {
     return compare_ptr_vectors(first.externs, other.externs) &&
            compare_ptr_vectors(first.functions, other.functions) &&
            compare_ptr_vectors(first.globals, other.globals) &&
            first.position == other.position; // not needed, but whatever
-}
-
-Parameter::Parameter(const std::wstring &name, TypePtr type,
-                     const Position &position) noexcept
-    : AstNode(position), name(name), type(std::move(type))
-{
 }
 
 bool operator==(const Parameter &first, const Parameter &other) noexcept

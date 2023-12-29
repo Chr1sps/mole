@@ -25,7 +25,7 @@ struct LogMessage
 class Logger
 {
   protected:
-    static std::map<LogLevel, std::wstring> log_level_strings;
+    static const std::map<LogLevel, std::wstring> log_level_strings;
 
   public:
     virtual void log(const LogMessage &) = 0;
@@ -42,7 +42,7 @@ class ConsoleLogger : public Logger
     std::wostream &out;
 
   public:
-    ConsoleLogger() : out(std::wcout)
+    constexpr ConsoleLogger() : out(std::wcout)
     {
     }
 
@@ -55,12 +55,12 @@ class ExecutionLogger : public Logger
     LogLevel threshold;
 
   public:
-    ExecutionLogger(const LogLevel &threshold)
+    constexpr ExecutionLogger(const LogLevel &threshold)
         : run(true), threshold(threshold)
     {
     }
 
-    ExecutionLogger() : ExecutionLogger(LogLevel::ERROR)
+    constexpr ExecutionLogger() : ExecutionLogger(LogLevel::ERROR)
     {
     }
 
@@ -93,7 +93,7 @@ class DebugLogger : public Logger
     std::vector<LogMessage> messages;
 
   public:
-    DebugLogger() = default;
+    constexpr DebugLogger() = default;
     void log(const LogMessage &msg) override;
     const std::vector<LogMessage> &get_messages() const;
 };
