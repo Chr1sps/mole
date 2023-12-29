@@ -203,7 +203,7 @@ void JsonSerializer::Visitor::visit(const CastExpr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::Visitor::visit(const ExprNode &node)
+void JsonSerializer::Visitor::visit(const Expression &node)
 {
     // this looks like a cheap, half-assed version of double-dispatch, but
     // whatever

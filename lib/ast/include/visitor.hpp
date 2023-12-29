@@ -22,7 +22,7 @@ class TypeVisitor : public Visitor
 class ExprVisitor : Visitor
 {
   public:
-    virtual void visit(const ExprNode &node) = 0;
+    virtual void visit(const Expression &node) = 0;
 };
 
 class StmtVisitor : Visitor

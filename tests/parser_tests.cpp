@@ -44,9 +44,9 @@ auto make_uniques_vector(Types &&...args)
 }
 
 template <typename... Types>
-std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
+std::vector<std::optional<ExprPtr>> make_lambda_vector(Types &&...args)
 {
-    std::vector<std::optional<ExprNodePtr>> result;
+    std::vector<std::optional<ExprPtr>> result;
     (result.emplace_back(std::forward<Types>(args)), ...);
     return result;
 }
@@ -61,31 +61,31 @@ std::vector<std::optional<ExprNodePtr>> make_lambda_vector(Types &&...args)
 #define TYPES(...) make_uniques_vector<Type>(__VA_ARGS__)
 
 #define VAREXPR(name, position)                                               \
-    std::make_unique<ExprNode>(VariableExpr(name, position))
+    std::make_unique<Expression>(VariableExpr(name, position))
 
 #define I32EXPR(value, position)                                              \
-    std::make_unique<ExprNode>(U32Expr(value, position))
+    std::make_unique<Expression>(U32Expr(value, position))
 #define F64EXPR(value, position)                                              \
-    std::make_unique<ExprNode>(F64Expr(value, position))
+    std::make_unique<Expression>(F64Expr(value, position))
 #define STREXPR(value, position)                                              \
-    std::make_unique<ExprNode>(StringExpr(value, position))
+    std::make_unique<Expression>(StringExpr(value, position))
 #define CHAREXPR(value, position)                                             \
-    std::make_unique<ExprNode>(CharExpr(value, position))
+    std::make_unique<Expression>(CharExpr(value, position))
 #define BOOLEXPR(value, position)                                             \
-    std::make_unique<ExprNode>(BoolExpr(value, position))
+    std::make_unique<Expression>(BoolExpr(value, position))
 
 #define BINEXPR(lhs, op, rhs, position)                                       \
-    std::make_unique<ExprNode>(BinaryExpr(lhs, rhs, BinOpEnum::op, position))
+    std::make_unique<Expression>(BinaryExpr(lhs, rhs, BinOpEnum::op, position))
 #define UNEXPR(expr, op, position)                                            \
-    std::make_unique<ExprNode>(UnaryExpr(expr, UnaryOpEnum::op, position))
+    std::make_unique<Expression>(UnaryExpr(expr, UnaryOpEnum::op, position))
 #define CALLEXPR(callable, args, position)                                    \
-    std::make_unique<ExprNode>(CallExpr(callable, args, position))
+    std::make_unique<Expression>(CallExpr(callable, args, position))
 #define LAMBDAEXPR(callable, args, position)                                  \
-    std::make_unique<ExprNode>(LambdaCallExpr(callable, args, position))
+    std::make_unique<Expression>(LambdaCallExpr(callable, args, position))
 #define INDEXEXPR(expr, index, position)                                      \
-    std::make_unique<ExprNode>(IndexExpr(expr, index, position))
+    std::make_unique<Expression>(IndexExpr(expr, index, position))
 #define CASTEXPR(expr, type, position)                                        \
-    std::make_unique<ExprNode>(CastExpr(expr, type, position))
+    std::make_unique<Expression>(CastExpr(expr, type, position))
 
 #define LITERALS(...) ARGS(__VA_ARGS__)
 #define LARM(literals, block, position)                                       \

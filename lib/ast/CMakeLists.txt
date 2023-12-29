@@ -3,7 +3,7 @@ set(LIB_HEADERS
     "visitor.hpp"
 )
 set(LIB_SOURCES
-    "ast.cpp"
+    ""
 )
 list(TRANSFORM LIB_HEADERS PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/include/")
 list(TRANSFORM LIB_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/src/")

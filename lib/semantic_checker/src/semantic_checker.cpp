@@ -527,7 +527,7 @@ void SemanticChecker::Visitor::visit(const Type &node)
 {
 }
 
-void SemanticChecker::Visitor::visit(const ExprNode &node)
+void SemanticChecker::Visitor::visit(const Expression &node)
 {
     std::visit(
         overloaded{

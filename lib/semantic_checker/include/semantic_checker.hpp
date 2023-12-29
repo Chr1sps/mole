@@ -110,7 +110,7 @@ class SemanticChecker
       public:
         Visitor() noexcept;
         void visit(const Statement &node) override;
-        void visit(const ExprNode &node) override;
+        void visit(const Expression &node) override;
         void visit(const Type &node) override;
         void visit(const MatchArm &node) override;
         void visit(const Parameter &node) override;

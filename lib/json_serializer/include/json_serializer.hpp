@@ -54,7 +54,7 @@ class JsonSerializer
         nlohmann::json last_object;
         Visitor() = default;
 
-        void visit(const ExprNode &node) override;
+        void visit(const Expression &node) override;
 
         void visit(const Statement &node) override;
         void visit(const MatchArm &node) override;
