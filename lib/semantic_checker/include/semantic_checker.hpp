@@ -15,6 +15,13 @@ class SemanticChecker
     {
         TypePtr last_type, return_type;
 
+        template <typename... Args>
+        void report_and_set_false(const LogLevel &log_level, Args &&...data)
+        {
+            this->report(log_level, data...);
+            this->value = false;
+        }
+
         // struct Variable
         // {
         //     std::wstring name;
@@ -101,6 +108,7 @@ class SemanticChecker
         // void visit(const ExternStmt &node);
 
       public:
+        Visitor() noexcept;
         void visit(const Statement &node) override;
         void visit(const ExprNode &node) override;
         void visit(const Type &node) override;

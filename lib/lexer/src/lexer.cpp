@@ -37,6 +37,8 @@ const std::map<std::wstring, TokenType> Lexer::keywords{
     KEYWORD(L"char", TYPE_CHAR),
     KEYWORD(L"str", TYPE_STR),
 
+    KEYWORD(L"bool", TYPE_BOOL),
+
 };
 
 #undef KEYWORD

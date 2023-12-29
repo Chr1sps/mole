@@ -57,7 +57,7 @@ std::map<TokenType, TypeEnum> Parser::type_map{
         TokenType::token_type, TypeEnum::type                                 \
     }
 std::map<TokenType, TypeEnum> Parser::type_value_map{
-    TYPE_VALUE(INT, I32),
+    TYPE_VALUE(INT, U32),
     TYPE_VALUE(DOUBLE, F64),
 };
 #undef TYPE_VALUE

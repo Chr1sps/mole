@@ -45,7 +45,7 @@ int main(int argc, char **argv)
     auto lexer = Lexer::from_file(path);
     lexer->add_logger(&logger);
     lexer->add_logger(&error_checker);
-    auto parser = Parser(lexer);
+    auto parser = Parser(std::move(lexer));
     parser.add_logger(&logger);
     parser.add_logger(&error_checker);
     auto program = parser.parse();

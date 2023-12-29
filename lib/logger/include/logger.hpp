@@ -29,6 +29,10 @@ class Logger
 
   public:
     virtual void log(const LogMessage &) = 0;
+
+    virtual ~Logger()
+    {
+    }
 };
 
 using LoggerPtr = std::shared_ptr<Logger>;

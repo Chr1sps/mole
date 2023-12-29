@@ -229,6 +229,8 @@ TEST_CASE("Type names.", "[TYPE]")
 
     compare_lexed_tokens(L"char", LIST(T(TYPE_CHAR, 1, 1)));
     compare_lexed_tokens(L"str", LIST(T(TYPE_STR, 1, 1)));
+
+    compare_lexed_tokens(L"bool", LIST(T(TYPE_BOOL, 1, 1)));
 }
 
 TEST_CASE("Identifiers.", "[ID]")

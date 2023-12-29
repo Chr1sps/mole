@@ -3,6 +3,11 @@
 #include "string_builder.hpp"
 #include <algorithm>
 
+SemanticChecker::Visitor::Visitor() noexcept
+    : last_type(nullptr), return_type(nullptr), value(true)
+{
+}
+
 // void SemanticChecker::Visitor::enter_scope()
 // {
 //     ++this->scope_level;
@@ -140,9 +145,9 @@ void SemanticChecker::Visitor::check_var_value_and_type(
             auto &value_type = this->last_type;
             if (!((!value_type && !node.type) ||
                   (value_type && node.type && *value_type == *node.type)))
-                this->report(LogLevel::ERROR,
-                             L"variable's declared type and assigned "
-                             L"value's type don't match");
+                this->report_and_set_false(
+                    LogLevel::ERROR, L"variable's declared type and assigned "
+                                     L"value's type don't match");
         }
     }
 }
@@ -491,15 +496,15 @@ void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
     {
         if (!(node.initial_value || node.type))
         {
-            this->report(LogLevel::ERROR,
-                         L"mutable must have either a type or a "
-                         L"value assigned to it");
+            this->report_and_set_false(LogLevel::ERROR,
+                                       L"mutable must have either a type or a "
+                                       L"value assigned to it");
         }
     }
     else if (!node.initial_value)
     {
-        this->report(LogLevel::ERROR,
-                     L"constant must have a value assigned to it");
+        this->report_and_set_false(
+            LogLevel::ERROR, L"constant must have a value assigned to it");
     }
     this->check_var_value_and_type(node);
     // this->check_var_name(node);
@@ -524,6 +529,39 @@ void SemanticChecker::Visitor::visit(const Type &node)
 
 void SemanticChecker::Visitor::visit(const ExprNode &node)
 {
+    std::visit(
+        overloaded{
+            [this](const U32Expr &node) {
+                this->last_type = std::make_unique<Type>(
+                    SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
+            },
+            [this](const F64Expr &node) {
+                this->last_type = std::make_unique<Type>(
+                    SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
+            },
+            [this](const CharExpr &node) {
+                this->last_type = std::make_unique<Type>(
+                    SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
+            },
+            [this](const BoolExpr &node) {
+                this->last_type = std::make_unique<Type>(
+                    SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
+            },
+            // [this](const StringExpr &node) {
+            //     this->last_type == std::make_unique<Type>(SimpleType(
+            //                            TypeEnum::STR,
+            //                            RefSpecifier::NON_REF));
+            // },
+            // [this](const VariableExpr &node) { this->last_type ==
+            // std::make_unique<Type>(SimpleType());},
+            //    [this](const BinaryExpr &node) { this->visit(node); },
+            //    [this](const UnaryExpr &node) { this->visit(node); },
+            //    [this](const CallExpr &node) { this->visit(node); },
+            //    [this](const LambdaCallExpr &node) { this->visit(node); },
+            //    [this](const IndexExpr &node) { this->visit(node); },
+            //    [this](const CastExpr &node) { this->visit(node); }},
+            [](const auto &) {}},
+        node);
 }
 
 void SemanticChecker::Visitor::visit(const Statement &node)

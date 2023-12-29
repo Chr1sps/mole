@@ -1,8 +1,10 @@
+#include "lexer.hpp"
 #include "locale.hpp"
 #include "parser.hpp"
 #include "semantic_checker.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
+#include <string>
 
 bool check_source(const std::wstring &source)
 {
@@ -25,11 +27,42 @@ TEST_CASE("Variable has no value or type assigned.")
 
 TEST_CASE("Variable's declared type and assigned value's type don't match")
 {
-    CHECK_VALID(L"let var: i32 = 1;");
-    // CHECK_VALID(L"let var: f64 = 0.1;");
-    // CHECK_INVALID(L"let var: i32 = 0.1;");
-    // CHECK_INVALID(L"let var: f64 = 1;");
+    SECTION("No type specifiers.")
+    {
+        CHECK_VALID(L"let var = 1;");
+        CHECK_VALID(L"let var = 1.3;");
+        CHECK_VALID(L"let var = true;");
+        CHECK_VALID(L"let var = 'a';");
+        CHECK_VALID(L"let var = \"a\";");
+    }
 
+    SECTION("Globals, normal types.")
+    {
+        CHECK_VALID(L"let var: u32 = 1;");
+        CHECK_VALID(L"let var: f64 = 0.1;");
+        CHECK_VALID(L"let var: bool = false;");
+        CHECK_VALID(L"let var: char = 'a';");
+        CHECK_INVALID(L"let var: u32 = 0.1;");
+        CHECK_INVALID(L"let var: f64 = 1;");
+        CHECK_INVALID(L"let var: bool = 'a';");
+    }
+
+    SECTION("References.")
+    {
+        CHECK_INVALID(L"let var: &u32 = 1;");
+        CHECK_VALID(L"let var: f64 = 0.1;");
+        CHECK_VALID(L"let var: bool = false;");
+        CHECK_VALID(L"let var: char = 'a';");
+        CHECK_INVALID(L"let var: u32 = 0.1;");
+        CHECK_INVALID(L"let var: f64 = 1;");
+    }
+
+    // SECTION("String.")
+    // {
+    //     CHECK_VALID(L"let var: &str = \"a\";");
+    //     CHECK_INVALID(L"let var: &mut str = \"a\";");
+    //     CHECK_INVALID(L"let var: str = \"a\";");
+    // }
     // SECTION("Inside a function")
     // {
     //     CHECK_VALID(FN_WRAP(L"let var: i32 = 1;"));

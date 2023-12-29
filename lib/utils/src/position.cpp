@@ -1,4 +1,5 @@
 #include "position.hpp"
+#include <ostream>
 
 bool operator==(const Position &first, const Position &other) noexcept
 {
