@@ -3,12 +3,6 @@
 #include "ast.hpp"
 #include "overloaded.hpp"
 
-struct Program;
-struct Parameter;
-
-struct SimpleType;
-struct FunctionType;
-
 class Visitor
 {
 };

@@ -91,6 +91,8 @@ class Parser : public Reporter
 
     StmtPtr parse_match_arm_block();
 
+    std::optional<BinOpData> parse_binop();
+
     // expressions
 
     ExprPtr parse_u32_expr();

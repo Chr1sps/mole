@@ -39,7 +39,8 @@ std::map<TokenType, BinOpData> Parser::binary_map{
     }
 std::map<TokenType, UnaryOpEnum> Parser::unary_map{
     UNOP(INCREMENT, INC),   UNOP(DECREMENT, DEC), UNOP(NEG, NEG),
-    UNOP(BIT_NEG, BIT_NEG), UNOP(MINUS, MINUS),   UNOP(AMPERSAND, REF)};
+    UNOP(BIT_NEG, BIT_NEG), UNOP(MINUS, MINUS),   UNOP(AMPERSAND, REF),
+    UNOP(STAR, DEREF)};
 #undef UNOP
 
 #define TYPE(token_type, type)                                                \
@@ -110,9 +111,6 @@ bool Parser::assert_current_and_eat(TokenType type,
     return true;
 }
 
-//
-//
-//
 // PROGRAM = {VAR_DECL_STMT | FUNC_DEF_STMT | EXTERN_STMT}
 ProgramPtr Parser::parse()
 {
@@ -320,7 +318,6 @@ std::vector<ParamPtr> Parser::parse_params()
 }
 
 // PARAMETER = IDENTIFIER, TYPE_SPECIFIER;
-// TODO
 ParamPtr Parser::parse_parameter()
 {
     if (this->current_token != TokenType::IDENTIFIER)
@@ -744,8 +741,7 @@ MatchArmPtr Parser::parse_guard_arm()
 }
 
 // GUARD_CONDITION = KW_IF, PAREN_EXPR;
-std::optional<std::tuple<Position, ExprPtr>> Parser::
-    parse_guard_condition()
+std::optional<std::tuple<Position, ExprPtr>> Parser::parse_guard_condition()
 {
     if (this->current_token != TokenType::KW_IF)
         return std::nullopt;
@@ -858,31 +854,40 @@ ExprPtr Parser::parse_bool_expr()
         return nullptr;
 }
 
-bool join_into_binary_op(std::stack<ExprPtr> &values,
+namespace
+{
+void join_into_binary_op(std::stack<ExprPtr> &values,
                          std::stack<BinOpData> &ops)
 {
     auto op = ops.top().type;
     ops.pop();
-    if (values.size() < 2)
-    {
-        return false;
-    }
-    else
-    {
-        // moving the nodes out of the values stack - the pointers
-        // stored in it must release the ownership
-        auto rhs = std::move(values.top());
-        values.pop();
 
-        auto lhs = std::move(values.top());
-        values.pop();
+    // moving the nodes out of the values stack - the pointers
+    // stored in it must release the ownership
+    auto rhs = std::move(values.top());
+    values.pop();
 
-        auto position = get_expr_position(*lhs);
-        auto new_expr = std::make_unique<Expression>(
-            BinaryExpr(std::move(lhs), std::move(rhs), op, position));
-        values.push(std::move(new_expr));
-        return true;
+    auto lhs = std::move(values.top());
+    values.pop();
+
+    auto position = get_expr_position(*lhs);
+    auto new_expr = std::make_unique<Expression>(
+        BinaryExpr(std::move(lhs), std::move(rhs), op, position));
+    values.push(std::move(new_expr));
+}
+
+} // namespace
+
+std::optional<BinOpData> Parser::parse_binop()
+{
+    decltype(this->binary_map)::const_iterator iter;
+    if (this->current_token.has_value() &&
+        (iter = this->binary_map.find(this->current_token->type)) !=
+            this->binary_map.end())
+    {
+        return iter->second;
     }
+    return std::nullopt;
 }
 
 // BINARY_EXPR = CAST_EXPR, {BINARY_OP, CAST_EXPR};
@@ -890,50 +895,38 @@ ExprPtr Parser::parse_binary_expr()
 {
     std::stack<ExprPtr> values;
     std::stack<BinOpData> ops;
-    decltype(this->binary_map)::const_iterator iter;
-    while (true)
+    if (auto expr = this->parse_cast_expr())
     {
+        values.push(std::move(expr));
+    }
+    else
+        return nullptr;
+    while (auto binop = this->parse_binop())
+    {
+
+        while (!ops.empty() && (binop->precedence < ops.top().precedence ||
+                                (binop->precedence == ops.top().precedence &&
+                                 !binop->is_right_assoc)))
+        {
+            join_into_binary_op(values, ops);
+        }
+        ops.push(*binop);
+        this->next_token();
+
         if (auto expr = this->parse_cast_expr())
         {
             values.push(std::move(expr));
         }
-        else if (this->current_token.has_value() &&
-                 (iter = this->binary_map.find(this->current_token->type)) !=
-                     this->binary_map.end())
-        {
-            while (!ops.empty() &&
-                   (iter->second.precedence < ops.top().precedence ||
-                    (iter->second.precedence == ops.top().precedence &&
-                     !iter->second.is_right_assoc)))
-            {
-                if (!join_into_binary_op(values, ops))
-                {
-                    this->report_error(
-                        L"no right-hand side found in a binary expression");
-                }
-            }
-            ops.push(iter->second);
-            this->next_token();
-        }
         else
-            break;
-    }
-    while (!ops.empty())
-    {
-        if (!join_into_binary_op(values, ops))
         {
             this->report_error(
                 L"no right-hand side found in a binary expression");
+            return nullptr;
         }
     }
-    if (values.size() > 1)
+    while (!ops.empty())
     {
-        this->report_error(L"binary expression doesn't have an operand");
-        return nullptr;
-    }
-    else if (values.empty())
-    {
-        return nullptr;
+        join_into_binary_op(values, ops);
     }
     auto result = std::move(values.top());
     values.pop();

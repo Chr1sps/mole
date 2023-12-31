@@ -131,8 +131,8 @@ std::vector<std::optional<ExprPtr>> make_lambda_vector(Types &&...args)
     std::make_unique<Parameter>(name, type, position)
 #define PARAMS(...) make_uniques_vector<Parameter>(__VA_ARGS__)
 
-#define ARGS(...) make_uniques_vector<ExprNode>(__VA_ARGS__)
-#define LAMBDAARGS(...) make_uniques_vector<ExprNode>(__VA_ARGS__)
+#define ARGS(...) make_uniques_vector<Expression>(__VA_ARGS__)
+#define LAMBDAARGS(...) make_uniques_vector<Expression>(__VA_ARGS__)
 #define NOARG nullptr
 
 #define GLOBALS(...) make_uniques_vector<VarDeclStmt>(__VA_ARGS__)
@@ -288,6 +288,16 @@ TEST_CASE("Binary operators.", "[VARS], [BINOP]")
                     FUNCTIONS(), EXTERNS()));
     SECTION("Nested operators.")
     {
+        COMPARE(L"let var=5-5-5;",
+                PROGRAM(GLOBALS(GLOBAL(
+                            L"var", nullptr,
+
+                            BINEXPR(BINEXPR(I32EXPR(5, POS(1, 9)), SUB,
+                                            I32EXPR(5, POS(1, 11)), POS(1, 9)),
+                                    SUB, I32EXPR(5, POS(1, 13)), POS(1, 9)),
+
+                            false, POS(1, 1))),
+                        FUNCTIONS(), EXTERNS()));
         COMPARE(
             L"let var=5+5*5;",
             PROGRAM(GLOBALS(GLOBAL(
@@ -339,7 +349,7 @@ TEST_CASE("Binary operators.", "[VARS], [BINOP]")
     SECTION("Shunting yard errors.")
     {
         THROWS_ERRORS(L"let var=5+;");
-        THROWS_ERRORS(L"let var=5+*5;");
+        THROWS_ERRORS(L"let var=5+/5;");
     }
 }
 
