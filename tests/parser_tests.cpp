@@ -385,6 +385,24 @@ TEST_CASE("Unary operators.", "[VARS], [UNOP]")
                         UNEXPR(I32EXPR(5, POS(1, 10)), MINUS, POS(1, 9)),
                         false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
+    COMPARE(
+        L"let var=&5;",
+        PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+                               UNEXPR(I32EXPR(5, POS(1, 10)), REF, POS(1, 9)),
+                               false, POS(1, 1))),
+                FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let var=&mut 5;",
+            PROGRAM(GLOBALS(GLOBAL(
+                        L"var", nullptr,
+                        UNEXPR(I32EXPR(5, POS(1, 14)), MUT_REF, POS(1, 9)),
+                        false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let var=&mut5;",
+            PROGRAM(GLOBALS(GLOBAL(
+                        L"var", nullptr,
+                        UNEXPR(VAREXPR(L"mut5", POS(1, 10)), REF, POS(1, 9)),
+                        false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
     SECTION("Nested.")
     {
         COMPARE(

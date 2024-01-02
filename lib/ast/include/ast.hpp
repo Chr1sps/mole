@@ -158,7 +158,9 @@ enum class UnaryOpEnum
     NEG,
     BIT_NEG,
     MINUS,
-    REF
+    REF,
+    MUT_REF,
+    DEREF
 };
 
 struct BinaryExpr : public AstNode

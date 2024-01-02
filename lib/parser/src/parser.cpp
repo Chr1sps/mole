@@ -202,13 +202,19 @@ std::unique_ptr<VarDeclStmt> Parser::parse_var_decl_stmt()
 // TYPE_SPECIFIER = COLON, TYPE;
 TypePtr Parser::parse_type_specifier()
 {
-    TypePtr type = nullptr;
     if (this->current_token == TokenType::COLON)
     {
         this->next_token();
-        type = this->parse_type();
+        if (auto result = this->parse_type())
+            return result;
+        else
+        {
+            this->report_error(
+                L"expected a type definition in a variable type specifier");
+            return nullptr;
+        }
     }
-    return type;
+    return nullptr;
 }
 
 // INITIAL_VALUE = ASSIGN, BINARY_EXPR;
@@ -336,20 +342,24 @@ TypePtr Parser::parse_type()
         return type;
     else if (auto type = this->parse_simple_type())
         return type;
-    this->report_error(L"invalid type syntax");
     return nullptr;
 }
 
 // RETURN_TYPE = LAMBDA_ARROW, TYPE
 TypePtr Parser::parse_return_type()
 {
-    TypePtr return_type = nullptr;
     if (this->current_token == TokenType::LAMBDA_ARROW)
     {
         this->next_token();
-        return_type = this->parse_type();
+        if (auto result = this->parse_type())
+            return result;
+        else
+        {
+            this->report_error(L"expected a return type in a function type");
+            return nullptr;
+        }
     }
-    return return_type;
+    return nullptr;
 }
 
 // SIMPLE_TYPE = TYPE_U32 | TYPE_I32 | TYPE_F64 | TYPE_BOOL | TYPE_CHAR |
@@ -412,12 +422,15 @@ TypePtr Parser::parse_function_type()
 std::vector<TypePtr> Parser::parse_types()
 {
     std::vector<TypePtr> types;
-    for (; this->current_token != TokenType::R_PAREN; this->next_token())
+    if (auto type = this->parse_type())
     {
-        auto type = this->parse_type();
         types.push_back(std::move(type));
-        if (this->current_token != TokenType::COMMA)
-            break;
+        while (this->current_token == TokenType::COMMA)
+        {
+            this->next_token();
+            type = this->parse_type();
+            types.push_back(std::move(type));
+        }
     }
     return types;
 }
@@ -959,19 +972,41 @@ ExprPtr Parser::parse_cast_expr()
     return lhs;
 }
 
+std::optional<std::tuple<UnaryOpEnum, Position>> Parser::parse_unop()
+{
+    if (this->current_token == TokenType::AMPERSAND)
+    {
+        auto position = this->current_token->position;
+        this->next_token();
+        if (this->current_token == TokenType::KW_MUT)
+        {
+            this->next_token();
+            return std::make_tuple(UnaryOpEnum::MUT_REF, position);
+        }
+        return std::make_tuple(UnaryOpEnum::REF, position);
+    }
+    decltype(this->unary_map)::const_iterator op_iter;
+    if (this->current_token.has_value() &&
+        (op_iter = this->unary_map.find(this->current_token->type)) !=
+            this->unary_map.end())
+    {
+        auto position = this->current_token->position;
+        this->next_token();
+        return std::make_tuple(op_iter->second, position);
+    }
+    return std::nullopt;
+}
+
 // UNARY_EXPR = {UNARY_OP}, (INDEX_LAMBDA_OR_CALL);
 ExprPtr Parser::parse_unary_expr()
 {
     std::stack<UnaryOpEnum> ops;
     std::stack<Position> positions;
-    decltype(this->unary_map)::const_iterator op_iter;
-    while (this->current_token.has_value() &&
-           (op_iter = this->unary_map.find(this->current_token->type)) !=
-               this->unary_map.end())
+    while (auto op_and_pos = this->parse_unop())
     {
-        ops.push(op_iter->second);
-        positions.push(this->current_token->position);
-        this->next_token();
+        auto [op, pos] = *op_and_pos;
+        ops.push(op);
+        positions.push(pos);
     }
     auto inner = this->parse_index_lambda_or_call();
     if (inner)
@@ -1000,42 +1035,31 @@ ExprPtr Parser::parse_index_lambda_or_call()
 
         return nullptr;
 
-    auto position = get_expr_position(*result);
-    while (true)
+    ExprPtr new_result;
+    while ((new_result = this->parse_call(std::move(result))) ||
+           (new_result = this->parse_lambda_call(std::move(result))) ||
+           (new_result = this->parse_index(std::move(result))))
     {
-        if (auto params = this->parse_call_part())
-        {
-            result = std::make_unique<Expression>(
-                CallExpr(std::move(result), std::move(*params), position));
-        }
-        else if (auto params = this->parse_lambda_call_part())
-        {
-            result = std::make_unique<Expression>(LambdaCallExpr(
-                std::move(result), std::move(*params), position));
-        }
-        else if (auto param = this->parse_index_part())
-        {
-            result = std::make_unique<Expression>(
-                IndexExpr(std::move(result), std::move(param), position));
-        }
-        else
-            break;
+        result = std::move(new_result);
     }
+
     return result;
 }
 
 // CALL_PART = L_PAREN, [ARGS], R_PAREN;
-std::optional<std::vector<ExprPtr>> Parser::parse_call_part()
+ExprPtr Parser::parse_call(ExprPtr &&expr)
 {
     if (this->current_token != TokenType::L_PAREN)
-        return std::nullopt;
+        return nullptr;
     this->next_token();
     auto args = this->parse_args();
     if (!this->assert_current_and_eat(
             TokenType::R_PAREN,
             L"expected right parenthesis in call expression"))
-        return std::nullopt;
-    return args;
+        return nullptr;
+    auto position = get_expr_position(*expr);
+    return std::make_unique<Expression>(
+        CallExpr(std::move(expr), std::move(args), position));
 }
 
 // ARGS = BINARY_EXPR, {COMMA, BINARY_EXPR};
@@ -1064,27 +1088,29 @@ std::vector<ExprPtr> Parser::parse_args()
 }
 
 // LAMBDA_CALL_PART = AT, L_PAREN, [LAMBDA_ARGS], R_PAREN;
-std::optional<std::vector<ExprPtr>> Parser::parse_lambda_call_part()
+ExprPtr Parser::parse_lambda_call(ExprPtr &&expr)
 {
     if (this->current_token != TokenType::AT)
-        return std::nullopt;
+        return nullptr;
     this->next_token();
     if (!this->assert_current_and_eat(
             TokenType::L_PAREN,
             L"expected left parenthesis in lambda call expression"))
-        return std::nullopt;
+        return nullptr;
     auto args = this->parse_lambda_args();
     if (!args)
     {
         this->report_error(
             L"expected a list of arguments in a lambda call expression");
-        return std::nullopt;
+        return nullptr;
     }
     if (!this->assert_current_and_eat(
             TokenType::R_PAREN,
             L"expected right parenthesis in lambda call expression"))
-        return std::nullopt;
-    return args;
+        return nullptr;
+    auto position = get_expr_position(*expr);
+    return std::make_unique<Expression>(
+        LambdaCallExpr(std::move(expr), std::move(*args), position));
 }
 
 // LAMBDA_ARGS = LAMBDA_ARG, {COMMA, LAMBDA_ARG};
@@ -1130,13 +1156,13 @@ std::optional<ExprPtr> Parser::parse_lambda_arg()
 }
 
 // INDEX_PART = L_SQ_BRACKET, BINARY_EXPR, R_SQ_BRACKET;
-ExprPtr Parser::parse_index_part()
+ExprPtr Parser::parse_index(ExprPtr &&expr)
 {
     if (this->current_token != TokenType::L_SQ_BRACKET)
         return nullptr;
     this->next_token();
-    auto result = this->parse_binary_expr();
-    if (!result)
+    auto param = this->parse_binary_expr();
+    if (!param)
     {
         this->report_error(L"no index value expression found in the index "
                            L"expression's square brackets");
@@ -1146,7 +1172,10 @@ ExprPtr Parser::parse_index_part()
             TokenType::R_SQ_BRACKET,
             L"expected right square bracket in an index expression"))
         return nullptr;
-    return result;
+
+    auto position = get_expr_position(*expr);
+    return std::make_unique<Expression>(
+        IndexExpr(std::move(expr), std::move(param), position));
 }
 
 // FACTOR = PAREN_EXPR | U32_EXPR | F64_EXPR | STRING_EXPR | CHAR_EXPR |

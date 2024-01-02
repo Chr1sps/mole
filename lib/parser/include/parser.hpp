@@ -92,6 +92,7 @@ class Parser : public Reporter
     StmtPtr parse_match_arm_block();
 
     std::optional<BinOpData> parse_binop();
+    std::optional<std::tuple<UnaryOpEnum, Position>> parse_unop();
 
     // expressions
 
@@ -110,14 +111,14 @@ class Parser : public Reporter
     ExprPtr parse_cast_expr();
     ExprPtr parse_binary_expr();
 
-    std::optional<std::vector<ExprPtr>> parse_call_part();
+    ExprPtr parse_call(ExprPtr &&expr);
     std::vector<ExprPtr> parse_args();
 
-    std::optional<std::vector<ExprPtr>> parse_lambda_call_part();
+    ExprPtr parse_lambda_call(ExprPtr &&expr);
     std::optional<std::vector<ExprPtr>> parse_lambda_args();
     std::optional<ExprPtr> parse_lambda_arg();
 
-    ExprPtr parse_index_part();
+    ExprPtr parse_index(ExprPtr &&expr);
 
     void report_error(const std::wstring &msg);
 
