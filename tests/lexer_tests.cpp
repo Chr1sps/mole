@@ -136,7 +136,6 @@ TEST_CASE("Multiple char tokens.", "[OPS]")
     compare_lexed_tokens(L"*=", LIST(T(ASSIGN_STAR, 1, 1)));
     compare_lexed_tokens(L"/=", LIST(T(ASSIGN_SLASH, 1, 1)));
     compare_lexed_tokens(L"%=", LIST(T(ASSIGN_PERCENT, 1, 1)));
-    compare_lexed_tokens(L"~=", LIST(T(ASSIGN_BIT_NEG, 1, 1)));
     compare_lexed_tokens(L"=>", LIST(T(LAMBDA_ARROW, 1, 1)));
     compare_lexed_tokens(L"==", LIST(T(EQUAL, 1, 1)));
     compare_lexed_tokens(L"<=", LIST(T(LESS_EQUAL, 1, 1)));

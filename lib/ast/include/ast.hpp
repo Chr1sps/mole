@@ -319,10 +319,10 @@ enum class AssignType
     MINUS,
     MUL,
     DIV,
+
     MOD,
     EXP,
 
-    BIT_NEG,
     BIT_AND,
     BIT_OR,
     BIT_XOR,
@@ -514,7 +514,9 @@ namespace
 {
 inline constexpr TypePtr clone_type_ptr(const TypePtr &type) noexcept
 {
-    return std::make_unique<Type>(*type);
+    if (type)
+        return std::make_unique<Type>(*type);
+    return nullptr;
 }
 } // namespace
 

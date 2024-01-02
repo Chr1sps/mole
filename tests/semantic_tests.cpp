@@ -63,30 +63,31 @@ TEST_CASE("Variable's declared type and assigned value's type don't match")
         CHECK_INVALID(L"let var: &mut str = \"a\";");
         CHECK_INVALID(L"let var: str = \"a\";");
     }
-    // SECTION("Inside a function")
-    // {
-    //     CHECK_VALID(FN_WRAP(L"let var: i32 = 1;"));
-    //     CHECK_VALID(FN_WRAP(L"let var: f64 = 0.1;"));
-    //     CHECK_INVALID(FN_WRAP(L"let var: i32 = 0.1;"));
-    //     CHECK_INVALID(FN_WRAP(L"let var: f64 = 1;"));
-    // }
+    SECTION("Inside a function")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 0.1;"));
+        CHECK_INVALID(FN_WRAP(L"let var: u32 = 0.1;"));
+        CHECK_INVALID(FN_WRAP(L"let var: f64 = 1;"));
+    }
 }
 
-// TEST_CASE("Constant has no value assigned.")
-// {
-//     CHECK_INVALID(L"let var: i32;");
-//     CHECK_VALID(L"let var: i32 = 32;");
-// }
+TEST_CASE("Constant has no value assigned.")
+{
+    CHECK_INVALID(L"let var: u32;");
+    CHECK_VALID(L"let var: u32 = 32;");
+}
 
-// TEST_CASE("Constant cannot be reassigned.")
-// {
-//     CHECK_INVALID(FN_WRAP(L"let value = 5; value = 4;"));
-// }
+TEST_CASE("Constant cannot be reassigned.")
+{
+    CHECK_INVALID(FN_WRAP(L"let value = 5; value = 4;"));
+    CHECK_VALID(FN_WRAP(L"let mut value = 5; value = 4;"));
+}
 
 // TEST_CASE("Using an uninitialized variable in an expression.")
 // {
 //     CHECK_INVALID(
-//         FN_WRAP(L"let mut value: i32; let new_value = (4 + value);"));
+//         FN_WRAP(L"let mut value: u32; let new_value = (4 + value);"));
 // }
 
 // TEST_CASE("Referenced value/function is not in scope.")
@@ -95,35 +96,35 @@ TEST_CASE("Variable's declared type and assigned value's type don't match")
 //     {
 //         CHECK_INVALID(
 //             L"fn foo(){let value = 5;} fn goo(){let new_value = value;}");
-//         // CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
+//         // CHECK_INVALID(L"fn foo(){fn boo()=>u32{return 5;}}"
 //         //               L"fn goo(){let new_value = boo();}");
 //     }
 //     SECTION("Function arguments.")
 //     {
-//         CHECK_VALID(L"fn foo(a: i32, b: i32) => i32 {return a + b;}");
+//         CHECK_VALID(L"fn foo(a: u32, b: u32) => u32 {return a + b;}");
 //     }
 //     // SECTION("Lambdas.")
 //     // {
-//     //     CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
+//     //     CHECK_INVALID(L"fn foo(){fn boo()=>u32{return 5;}}"
 //     //                   L"fn goo(){let new_value = boo(2, ...);}");
-//     //     CHECK_INVALID(L"fn foo(){fn boo()=>i32{return 5;}}"
+//     //     CHECK_INVALID(L"fn foo(){fn boo()=>u32{return 5;}}"
 //     //                   L"fn goo(){let new_value = boo(2, ...);}");
 //     // }
 // }
 
 // TEST_CASE("Function's argument type is mismatched.")
 // {
-//     CHECK_INVALID(L"fn foo(x: i32)=>i32{return 32;}"
+//     CHECK_INVALID(L"fn foo(x: u32)=>u32{return 32;}"
 //                   L"fn boo(){let value = 0.1; let falue = foo(value);}");
-//     CHECK_INVALID(L"fn foo(x: i32)=>i32{return 3;}"
+//     CHECK_INVALID(L"fn foo(x: u32)=>u32{return 3;}"
 //                   L"fn boo(){let boo = foo(0.1);}");
 // }
 
 // TEST_CASE("Function is called with a wrong amount of arguments.")
 // {
-//     CHECK_INVALID(L"fn foo(x: i32){}"
+//     CHECK_INVALID(L"fn foo(x: u32){}"
 //                   L"fn boo(){let goo = foo(1,2);}");
-//     CHECK_INVALID(L"fn foo(x: i32){}"
+//     CHECK_INVALID(L"fn foo(x: u32){}"
 //                   L"fn boo(){let goo = foo();}");
 // }
 
@@ -134,33 +135,33 @@ TEST_CASE("Variable's declared type and assigned value's type don't match")
 
 // TEST_CASE("Function doesn't return when its type indicates otherwise.")
 // {
-//     CHECK_INVALID(L"fn foo(x: i32)=>i32{}");
-//     CHECK_VALID(L"fn foo(x: i32)=>!{}");
+//     CHECK_INVALID(L"fn foo(x: u32)=>u32{}");
+//     CHECK_VALID(L"fn foo(x: u32)=>!{}");
 // }
 
 // TEST_CASE("Function returns the wrong type.")
 // {
-//     CHECK_INVALID(L"fn foo()=>i32{return 0.1;}");
-//     CHECK_INVALID(L"fn foo()=>i32{let value = 0.1; return value;}");
+//     CHECK_INVALID(L"fn foo()=>u32{return 0.1;}");
+//     CHECK_INVALID(L"fn foo()=>u32{let value = 0.1; return value;}");
 // }
 
 // TEST_CASE("Return statement with no value in a function that does return.")
 // {
-//     CHECK_INVALID(L"fn foo(x: i32)=>i32{return;}");
+//     CHECK_INVALID(L"fn foo(x: u32)=>u32{return;}");
 // }
 
 // TEST_CASE("Function returns a value when it shouldn't.")
 // {
-//     CHECK_INVALID(L"fn foo(x: i32){return 5;}");
-//     CHECK_INVALID(L"fn foo(x: i32)=>!{return 5;}");
+//     CHECK_INVALID(L"fn foo(x: u32){return 5;}");
+//     CHECK_INVALID(L"fn foo(x: u32)=>!{return 5;}");
 // }
 
 // TEST_CASE("Function parameter cannot shadow a variable/function in scope")
 // {
 //     CHECK_INVALID(L"let var = 5;"
-//                   L"fn foo(var: i32){}");
+//                   L"fn foo(var: u32){}");
 //     CHECK_INVALID(L"fn var(){}"
-//                   L"fn foo(var: i32){}");
+//                   L"fn foo(var: u32){}");
 // }
 
 // TEST_CASE("Const function cannot reference outside variables that are not "
@@ -192,58 +193,58 @@ TEST_CASE("Variable's declared type and assigned value's type don't match")
 //     //             L"}");
 // }
 
-// TEST_CASE("Variable cannot be called 'main'.")
-// {
-//     CHECK_INVALID(L"let main: i32;");
-//     CHECK_INVALID(L"let main: fn()=>!;");
-//     CHECK_INVALID(L"let main: fn()=>u8;");
-// }
+TEST_CASE("Variable cannot be called 'main'.")
+{
+    CHECK_INVALID(L"let main: u32;");
+    CHECK_INVALID(L"let main: fn();");
+    CHECK_INVALID(L"let main: fn()=>u32;");
+}
 
-// TEST_CASE("Main should be of type fn()=>u8 or fn()=>!.")
-// {
-//     CHECK_INVALID(L"fn main()=>i32{return 3;}");
-//     CHECK_INVALID(L"fn main()=>f64{return 0.1;}");
-// }
+TEST_CASE("Main should be of type fn()=>u32 or fn().")
+{
+    CHECK_VALID(L"fn main()=>u32{return 3;}");
+    CHECK_INVALID(L"fn main()=>f64{return 0.1;}");
+}
 
-// TEST_CASE("Main cannot have any parameters.")
-// {
-//     CHECK_INVALID(L"fn main(x: i32){}");
-// }
+TEST_CASE("Main cannot have any parameters.")
+{
+    CHECK_INVALID(L"fn main(x: u32){}");
+}
 
 // TEST_CASE("Lambda call expression with a wrong number of arguments.")
 // {
-//     CHECK_INVALID(L"fn foo(a: i32, b: i32, c: i32){} "
+//     CHECK_INVALID(L"fn foo(a: u32, b: u32, c: u32){} "
 //                   L"fn main(){let val = foo(_, 2);}");
-//     CHECK_INVALID(L"fn foo(a: i32, b: i32, c: i32, d: i32){} "
+//     CHECK_INVALID(L"fn foo(a: u32, b: u32, c: u32, d: u32){} "
 //                   L"fn main(){let val = foo(_, _, 3);}");
-//     CHECK_INVALID(L"fn foo(a: i32, b: i32, c: i32, d: i32){} "
+//     CHECK_INVALID(L"fn foo(a: u32, b: u32, c: u32, d: u32){} "
 //                   L"fn main(){let val = foo(_, _, 3, _, 5);}");
-//     CHECK_INVALID(L"fn foo(a: i32, b: i32, c: i32, d: i32){} "
+//     CHECK_INVALID(L"fn foo(a: u32, b: u32, c: u32, d: u32){} "
 //                   L"fn main(){let val = foo(_, _, _, _, 5, ...);}");
-//     CHECK_VALID(L"fn foo(a: i32, b: i32, c: i32){} "
+//     CHECK_VALID(L"fn foo(a: u32, b: u32, c: u32){} "
 //                 L"fn main(){let val = foo(1, ...);}");
-//     CHECK_VALID(L"fn foo(a: i32, b: i32, c: i32){} "
+//     CHECK_VALID(L"fn foo(a: u32, b: u32, c: u32){} "
 //                 L"fn main(){let val = foo(_, 2, ...);}");
-//     CHECK_VALID(L"fn foo(a: i32, b: i32, c: i32, d: i32){} "
+//     CHECK_VALID(L"fn foo(a: u32, b: u32, c: u32, d: u32){} "
 //                 L"fn main(){let val = foo(_, 2, _, 4, ...);}");
 // }
 
 // TEST_CASE("Lambda call expression has mismatched types.")
 // {
-//     CHECK_INVALID(L"fn foo(a: i32, b: i32){} "
+//     CHECK_INVALID(L"fn foo(a: u32, b: u32){} "
 //                   L"fn main(){let val = foo(_, 2.1);}");
-//     CHECK_INVALID(L"fn foo(a: i32, b: i32){} "
+//     CHECK_INVALID(L"fn foo(a: u32, b: u32){} "
 //                   L"fn main(){let val = foo(1.05, ...);}");
 // }
 
 // TEST_CASE("Chaining function calls.")
 // {
-//     CHECK_VALID(L"fn foo(a: i32, b: i32) => i32 {return a + b;}"
+//     CHECK_VALID(L"fn foo(a: u32, b: u32) => u32 {return a + b;}"
 //                 L"fn main() {"
 //                 L"  let boo = foo(32, _);"
 //                 L"  let goo = boo(32);"
 //                 L"}");
-//     CHECK_VALID(L"fn foo(a: i32, b: i32) => i32 {return a + b;}"
+//     CHECK_VALID(L"fn foo(a: u32, b: u32) => u32 {return a + b;}"
 //                 L"fn main() {"
 //                 L"  let boo = foo(32, _)(32);"
 //                 L"}");

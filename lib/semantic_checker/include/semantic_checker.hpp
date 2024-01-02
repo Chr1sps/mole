@@ -14,12 +14,12 @@ class SemanticChecker
     class Visitor : public AstVisitor, public Reporter
     {
         TypePtr last_type, return_type;
-        std::optional<std::wstring> referenced_var;
+        // std::optional<std::wstring> referenced_var;
+        bool is_assignable;
 
-        template <typename... Args>
-        void report_and_set_false(const LogLevel &log_level, Args &&...data)
+        template <typename... Args> void report_error(Args &&...data)
         {
-            this->report(log_level, data...);
+            this->report(LogLevel::ERROR, data...);
             this->value = false;
         }
 
@@ -44,8 +44,8 @@ class SemanticChecker
         // unsigned int scope_level = 0;
         // bool check_const;
 
-        // void enter_scope();
-        // void leave_scope();
+        void enter_scope();
+        void leave_scope();
         // void register_globals(const Program &node);
 
         // void check_function_names(const VarDeclStmt &node);
@@ -69,7 +69,7 @@ class SemanticChecker
         // std::shared_ptr<Function> find_outside_function(
         //     const std::wstring &name);
 
-        // void register_local_variable(const VarDeclStmt &node);
+        void register_local_variable(const VarDeclStmt &node);
         // void register_local_function(const FuncDefStmt &node);
         // void register_local_function(const ExternStmt &node);
 

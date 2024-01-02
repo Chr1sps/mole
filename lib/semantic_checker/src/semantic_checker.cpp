@@ -5,24 +5,22 @@
 #include <optional>
 
 SemanticChecker::Visitor::Visitor() noexcept
-    : last_type(nullptr), return_type(nullptr), referenced_var(std::nullopt),
+    : last_type(nullptr), return_type(nullptr), is_assignable(false),
       value(true)
 {
 }
 
-// void SemanticChecker::Visitor::enter_scope()
-// {
-//     ++this->scope_level;
-//     this->functions.push_back({});
-//     this->variables.push_back({});
-// }
+void SemanticChecker::Visitor::enter_scope()
+{
+    this->function_map.push_back({});
+    this->variable_map.push_back({});
+}
 
-// void SemanticChecker::Visitor::leave_scope()
-// {
-//     --this->scope_level;
-//     this->functions.pop_back();
-//     this->variables.pop_back();
-// }
+void SemanticChecker::Visitor::leave_scope()
+{
+    this->function_map.pop_back();
+    this->variable_map.pop_back();
+}
 
 // void SemanticChecker::Visitor::register_globals(const Program &node)
 // {
@@ -121,16 +119,14 @@ void SemanticChecker::Visitor::check_main_function(const FuncDefStmt &node)
           *node.return_type ==
               SimpleType(TypeEnum::U32, RefSpecifier::NON_REF)))
     {
-        this->report_and_set_false(
-            LogLevel::ERROR, L"wrong main function return type declaration");
+        this->report_error(L"wrong main function return type declaration");
     }
     // if (*node.return_type == SimpleType(TypeEnum::U32,
     // RefSpecifier::NON_REF))
     //     node.block->accept(*this);
     if (!node.params.empty())
     {
-        this->report_and_set_false(LogLevel::ERROR,
-                                   L"main cannot have any parameters");
+        this->report_error(L"main cannot have any parameters");
     }
 }
 
@@ -151,9 +147,8 @@ void SemanticChecker::Visitor::check_var_value_and_type(
             auto &value_type = this->last_type;
             if (!((!value_type && !node.type) ||
                   (value_type && node.type && *value_type == *node.type)))
-                this->report_and_set_false(
-                    LogLevel::ERROR, L"variable's declared type and assigned "
-                                     L"value's type don't match");
+                this->report_error(L"variable's declared type and assigned "
+                                   L"value's type don't match");
         }
     }
 }
@@ -223,13 +218,13 @@ auto SemanticChecker::Visitor::find_variable(const std::wstring &name)
 //     return nullptr;
 // }
 
-// void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt
-// &node)
-// {
-//     auto new_var = Variable(node.name, this->last_type, node.is_mut,
-//                             node.initial_value.has_value());
-//     this->variables.back().insert(std::make_shared<Variable>(new_var));
-// }
+void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt &node)
+{
+    auto type = (node.type) ? (*node.type) : (*this->last_type);
+    auto new_data =
+        VarData(type, node.is_mut, static_cast<bool>(node.initial_value));
+    this->variable_map.back().emplace(std::make_pair(node.name, new_data));
+}
 
 // void SemanticChecker::Visitor::register_local_function(const FuncDefStmt
 // &node)
@@ -423,10 +418,10 @@ auto SemanticChecker::Visitor::find_variable(const std::wstring &name)
 
 void SemanticChecker::Visitor::visit(const Block &node)
 {
-    // this->enter_scope();
+    this->enter_scope();
     for (auto &stmt : node.statements)
         this->visit(*stmt);
-    // this->leave_scope();
+    this->leave_scope();
 }
 
 // void SemanticChecker::Visitor::visit(const ReturnStmt &node)
@@ -471,6 +466,42 @@ void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
 void SemanticChecker::Visitor::visit(const AssignStmt &node)
 {
     this->visit(*node.lhs);
+    if (!this->is_assignable)
+    {
+        this->report_error(
+            L"left side of the assignment statement is non-assignable");
+        return;
+    }
+    auto lhs_type = *this->last_type;
+    this->visit(*node.rhs);
+    auto rhs_type = *this->last_type;
+    switch (node.type)
+    {
+    case AssignType::PLUS:
+    case AssignType::MINUS:
+    case AssignType::MUL:
+    case AssignType::DIV:
+
+    case AssignType::BIT_AND:
+    case AssignType::BIT_OR:
+    case AssignType::BIT_XOR:
+
+    case AssignType::NORMAL:
+        if (lhs_type != rhs_type)
+        {
+            this->report_error(L"assigned value type does not match the left "
+                               L"side of the assignment statement");
+        }
+        break;
+    case AssignType::SHL:
+    case AssignType::SHR:
+        break;
+    case AssignType::EXP:
+        break;
+    case AssignType::MOD:
+        break;
+    }
+
     // if (auto var = this->find_variable(node.name))
     // {
     //     if (!(var->mut))
@@ -501,23 +532,26 @@ void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
 {
     // this->check_variable_names(node);
     // this->check_function_names(node);
+    auto registerable = true;
     if (node.is_mut)
     {
         if (!(node.initial_value || node.type))
         {
-            this->report_and_set_false(LogLevel::ERROR,
-                                       L"mutable must have either a type or a "
-                                       L"value assigned to it");
+            this->report_error(L"mutable must have either a type or a "
+                               L"value assigned to it");
+            registerable = false;
         }
     }
     else if (!node.initial_value)
     {
-        this->report_and_set_false(
-            LogLevel::ERROR, L"constant must have a value assigned to it");
+        this->report_error(L"constant must have a value assigned to it");
+        if (!node.type)
+            registerable = false;
     }
     this->check_var_value_and_type(node);
     // this->check_var_name(node);
-    // this->register_local_variable(node);
+    if (registerable)
+        this->register_local_variable(node);
 }
 
 // void SemanticChecker::Visitor::visit(const ExternStmt &node)
@@ -543,33 +577,38 @@ void SemanticChecker::Visitor::visit(const Expression &node)
             [this](const U32Expr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
+                this->is_assignable = false;
             },
             [this](const F64Expr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
+                this->is_assignable = false;
             },
             [this](const CharExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
+                this->is_assignable = false;
             },
             [this](const BoolExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
+                this->is_assignable = false;
             },
             [this](const StringExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::STR, RefSpecifier::REF));
+                this->is_assignable = false;
             },
             [this](const VariableExpr &node) {
                 if (auto var = this->find_variable(node.name))
                 {
                     this->last_type = std::make_unique<Type>(var->type);
-                    this->referenced_var = node.name;
+                    this->is_assignable = var->mut;
                 }
                 else
                 {
-                    this->report_and_set_false(
-                        LogLevel::ERROR, L"referenced variable doesn't exist");
+                    this->report_error(L"referenced variable doesn't exist");
+                    this->is_assignable = false;
                     this->last_type = nullptr;
                 }
             },
@@ -600,7 +639,7 @@ void SemanticChecker::Visitor::visit(const Statement &node)
             //    [this](const BreakStmt &node) { this->visit(node); },
             //    [this](const ContinueStmt &node) { this->visit(node); },
             [this](const FuncDefStmt &node) { this->visit(node); },
-            //    [this](const AssignStmt &node) { this->visit(node); },
+            [this](const AssignStmt &node) { this->visit(node); },
             //    [this](const ExprStmt &node) { this->visit(node); },
             [this](const VarDeclStmt &node) { this->visit(node); },
             //    [this](const ExternStmt &node) { this->visit(node); },
@@ -618,14 +657,14 @@ void SemanticChecker::Visitor::visit(const Parameter &node)
 
 void SemanticChecker::Visitor::visit(const Program &node)
 {
-    // this->enter_scope();
+    this->enter_scope();
     // for (auto &ext : node.externs)
     //     this->visit(*ext);
     for (auto &var : node.globals)
         this->visit(*var);
     for (auto &func : node.functions)
         this->visit(*func);
-    // this->leave_scope();
+    this->leave_scope();
 }
 
 bool SemanticChecker::verify(const Program &program)

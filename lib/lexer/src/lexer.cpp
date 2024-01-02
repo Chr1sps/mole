@@ -74,7 +74,7 @@ const std::map<wchar_t, CharNode> Lexer::char_nodes{
               CHAR_NODE(L'=', ASSIGN_MINUS)),
     CHAR_NODE(L'*', STAR, CHAR_NODE(L'=', ASSIGN_STAR)),
     CHAR_NODE(L'%', PERCENT, CHAR_NODE(L'=', ASSIGN_PERCENT)),
-    CHAR_NODE(L'~', BIT_NEG, CHAR_NODE(L'=', ASSIGN_BIT_NEG)),
+    CHAR_NODE(L'~', BIT_NEG),
     CHAR_NODE(L'=', ASSIGN, CHAR_NODE(L'>', LAMBDA_ARROW),
               CHAR_NODE(L'=', EQUAL)),
     CHAR_NODE(L'<', LESS, CHAR_NODE(L'=', LESS_EQUAL),

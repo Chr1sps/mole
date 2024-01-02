@@ -28,8 +28,7 @@ enum class TokenType
     PERCENT,        // '%'
     ASSIGN_PERCENT, // '%='
 
-    BIT_NEG,        // '~'
-    ASSIGN_BIT_NEG, // '~='
+    BIT_NEG, // '~'
 
     ASSIGN, // '='
     EQUAL,  // '=='
