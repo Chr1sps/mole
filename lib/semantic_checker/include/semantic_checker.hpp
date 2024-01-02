@@ -14,6 +14,7 @@ class SemanticChecker
     class Visitor : public AstVisitor, public Reporter
     {
         TypePtr last_type, return_type;
+        std::optional<std::wstring> referenced_var;
 
         template <typename... Args>
         void report_and_set_false(const LogLevel &log_level, Args &&...data)
@@ -22,36 +23,21 @@ class SemanticChecker
             this->value = false;
         }
 
-        // struct Variable
-        // {
-        //     std::wstring name;
-        //     TypePtr type;
-        //     bool mut;
-        //     bool initialized;
+        struct VarData
+        {
+            Type type;
+            bool mut, initialized;
 
-        //     Variable(const std::wstring &name, const TypePtr &type,
-        //              const bool &mut, const bool &initialized)
-        //         : name(name), type(clone_type_ptr(type)), mut(mut),
-        //           initialized(initialized)
-        //     {
-        //     }
-        // };
+            VarData(const Type &type, const bool &mut,
+                    const bool &initialized = false)
+                : type(type), mut(mut), initialized(initialized)
+            {
+            }
+        };
 
-        // struct Function
-        // {
-        //     std::wstring name;
-        //     FunctionType type;
-
-        //     Function(const std::wstring &name, const FunctionType &type)
-        //         : name(name), type(type)
-        //     {
-        //     }
-        // };
-
-        // std::vector<std::unordered_set<std::shared_ptr<Variable>>>
-        // variables;
-        // std::vector<std::unordered_set<std::shared_ptr<Function>>>
-        // functions; std::vector<TypePtr> return_stack;
+        std::vector<std::unordered_map<std::wstring, VarData>> variable_map;
+        std::vector<std::unordered_map<std::wstring, FunctionType>>
+            function_map;
 
         // std::vector<size_t> const_scopes;
 
@@ -67,14 +53,14 @@ class SemanticChecker
         // void check_function_params(const ExternStmt &node);
         // void check_function_block(const FuncDefStmt &node);
         // void check_variable_names(const VarDeclStmt &node);
-        // void check_main_function(const FuncDefStmt &node);
+        void check_main_function(const FuncDefStmt &node);
 
         void check_var_value_and_type(const VarDeclStmt &node);
 
         // void check_function_return(const FuncDefStmt &node);
 
-        // std::shared_ptr<Variable> find_variable(const std::wstring &name);
-        // std::shared_ptr<Function> find_function(const std::wstring &name);
+        std::optional<VarData> find_variable(const std::wstring &name);
+        std::optional<FunctionType> find_function(const std::wstring &name);
 
         // std::shared_ptr<Variable> find_outside_variable(
         //     const std::wstring &name);
@@ -100,10 +86,10 @@ class SemanticChecker
         // void visit(const CallExpr &node);
         // void visit(const LambdaCallExpr &node);
 
-        // void visit(const Block &node);
+        void visit(const Block &node);
         // void visit(const ReturnStmt &node);
-        // void visit(const AssignStmt &node);
-        // void visit(const FuncDefStmt &node);
+        void visit(const AssignStmt &node);
+        void visit(const FuncDefStmt &node);
         void visit(const VarDeclStmt &node);
         // void visit(const ExternStmt &node);
 

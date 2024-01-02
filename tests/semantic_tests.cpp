@@ -57,12 +57,12 @@ TEST_CASE("Variable's declared type and assigned value's type don't match")
         CHECK_INVALID(L"let var: f64 = 1;");
     }
 
-    // SECTION("String.")
-    // {
-    //     CHECK_VALID(L"let var: &str = \"a\";");
-    //     CHECK_INVALID(L"let var: &mut str = \"a\";");
-    //     CHECK_INVALID(L"let var: str = \"a\";");
-    // }
+    SECTION("String.")
+    {
+        CHECK_VALID(L"let var: &str = \"a\";");
+        CHECK_INVALID(L"let var: &mut str = \"a\";");
+        CHECK_INVALID(L"let var: str = \"a\";");
+    }
     // SECTION("Inside a function")
     // {
     //     CHECK_VALID(FN_WRAP(L"let var: i32 = 1;"));
