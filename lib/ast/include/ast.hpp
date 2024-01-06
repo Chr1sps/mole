@@ -2,6 +2,7 @@
 #define __AST_HPP__
 #include "overloaded.hpp"
 #include "position.hpp"
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -77,6 +78,7 @@ struct SimpleType
 
     constexpr SimpleType(const SimpleType &) noexcept = default;
     constexpr SimpleType(SimpleType &&) noexcept = default;
+    constexpr SimpleType &operator=(const SimpleType &) noexcept = default;
 };
 
 struct FunctionType
@@ -91,6 +93,7 @@ struct FunctionType
     constexpr FunctionType(const FunctionType &other) noexcept;
 
     constexpr FunctionType(FunctionType &&) noexcept = default;
+    constexpr FunctionType &operator=(const FunctionType &other) noexcept;
 };
 
 // =======================
@@ -154,12 +157,15 @@ enum class UnaryOpEnum
 {
     INC,
     DEC,
+    MINUS,
+
+    BIT_NEG,
 
     NEG,
-    BIT_NEG,
-    MINUS,
+
     REF,
     MUT_REF,
+
     DEREF
 };
 
@@ -538,10 +544,20 @@ inline constexpr FunctionType::FunctionType(const FunctionType &other) noexcept
     : arg_types(), return_type(clone_type_ptr(other.return_type)),
       is_const(other.is_const)
 {
-    for (const auto &arg : other.arg_types)
-    {
-        this->arg_types.push_back(clone_type_ptr(arg));
-    }
+    std::transform(other.arg_types.cbegin(), other.arg_types.cend(),
+                   std::back_inserter(this->arg_types),
+                   [](const TypePtr &arg) { return clone_type_ptr(arg); });
+}
+
+inline constexpr FunctionType &FunctionType::operator=(
+    const FunctionType &other) noexcept
+{
+    std::transform(other.arg_types.cbegin(), other.arg_types.cend(),
+                   std::back_inserter(this->arg_types),
+                   [](const TypePtr &arg) { return clone_type_ptr(arg); });
+    this->return_type = clone_type_ptr(other.return_type);
+    this->is_const = other.is_const;
+    return *this;
 }
 
 // =======================

@@ -77,7 +77,8 @@ All operators listed below are binary, unless indicated otherwise:
 |Bitwise|`<<`, `>>`, `&`, `\|`, `^`, unary `~`|
 |Logical|`&&`,`\|\|`, unary `!`               |
 |Cast|`as` (takes type name as a second parameter)|
-|Reference|Unary `&`|
+|Reference|Unary `&`, `&mut`|
+|Dereference|Unary `*`|
 
 Different types have different operator support:
 
@@ -87,11 +88,18 @@ Different types have different operator support:
 |Comparison   |only `==`,`!=`|✓|✓|✓|✓|only `==`,`!=`|
 |Bitwise      |X|✓|✓|X|X|X|
 |Logical      |✓|X|X|X|X|X|
-|Cast         |✓|✓|✓|✓|✓|✓*|
-|Reference    |✓|✓|✓|✓|✓|✓|
+|Cast         |✓|✓|✓|✓|✓|X*|
+|Reference    |✓|✓|✓|✓|✓|X**|
 
-\* `str` type has no casts supported, but the casting capability is still
-supported
+\* Technically, the `str` type has the casting capability supported, but as
+there are no types eligible for casting from `str`, this behaviour isn't
+allowed.
+
+\*\* Because `str` only exists in the referenced form (`&str`), referencing
+doesn't occur.
+
+All referenced types (except `str`) support dereferencing through the unary `*`
+operator.
 
 ### Expression precedence
 
@@ -101,7 +109,7 @@ The expressions in Mole are evaluated in the following order:
 |:-------------------------:|:-----------:|
 |Parenthesis||
 |Lambda calls, function calls, string indexing||
-|Unary operators `++`,`--`,`!`,`~`,`-`|   |
+|Unary operators `++`,`--`,`!`,`~`,`-`,`&`,`&mut`|   |
 |Casting operator `as`      |left-to-right|
 |`^^`                       |right-to-left|
 |`*`,`/`,`%`                |left-to-right|
@@ -312,7 +320,7 @@ match value {
     0 => {value = 1;}                   // matches 0
     1 | 2 => {value = 0;}               // matches 1 or 2
     if (value > 4) => {value = 2;}      // matches any value bigger than 4
-    _ => {value = 3;}                   // matches any value leftover
+    else => {value = 3;}                // matches any value leftover
 };
 ```
 
@@ -322,7 +330,7 @@ The example above shows all 4 possible scenarios of patterns:
 - comparing against multiple literals joined by the `|` sign
 - using the `if` guard, which matches if the expression inside evaluates to
   `true`
-- matching against all values left with the dummy `_` pattern.
+- matching against all values left with the dummy `else` pattern.
 
 The `if` guard accepts any expression that resolves to a boolean value.
 
@@ -365,7 +373,7 @@ Mole support two types of comments:
   */
   ```
 
-These comments are ignored by the compiler during the lexing phase.
+These comments are lexed but ignored during parsing.
 
 ## Grammar
 
@@ -620,7 +628,8 @@ UNARY_OP = INCREMENT |
            DECREMENT |
            NEG |
            BIT_NEG |
-           MINUS;
+           MINUS |
+           REF_SPECIFIER;
 BINARY_OP = EXP |
             STAR |
             SLASH |

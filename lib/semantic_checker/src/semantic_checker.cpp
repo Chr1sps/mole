@@ -4,6 +4,19 @@
 #include <algorithm>
 #include <optional>
 
+const std::unordered_multimap<TypeEnum, TypeEnum>
+    SemanticChecker::Visitor::cast_map = {
+        {TypeEnum::BOOL, TypeEnum::BOOL}, {TypeEnum::BOOL, TypeEnum::U32},
+        {TypeEnum::BOOL, TypeEnum::I32},  {TypeEnum::BOOL, TypeEnum::F64},
+        {TypeEnum::U32, TypeEnum::U32},   {TypeEnum::U32, TypeEnum::I32},
+        {TypeEnum::U32, TypeEnum::F64},   {TypeEnum::U32, TypeEnum::CHAR},
+        {TypeEnum::I32, TypeEnum::U32},   {TypeEnum::I32, TypeEnum::I32},
+        {TypeEnum::I32, TypeEnum::F64},   {TypeEnum::I32, TypeEnum::CHAR},
+        {TypeEnum::F64, TypeEnum::U32},   {TypeEnum::F64, TypeEnum::I32},
+        {TypeEnum::F64, TypeEnum::F64},   {TypeEnum::CHAR, TypeEnum::U32},
+        {TypeEnum::CHAR, TypeEnum::I32},  {TypeEnum::CHAR, TypeEnum::CHAR},
+};
+
 SemanticChecker::Visitor::Visitor() noexcept
     : last_type(nullptr), return_type(nullptr), is_assignable(false),
       value(true)
@@ -136,21 +149,36 @@ void SemanticChecker::Visitor::check_main_function(const FuncDefStmt &node)
 //         this->report_error(L"variable cannot be named 'main'");
 // }
 
-void SemanticChecker::Visitor::check_var_value_and_type(
+bool SemanticChecker::Visitor::check_var_value_and_type(
     const VarDeclStmt &node)
 {
     if (node.initial_value)
     {
         this->visit(*node.initial_value);
+        if (!this->last_type)
+        {
+            return false;
+        }
         if (node.type)
         {
             auto &value_type = this->last_type;
             if (!((!value_type && !node.type) ||
                   (value_type && node.type && *value_type == *node.type)))
+            {
                 this->report_error(L"variable's declared type and assigned "
                                    L"value's type don't match");
+                return false;
+            }
+        }
+        if (!this->is_initialized)
+        {
+            this->report_error(
+                L"initial value expression in a variable declaration contains"
+                L"an uninitialized variable");
+            return false;
         }
     }
+    return true;
 }
 
 auto SemanticChecker::Visitor::find_variable(const std::wstring &name)
@@ -221,8 +249,7 @@ auto SemanticChecker::Visitor::find_variable(const std::wstring &name)
 void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt &node)
 {
     auto type = (node.type) ? (*node.type) : (*this->last_type);
-    auto new_data =
-        VarData(type, node.is_mut, static_cast<bool>(node.initial_value));
+    auto new_data = VarData(type, node.is_mut, node.initial_value != nullptr);
     this->variable_map.back().emplace(std::make_pair(node.name, new_data));
 }
 
@@ -263,16 +290,18 @@ void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt &node)
 //     this->functions.back().insert(std::make_shared<Function>(new_func));
 // }
 
-// void SemanticChecker::Visitor::register_function_params(
-//     const FuncDefStmt &node)
-// {
-//     for (auto &param : node.params)
-//     {
-//         this->variables.back().insert(
-//             std::make_shared<Variable>(param->name, param->type, false,
-//             true));
-//     }
-// }
+void SemanticChecker::Visitor::register_function_params(
+    const FuncDefStmt &node)
+{
+    for (auto &param : node.params)
+    {
+        this->visit(*param);
+        auto type = *this->last_type;
+        auto new_data = VarData(type, false, true);
+        this->variable_map.back().emplace(
+            std::make_pair(param->name, new_data));
+    }
+}
 
 // void SemanticChecker::Visitor::unregister_function_params(
 //     const FuncDefStmt &node)
@@ -340,11 +369,63 @@ void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt &node)
 
 //     this->last_type = left_type;
 // }
+RefSpecifier get_ref_specifier(const UnaryOpEnum &op)
+{
+    switch (op)
+    {
+    case UnaryOpEnum::MUT_REF:
+        return RefSpecifier::MUT_REF;
+        break;
 
-// void SemanticChecker::Visitor::visit(const UnaryExpr &node)
-// {
-//     node.expr->accept(*this);
-// }
+    default:
+        return RefSpecifier::REF;
+        break;
+    }
+}
+
+void SemanticChecker::Visitor::visit(const UnaryExpr &node)
+{
+    this->visit(*node.expr);
+    switch (node.op)
+    {
+    case UnaryOpEnum::INC:
+    case UnaryOpEnum::DEC:
+    case UnaryOpEnum::MINUS:
+        break;
+
+    case UnaryOpEnum::BIT_NEG:
+        break;
+
+    case UnaryOpEnum::NEG:
+        break;
+
+    case UnaryOpEnum::MUT_REF:
+    case UnaryOpEnum::REF:
+        std::visit(
+            overloaded{
+                [this, &node](const SimpleType &type) {
+                    switch (type.ref_spec)
+                    {
+                    case RefSpecifier::NON_REF:
+                        this->last_type = std::make_unique<Type>(
+                            SimpleType(type.type, get_ref_specifier(node.op)));
+                        break;
+
+                    default:
+                        this->report_error(L"references cannot be referenced");
+                        break;
+                    }
+                },
+                [this](const FunctionType &) {
+                    this->report_error(
+                        L"function references cannot be referenced");
+                }},
+            *this->last_type);
+        break;
+    case UnaryOpEnum::DEREF:
+        break;
+    }
+}
 
 // void SemanticChecker::Visitor::visit(const CallExpr &node)
 // {
@@ -416,6 +497,47 @@ void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt &node)
 //     this->last_type = result_type;
 // }
 
+void SemanticChecker::Visitor::visit(const CastExpr &node)
+{
+    this->visit(*node.expr);
+    auto to_type = std::get<SimpleType>((*node.type));
+    std::visit(
+        overloaded{
+            [this, &to_type](const SimpleType &from_type) {
+                if (from_type.ref_spec != RefSpecifier::NON_REF)
+                {
+                    this->report_error(L"cannot cast from a reference value");
+                }
+                if (to_type.ref_spec != RefSpecifier::NON_REF)
+                {
+                    this->report_error(L"cannot cast to a reference type");
+                    this->last_type = nullptr;
+                    return;
+                }
+                auto iter = std::find_if(
+                    this->cast_map.cbegin(), this->cast_map.cend(),
+                    [&from_type, &to_type](const auto &entry) {
+                        return entry.first == from_type.type &&
+                               entry.second == to_type.type;
+                    });
+                if (iter == this->cast_map.cend())
+                {
+                    this->report_error(
+                        L"cast between two types not supported");
+                    this->last_type = nullptr;
+                }
+                else
+                {
+                    this->last_type = std::make_unique<Type>(to_type);
+                }
+            },
+            [this](const FunctionType &) {
+                this->report_error(L"function references cannot be cast");
+                this->last_type = nullptr;
+            }},
+        *this->last_type);
+}
+
 void SemanticChecker::Visitor::visit(const Block &node)
 {
     this->enter_scope();
@@ -448,13 +570,15 @@ void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
     // this->check_function_params(node);
 
     // this->return_stack.push_back(nullptr);
-    // this->register_function_params(node);
     // this->check_function_block(node);
     // this->visit(*node.block);
+    this->enter_scope();
+    // this->register_function_params(node);
     for (const auto &stmt : node.block->statements)
     {
         this->visit(*stmt);
     }
+    this->leave_scope();
     // this->unregister_function_params(node);
 
     // this->check_function_return(node);
@@ -492,6 +616,11 @@ void SemanticChecker::Visitor::visit(const AssignStmt &node)
             this->report_error(L"assigned value type does not match the left "
                                L"side of the assignment statement");
         }
+        if (!this->is_initialized)
+        {
+            this->report_error(L"expression assigned to a variable contains "
+                               L"an uninitialized variable");
+        }
         break;
     case AssignType::SHL:
     case AssignType::SHR:
@@ -528,6 +657,11 @@ void SemanticChecker::Visitor::visit(const AssignStmt &node)
     // }
 }
 
+void SemanticChecker::Visitor::visit(const ExprStmt &node)
+{
+    this->visit(*node.expr);
+}
+
 void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
 {
     // this->check_variable_names(node);
@@ -548,7 +682,7 @@ void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
         if (!node.type)
             registerable = false;
     }
-    this->check_var_value_and_type(node);
+    registerable &= this->check_var_value_and_type(node);
     // this->check_var_name(node);
     if (registerable)
         this->register_local_variable(node);
@@ -578,46 +712,53 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
                 this->is_assignable = false;
+                this->is_initialized = true;
             },
             [this](const F64Expr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
                 this->is_assignable = false;
+                this->is_initialized = true;
             },
             [this](const CharExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
                 this->is_assignable = false;
+                this->is_initialized = true;
             },
             [this](const BoolExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
                 this->is_assignable = false;
+                this->is_initialized = true;
             },
             [this](const StringExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::STR, RefSpecifier::REF));
                 this->is_assignable = false;
+                this->is_initialized = true;
             },
             [this](const VariableExpr &node) {
                 if (auto var = this->find_variable(node.name))
                 {
                     this->last_type = std::make_unique<Type>(var->type);
                     this->is_assignable = var->mut;
+                    this->is_initialized = var->initialized;
                 }
                 else
                 {
                     this->report_error(L"referenced variable doesn't exist");
                     this->is_assignable = false;
                     this->last_type = nullptr;
+                    this->is_initialized = false;
                 }
             },
             //    [this](const BinaryExpr &node) { this->visit(node); },
-            //    [this](const UnaryExpr &node) { this->visit(node); },
+            [this](const UnaryExpr &node) { this->visit(node); },
             //    [this](const CallExpr &node) { this->visit(node); },
             //    [this](const LambdaCallExpr &node) { this->visit(node); },
             //    [this](const IndexExpr &node) { this->visit(node); },
-            //    [this](const CastExpr &node) { this->visit(node); }},
+            [this](const CastExpr &node) { this->visit(node); },
             [](const auto &) {}},
         node);
 }
@@ -640,7 +781,7 @@ void SemanticChecker::Visitor::visit(const Statement &node)
             //    [this](const ContinueStmt &node) { this->visit(node); },
             [this](const FuncDefStmt &node) { this->visit(node); },
             [this](const AssignStmt &node) { this->visit(node); },
-            //    [this](const ExprStmt &node) { this->visit(node); },
+            [this](const ExprStmt &node) { this->visit(node); },
             [this](const VarDeclStmt &node) { this->visit(node); },
             //    [this](const ExternStmt &node) { this->visit(node); },
             [](const auto &) {}},

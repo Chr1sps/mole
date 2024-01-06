@@ -72,6 +72,156 @@ TEST_CASE("Variable's declared type and assigned value's type don't match")
     }
 }
 
+TEST_CASE("Unary expressions.")
+{
+    SECTION("On bool.")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
+                              L"++var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
+                              L"--var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
+                              L"-var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
+                              L"~var;"));
+        CHECK_VALID(FN_WRAP(L"let var: bool = true;"
+                            L"!var;"));
+        CHECK_VALID(FN_WRAP(L"let var: bool = true;"
+                            L"&var;"));
+        CHECK_VALID(FN_WRAP(L"let var: bool = true;"
+                            L"&mut var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
+                              L"*var;"));
+    }
+}
+
+TEST_CASE("Casting.")
+{
+    SECTION("From bool")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: bool = true;"
+                            L"var as bool;"));
+        CHECK_VALID(FN_WRAP(L"let var: bool = true;"
+                            L"var as u32;"));
+        CHECK_VALID(FN_WRAP(L"let var: bool = true;"
+                            L"var as i32;"));
+        CHECK_VALID(FN_WRAP(L"let var: bool = true;"
+                            L"var as f64;"));
+        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
+                              L"var as char;"));
+    }
+    SECTION("From u32")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var: u32 = 1;"
+                              L"var as bool;"));
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
+                            L"var as u32;"));
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
+                            L"var as i32;"));
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
+                            L"var as f64;"));
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
+                            L"var as char;"));
+    }
+    // SECTION("From i32")
+    // {
+    //     CHECK_INVALID(FN_WRAP(L"let var: i32 = -1;"
+    //                           L"var as bool;"));
+    //     CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+    //                         L"var as u32;"));
+    //     CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+    //                         L"var as i32;"));
+    //     CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+    //                         L"var as f64;"));
+    //     CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+    //                         Lvar as char;"));
+    // }
+    SECTION("From f64")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var: f64 = 1.0;"
+                              L"var as bool;"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
+                            L"var as u32;"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
+                            L"var as i32;"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
+                            L"var as f64;"));
+        CHECK_INVALID(FN_WRAP(L"let var: f64 = 1.0;"
+                              L"var as char;"));
+    }
+    SECTION("From char")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
+                              L"var as bool;"));
+        CHECK_VALID(FN_WRAP(L"let var: char = 'a';"
+                            L"var as u32;"));
+        CHECK_VALID(FN_WRAP(L"let var: char = 'a';"
+                            L"var as i32;"));
+        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
+                              L"var as f64;"));
+        CHECK_VALID(FN_WRAP(L"let var: char = 'a';"
+                            L"var as char;"));
+    }
+    SECTION("Casting from or to strings.")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
+                              L"var as str;"));
+        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
+                              L"var as &str;"));
+        CHECK_INVALID(FN_WRAP(L"let var = \"a\";"
+                              L"var as char;"));
+        CHECK_INVALID(FN_WRAP(L"let var = \"a\";"
+                              L"var as i32;"));
+        CHECK_INVALID(FN_WRAP(L"let var = \"a\";"
+                              L"var as str;"));
+        CHECK_INVALID(FN_WRAP(L"let var = \"a\";"
+                              L"var as &str;"));
+        CHECK_INVALID(FN_WRAP(L"let var = \"a\";"
+                              L"var as &mut str;"));
+    }
+    SECTION("Casting from or to references.")
+    {
+
+        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
+                              L"var as &bool;"));
+        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
+                              L"let refer: &bool = &var;"
+                              L"refer as i32;"));
+        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
+                              L"let refer = &mut var;"
+                              L"refer as i32;"));
+    }
+}
+
+TEST_CASE("Assignments.")
+{
+    SECTION("Normal assignments.")
+    {
+        CHECK_VALID(FN_WRAP(L"let mut var = 1; var = 2;"));
+        CHECK_VALID(FN_WRAP(L"let mut var = 1;"
+                            L"let refer: &u32 = &var;"));
+        CHECK_VALID(FN_WRAP(L"let mut var = 1;"
+                            L"let refer = &var;"));
+        CHECK_VALID(FN_WRAP(L"let mut var = 1;"
+                            L"let refer = &mut var;"));
+        CHECK_INVALID(FN_WRAP(L"let mut var = 1;"
+                              L" let refer: &mut u32 = &var;"));
+        CHECK_INVALID(FN_WRAP(L"let mut var = 1;"
+                              L"let refer: &u32 = &mut var;"));
+        CHECK_INVALID(FN_WRAP(L"let mut var = \"some text\";"
+                              L"let string = &var;"));
+        CHECK_INVALID(FN_WRAP(L"let mut var = \"some text\";"
+                              L"let string = &mut var;"));
+    }
+    SECTION("Simple assignments.")
+    {
+        CHECK_VALID(FN_WRAP(L"let mut var = 1; var += 1;"));
+        CHECK_VALID(FN_WRAP(L"let mut var = 1; var -= 1;"));
+        CHECK_VALID(FN_WRAP(L"let mut var = 1; var *= 1;"));
+        CHECK_VALID(FN_WRAP(L"let mut var = 1; var /= 1;"));
+    }
+}
+
 TEST_CASE("Constant has no value assigned.")
 {
     CHECK_INVALID(L"let var: u32;");
@@ -84,33 +234,31 @@ TEST_CASE("Constant cannot be reassigned.")
     CHECK_VALID(FN_WRAP(L"let mut value = 5; value = 4;"));
 }
 
-// TEST_CASE("Using an uninitialized variable in an expression.")
-// {
-//     CHECK_INVALID(
-//         FN_WRAP(L"let mut value: u32; let new_value = (4 + value);"));
-// }
+TEST_CASE("Using an uninitialized variable in an expression.")
+{
+    CHECK_INVALID(FN_WRAP(L"let mut value: u32; let new_value = value;"));
+    CHECK_INVALID(FN_WRAP(L"let mut value: u32;"
+                          L"let mut new_value: u32;"
+                          L"new_value = value;"));
+    CHECK_VALID(FN_WRAP(L"let mut value: u32 = 3; let new_value = value;"));
+    CHECK_VALID(FN_WRAP(L"let mut value: u32 = 3;"
+                        L"let mut new_value: u32;"
+                        L"new_value = value;"));
+}
 
-// TEST_CASE("Referenced value/function is not in scope.")
-// {
-//     SECTION("Default cases.")
-//     {
-//         CHECK_INVALID(
-//             L"fn foo(){let value = 5;} fn goo(){let new_value = value;}");
-//         // CHECK_INVALID(L"fn foo(){fn boo()=>u32{return 5;}}"
-//         //               L"fn goo(){let new_value = boo();}");
-//     }
-//     SECTION("Function arguments.")
-//     {
-//         CHECK_VALID(L"fn foo(a: u32, b: u32) => u32 {return a + b;}");
-//     }
-//     // SECTION("Lambdas.")
-//     // {
-//     //     CHECK_INVALID(L"fn foo(){fn boo()=>u32{return 5;}}"
-//     //                   L"fn goo(){let new_value = boo(2, ...);}");
-//     //     CHECK_INVALID(L"fn foo(){fn boo()=>u32{return 5;}}"
-//     //                   L"fn goo(){let new_value = boo(2, ...);}");
-//     // }
-// }
+TEST_CASE("Referenced value/function is not in scope.")
+{
+    SECTION("Default cases.")
+    {
+        CHECK_INVALID(
+            L"fn foo(){let value = 5;} fn goo(){let new_value = value;}");
+    }
+    // SECTION("Function arguments.")
+    // {
+    //     CHECK_VALID(L"fn foo(a: u32, b: u32) => u32 {return a + b;}");
+    //     CHECK_INVALID(L"fn foo(a: u32) => u32 {return a + b;}");
+    // }
+}
 
 // TEST_CASE("Function's argument type is mismatched.")
 // {

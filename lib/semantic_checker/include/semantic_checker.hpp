@@ -13,9 +13,10 @@ class SemanticChecker
 {
     class Visitor : public AstVisitor, public Reporter
     {
+        static const std::unordered_multimap<TypeEnum, TypeEnum> cast_map;
         TypePtr last_type, return_type;
         // std::optional<std::wstring> referenced_var;
-        bool is_assignable;
+        bool is_assignable, is_initialized;
 
         template <typename... Args> void report_error(Args &&...data)
         {
@@ -32,6 +33,20 @@ class SemanticChecker
                     const bool &initialized = false)
                 : type(type), mut(mut), initialized(initialized)
             {
+            }
+
+            VarData(const VarData &other)
+                : type(other.type), mut(other.mut),
+                  initialized(other.initialized)
+            {
+            }
+
+            VarData &operator=(const VarData &other)
+            {
+                this->type = other.type;
+                this->mut = other.mut;
+                this->initialized = other.initialized;
+                return *this;
             }
         };
 
@@ -55,7 +70,7 @@ class SemanticChecker
         // void check_variable_names(const VarDeclStmt &node);
         void check_main_function(const FuncDefStmt &node);
 
-        void check_var_value_and_type(const VarDeclStmt &node);
+        bool check_var_value_and_type(const VarDeclStmt &node);
 
         // void check_function_return(const FuncDefStmt &node);
 
@@ -73,7 +88,7 @@ class SemanticChecker
         // void register_local_function(const FuncDefStmt &node);
         // void register_local_function(const ExternStmt &node);
 
-        // void register_function_params(const FuncDefStmt &node);
+        void register_function_params(const FuncDefStmt &node);
         // void unregister_function_params(const FuncDefStmt &node);
 
         // void check_var_name(const VarDeclStmt &node);
@@ -82,13 +97,15 @@ class SemanticChecker
         // void visit(const U32Expr &node);
         // void visit(const F64Expr &node);
         // void visit(const BinaryExpr &node);
-        // void visit(const UnaryExpr &node);
+        void visit(const UnaryExpr &node);
         // void visit(const CallExpr &node);
         // void visit(const LambdaCallExpr &node);
+        void visit(const CastExpr &node);
 
         void visit(const Block &node);
         // void visit(const ReturnStmt &node);
         void visit(const AssignStmt &node);
+        void visit(const ExprStmt &node);
         void visit(const FuncDefStmt &node);
         void visit(const VarDeclStmt &node);
         // void visit(const ExternStmt &node);
