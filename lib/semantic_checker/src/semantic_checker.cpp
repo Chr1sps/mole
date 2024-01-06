@@ -647,52 +647,75 @@ void SemanticChecker::Visitor::visit(const CallExpr &node)
     }
 }
 
-// void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
-// {
-//     node.callable->accept(*this);
-//     auto func = std::dynamic_pointer_cast<FunctionType>(this->last_type);
-//     if (!func)
-//     {
-//         this->report_error(L"given function is not a callable");
-//     }
+void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
+{
+    this->visit(*node.callable);
+    if (!this->last_type)
+        return;
 
-//     if (node.args.size() != func->arg_types.size())
-//     {
-//         if (!((node.args.size() < func->arg_types.size()) &&
-//         node.is_ellipsis))
-//             this->report_error(
-//                 L"wrong amount of arguments in an in-place lambda");
-//     }
-
-//     auto new_args = std::vector<TypePtr>();
-//     for (size_t i = 0; i < func->arg_types.size(); ++i)
-//     {
-//         auto expected_type = func->arg_types[i];
-//         if (i < node.args.size())
-//         {
-//             auto &param_type = node.args[i];
-//             if (param_type)
-//             {
-//                 (*param_type)->accept(*this);
-//                 auto actual_type = this->last_type;
-//                 if (*expected_type != *actual_type)
-//                     this->report_error(
-//                         L"in-place lambda argument type is mismatched");
-//             }
-//             else
-//             {
-//                 new_args.push_back(expected_type);
-//             }
-//         }
-//         else
-//         {
-//             new_args.push_back(expected_type);
-//         }
-//     }
-//     auto result_type = std::make_shared<FunctionType>(
-//         new_args, func->return_type, func->is_const);
-//     this->last_type = result_type;
-// }
+    if (std::holds_alternative<SimpleType>(*this->last_type))
+    {
+        this->report_expr_error(L"value of primitive type `",
+                                get_type_string(*this->last_type),
+                                L"` cannot be called");
+        return;
+    }
+    auto type = std::get<FunctionType>(*this->last_type);
+    auto expected_arg_count = type.arg_types.size();
+    auto arg_count = node.args.size();
+    if (arg_count != expected_arg_count)
+    {
+        this->report_expr_error(
+            L"function argument count incorrect in a lambda call "
+            L"expression: expected ",
+            expected_arg_count, L" arguments, found ", arg_count);
+    }
+    auto is_valid = true;
+    auto is_const = type.is_const;
+    std::vector<TypePtr> remaining_args;
+    for (const auto &[expected_type, arg] :
+         std::views::zip(type.arg_types, node.args))
+    {
+        if (arg)
+        {
+            this->visit(*arg);
+            if (!this->last_type)
+            {
+                is_valid = false;
+                continue;
+            }
+            auto actual_type = *this->last_type;
+            if (*expected_type != actual_type)
+            {
+                this->report_expr_error(L"function call argument type "
+                                        L"mismatched - expected type: `",
+                                        get_type_string(expected_type),
+                                        L"`, found: `",
+                                        get_type_string(actual_type), L"`");
+                is_valid = false;
+            }
+            if (std::holds_alternative<SimpleType>(actual_type))
+            {
+                auto simple = std::get<SimpleType>(actual_type);
+                if (simple.ref_spec != RefSpecifier::NON_REF)
+                {
+                    is_const = false;
+                }
+            }
+        }
+        else
+        {
+            remaining_args.emplace_back(clone_type_ptr(expected_type));
+        }
+    }
+    if (is_valid)
+    {
+        auto fn_type =
+            FunctionType(std::move(remaining_args),
+                         clone_type_ptr(type.return_type), is_const);
+        this->last_type = std::make_unique<Type>(std::move(fn_type));
+    }
+}
 
 void SemanticChecker::Visitor::visit(const IndexExpr &node)
 {
@@ -940,64 +963,63 @@ void SemanticChecker::Visitor::visit(const Type &node)
 void SemanticChecker::Visitor::visit(const Expression &node)
 {
     std::visit(
-        overloaded{
-            [this](const U32Expr &node) {
-                this->last_type = std::make_unique<Type>(
-                    SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
-                this->is_assignable = false;
-                this->is_initialized = true;
-            },
-            [this](const F64Expr &node) {
-                this->last_type = std::make_unique<Type>(
-                    SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
-                this->is_assignable = false;
-                this->is_initialized = true;
-            },
-            [this](const CharExpr &node) {
-                this->last_type = std::make_unique<Type>(
-                    SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
-                this->is_assignable = false;
-                this->is_initialized = true;
-            },
-            [this](const BoolExpr &node) {
-                this->last_type = std::make_unique<Type>(
-                    SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
-                this->is_assignable = false;
-                this->is_initialized = true;
-            },
-            [this](const StringExpr &node) {
-                this->last_type = std::make_unique<Type>(
-                    SimpleType(TypeEnum::STR, RefSpecifier::REF));
-                this->is_assignable = false;
-                this->is_initialized = true;
-            },
-            [this](const VariableExpr &node) {
-                if (auto var = this->find_variable(node.name))
-                {
-                    this->last_type = std::make_unique<Type>(var->type);
-                    this->is_assignable = var->mut;
-                    this->is_initialized = var->initialized;
-                }
-                else if (auto func = this->find_function(node.name))
-                {
-                    this->last_type = std::make_unique<Type>(*func);
-                    this->is_assignable = false;
-                    this->is_initialized = true;
-                }
-                else
-                {
-                    this->report_expr_error(
-                        L"referenced variable doesn't exist");
-                    this->is_initialized = false;
-                }
-            },
-            //    [this](const BinaryExpr &node) { this->visit(node); },
-            [this](const UnaryExpr &node) { this->visit(node); },
-            [this](const CallExpr &node) { this->visit(node); },
-            //    [this](const LambdaCallExpr &node) { this->visit(node); },
-            [this](const IndexExpr &node) { this->visit(node); },
-            [this](const CastExpr &node) { this->visit(node); },
-            [](const auto &) {}},
+        overloaded{[this](const U32Expr &node) {
+                       this->last_type = std::make_unique<Type>(
+                           SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
+                       this->is_assignable = false;
+                       this->is_initialized = true;
+                   },
+                   [this](const F64Expr &node) {
+                       this->last_type = std::make_unique<Type>(
+                           SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
+                       this->is_assignable = false;
+                       this->is_initialized = true;
+                   },
+                   [this](const CharExpr &node) {
+                       this->last_type = std::make_unique<Type>(
+                           SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
+                       this->is_assignable = false;
+                       this->is_initialized = true;
+                   },
+                   [this](const BoolExpr &node) {
+                       this->last_type = std::make_unique<Type>(
+                           SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
+                       this->is_assignable = false;
+                       this->is_initialized = true;
+                   },
+                   [this](const StringExpr &node) {
+                       this->last_type = std::make_unique<Type>(
+                           SimpleType(TypeEnum::STR, RefSpecifier::REF));
+                       this->is_assignable = false;
+                       this->is_initialized = true;
+                   },
+                   [this](const VariableExpr &node) {
+                       if (auto var = this->find_variable(node.name))
+                       {
+                           this->last_type = std::make_unique<Type>(var->type);
+                           this->is_assignable = var->mut;
+                           this->is_initialized = var->initialized;
+                       }
+                       else if (auto func = this->find_function(node.name))
+                       {
+                           this->last_type = std::make_unique<Type>(*func);
+                           this->is_assignable = false;
+                           this->is_initialized = true;
+                       }
+                       else
+                       {
+                           this->report_expr_error(
+                               L"referenced variable doesn't exist");
+                           this->is_initialized = false;
+                       }
+                   },
+                   //    [this](const BinaryExpr &node) { this->visit(node); },
+                   [this](const UnaryExpr &node) { this->visit(node); },
+                   [this](const CallExpr &node) { this->visit(node); },
+                   [this](const LambdaCallExpr &node) { this->visit(node); },
+                   [this](const IndexExpr &node) { this->visit(node); },
+                   [this](const CastExpr &node) { this->visit(node); },
+                   [](const auto &) {}},
         node);
 }
 

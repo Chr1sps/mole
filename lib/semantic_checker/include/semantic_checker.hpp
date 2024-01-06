@@ -103,7 +103,7 @@ class SemanticChecker
         // void visit(const BinaryExpr &node);
         void visit(const UnaryExpr &node);
         void visit(const CallExpr &node);
-        // void visit(const LambdaCallExpr &node);
+        void visit(const LambdaCallExpr &node);
         void visit(const IndexExpr &node);
         void visit(const CastExpr &node);
 

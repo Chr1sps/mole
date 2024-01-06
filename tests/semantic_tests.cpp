@@ -221,6 +221,52 @@ TEST_CASE("Function calls.")
 
 TEST_CASE("Lambda calls.")
 {
+    SECTION("Valid calls.")
+    {
+        CHECK_VALID(L"fn test(){}"
+                    L"fn main(){"
+                    L"  test@();"
+                    L"}");
+        CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                    L"fn main(){"
+                    L"  test@(_, _);"
+                    L"}");
+        CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                    L"fn main(){"
+                    L"  test@(1, _);"
+                    L"}");
+        CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                    L"fn main(){"
+                    L"  test@(_, 2);"
+                    L"}");
+        CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                    L"fn main(){"
+                    L"  test@(1, 2);"
+                    L"}");
+    }
+    SECTION("Mismatched argument count.")
+    {
+        CHECK_INVALID(L"fn test(){}"
+                      L"fn main(){"
+                      L"  test@(1);"
+                      L"}");
+        CHECK_INVALID(L"fn test(){}"
+                      L"fn main(){"
+                      L"  test@(1, _);"
+                      L"}");
+        CHECK_INVALID(L"fn test(a: u32, b: u32){}"
+                      L"fn main(){"
+                      L"  test@(1);"
+                      L"}");
+        CHECK_INVALID(L"fn test(a: u32, b: u32){}"
+                      L"fn main(){"
+                      L"  test@(1, 2, _);"
+                      L"}");
+        CHECK_INVALID(L"fn test(a: u32, b: u32){}"
+                      L"fn main(){"
+                      L"  test@(_, 2, 3);"
+                      L"}");
+    }
 }
 
 TEST_CASE("Indexing.")
