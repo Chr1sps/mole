@@ -24,6 +24,13 @@ class SemanticChecker
             this->value = false;
         }
 
+        template <typename... Args> void report_expr_error(Args &&...data)
+        {
+            this->report_error(data...);
+            this->last_type = nullptr;
+            this->is_assignable = false;
+        }
+
         struct VarData
         {
             Type type;

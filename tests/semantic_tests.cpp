@@ -93,6 +93,101 @@ TEST_CASE("Unary expressions.")
         CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
                               L"*var;"));
     }
+    SECTION("On u32.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
+                            L"++var;"));
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
+                            L"--var;"));
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
+                            L"-var;"));
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
+                            L"~var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: u32 = 1;"
+                              L"!var;"));
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
+                            L"&var;"));
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
+                            L"&mut var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: u32 = 1;"
+                              L"*var;"));
+    }
+    SECTION("On i32.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+                            L"++var;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+                            L"--var;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+                            L"-var;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+                            L"~var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: i32 = -1;"
+                              L"!var;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+                            L"&var;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+                            L"&mut var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: i32 = -1;"
+                              L"*var;"));
+    }
+    SECTION("On f64.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
+                            L"++var;"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
+                            L"--var;"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
+                            L"-var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: f64 = 1.0;"
+                              L"~var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: f64 = 1.0;"
+                              L"!var;"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
+                            L"&var;"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
+                            L"&mut var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: f64 = 1.0;"
+                              L"*var;"));
+    }
+    SECTION("On char.")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
+                              L"++var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
+                              L"--var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
+                              L"-var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
+                              L"~var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
+                              L"!var;"));
+        CHECK_VALID(FN_WRAP(L"let var: char = 'a';"
+                            L"&var;"));
+        CHECK_VALID(FN_WRAP(L"let var: char = 'a';"
+                            L"&mut var;"));
+        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
+                              L"*var;"));
+    }
+    SECTION("On string.")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
+                              L"++var;"));
+        CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
+                              L"--var;"));
+        CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
+                              L"-var;"));
+        CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
+                              L"~var;"));
+        CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
+                              L"!var;"));
+        CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
+                              L"&var;"));
+        CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
+                              L"&mut var;"));
+        CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
+                              L"*var;"));
+    }
 }
 
 TEST_CASE("Casting.")
@@ -123,19 +218,19 @@ TEST_CASE("Casting.")
         CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
                             L"var as char;"));
     }
-    // SECTION("From i32")
-    // {
-    //     CHECK_INVALID(FN_WRAP(L"let var: i32 = -1;"
-    //                           L"var as bool;"));
-    //     CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
-    //                         L"var as u32;"));
-    //     CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
-    //                         L"var as i32;"));
-    //     CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
-    //                         L"var as f64;"));
-    //     CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
-    //                         Lvar as char;"));
-    // }
+    SECTION("From i32")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var: i32 = -1;"
+                              L"var as bool;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+                            L"var as u32;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+                            L"var as i32;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+                            L"var as f64;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
+                            L"var as char;"));
+    }
     SECTION("From f64")
     {
         CHECK_INVALID(FN_WRAP(L"let var: f64 = 1.0;"

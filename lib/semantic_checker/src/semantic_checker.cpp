@@ -2,7 +2,115 @@
 #include "ast.hpp"
 #include "string_builder.hpp"
 #include <algorithm>
+#include <expected>
 #include <optional>
+#include <ranges>
+#include <string_view>
+
+namespace
+{
+std::unordered_map<TypeEnum, std::wstring> type_map = {
+    {TypeEnum::BOOL, L"bool"}, {TypeEnum::U32, L"u32"},
+    {TypeEnum::I32, L"i32"},   {TypeEnum::F64, L"f64"},
+    {TypeEnum::CHAR, L"char"}, {TypeEnum::STR, L"str"},
+};
+std::unordered_map<RefSpecifier, std::wstring> ref_spec_map = {
+    {RefSpecifier::NON_REF, L""},
+    {RefSpecifier::REF, L"&"},
+    {RefSpecifier::MUT_REF, L"&mut "},
+};
+std::unordered_map<UnaryOpEnum,
+                   std::unordered_map<TypeEnum, std::optional<TypeEnum>>>
+    unary_map = {
+        {UnaryOpEnum::INC,
+         {
+             {TypeEnum::BOOL, {}},
+             {TypeEnum::U32, {TypeEnum::U32}},
+             {TypeEnum::I32, {TypeEnum::I32}},
+             {TypeEnum::F64, {TypeEnum::F64}},
+             {TypeEnum::CHAR, {}},
+         }},
+        {UnaryOpEnum::DEC,
+         {
+             {TypeEnum::BOOL, {}},
+             {TypeEnum::U32, {TypeEnum::U32}},
+             {TypeEnum::I32, {TypeEnum::I32}},
+             {TypeEnum::F64, {TypeEnum::F64}},
+             {TypeEnum::CHAR, {}},
+         }},
+        {UnaryOpEnum::MINUS,
+         {
+             {TypeEnum::BOOL, {}},
+             {TypeEnum::U32, {TypeEnum::I32}},
+             {TypeEnum::I32, {TypeEnum::I32}},
+             {TypeEnum::F64, {TypeEnum::F64}},
+             {TypeEnum::CHAR, {}},
+         }},
+        {UnaryOpEnum::BIT_NEG,
+         {
+             {TypeEnum::BOOL, {}},
+             {TypeEnum::U32, {TypeEnum::U32}},
+             {TypeEnum::I32, {TypeEnum::I32}},
+             {TypeEnum::F64, {}},
+             {TypeEnum::CHAR, {}},
+         }},
+        {UnaryOpEnum::NEG,
+         {
+             {TypeEnum::BOOL, {TypeEnum::BOOL}},
+             {TypeEnum::U32, {}},
+             {TypeEnum::I32, {}},
+             {TypeEnum::F64, {}},
+             {TypeEnum::CHAR, {}},
+         }},
+};
+
+std::unordered_map<UnaryOpEnum, std::wstring> unary_str_map = {
+    {UnaryOpEnum::INC, L"incremented"},
+    {UnaryOpEnum::DEC, L"decremented"},
+    {UnaryOpEnum::MINUS, L"negated"},
+    {UnaryOpEnum::NEG, L"negated logically"},
+    {UnaryOpEnum::BIT_NEG, L"negated bitwise"},
+};
+
+constexpr std::wstring get_type_string(const Type &type)
+{
+    return std::visit(
+        overloaded{[](const SimpleType &type) {
+                       return ref_spec_map[type.ref_spec] +
+                              type_map[type.type];
+                   },
+                   [](const FunctionType &type) {
+                       std::wstring result = L"fn";
+                       if (type.is_const)
+                           result += L" const";
+                       auto args_string =
+                           type.arg_types |
+                           std::views::transform(
+                               [](const TypePtr &type_ptr) -> std::wstring {
+                                   return get_type_string(*type_ptr);
+                               }) |
+                           std::views::join_with(L',');
+                       result += L'(';
+                       for (const auto &i : args_string)
+                       {
+                           result += i;
+                       }
+                       result += L')';
+                       if (type.return_type)
+                       {
+                           result += L"=>";
+                           result += get_type_string(*type.return_type);
+                       }
+                       return result;
+                   }},
+        type);
+}
+
+std::wstring get_type_string(const TypePtr &type_ptr)
+{
+    return (type_ptr) ? (get_type_string(*type_ptr)) : (L"void");
+}
+} // namespace
 
 const std::unordered_multimap<TypeEnum, TypeEnum>
     SemanticChecker::Visitor::cast_map = {
@@ -132,7 +240,9 @@ void SemanticChecker::Visitor::check_main_function(const FuncDefStmt &node)
           *node.return_type ==
               SimpleType(TypeEnum::U32, RefSpecifier::NON_REF)))
     {
-        this->report_error(L"wrong main function return type declaration");
+        this->report_error(L"wrong main function return type declaration - "
+                           L"expected return type: void or u32, found: ",
+                           get_type_string(node.return_type));
     }
     // if (*node.return_type == SimpleType(TypeEnum::U32,
     // RefSpecifier::NON_REF))
@@ -165,8 +275,10 @@ bool SemanticChecker::Visitor::check_var_value_and_type(
             if (!((!value_type && !node.type) ||
                   (value_type && node.type && *value_type == *node.type)))
             {
-                this->report_error(L"variable's declared type and assigned "
-                                   L"value's type don't match");
+                this->report_error(L"variable of declared type: `",
+                                   get_type_string(node.type),
+                                   L"` cannot be assigned a value of type: `",
+                                   get_type_string(value_type), L'`');
                 return false;
             }
         }
@@ -386,43 +498,74 @@ RefSpecifier get_ref_specifier(const UnaryOpEnum &op)
 void SemanticChecker::Visitor::visit(const UnaryExpr &node)
 {
     this->visit(*node.expr);
+    if (std::holds_alternative<FunctionType>(*this->last_type))
+    {
+        this->report_error(
+            L"function reference cannot be used in a unary expression");
+        this->last_type = nullptr;
+        return;
+    }
+    auto type = std::get<SimpleType>(*this->last_type);
     switch (node.op)
     {
     case UnaryOpEnum::INC:
     case UnaryOpEnum::DEC:
     case UnaryOpEnum::MINUS:
-        break;
-
     case UnaryOpEnum::BIT_NEG:
-        break;
-
     case UnaryOpEnum::NEG:
+        if (type.ref_spec != RefSpecifier::NON_REF)
+        {
+            this->report_expr_error(L"reference type value cannot be ",
+                                    unary_str_map.at(node.op));
+            return;
+        }
+        if (auto opt_type = unary_map.at(node.op).at(type.type))
+        {
+            this->last_type = std::make_unique<Type>(
+                SimpleType(*opt_type, RefSpecifier::NON_REF));
+        }
+        else
+        {
+            this->report_expr_error(L"value of type `", get_type_string(type),
+                                    L" cannot be ", unary_str_map.at(node.op));
+        }
+        /* code */
         break;
-
     case UnaryOpEnum::MUT_REF:
     case UnaryOpEnum::REF:
-        std::visit(
-            overloaded{
-                [this, &node](const SimpleType &type) {
-                    switch (type.ref_spec)
-                    {
-                    case RefSpecifier::NON_REF:
-                        this->last_type = std::make_unique<Type>(
-                            SimpleType(type.type, get_ref_specifier(node.op)));
-                        break;
 
-                    default:
-                        this->report_error(L"references cannot be referenced");
-                        break;
-                    }
-                },
-                [this](const FunctionType &) {
-                    this->report_error(
-                        L"function references cannot be referenced");
-                }},
-            *this->last_type);
+        if (type.ref_spec != RefSpecifier::NON_REF)
+        {
+            this->report_expr_error(
+                L"references cannot be referenced further");
+            break;
+        }
+        this->last_type = std::make_unique<Type>(
+            SimpleType(type.type, get_ref_specifier(node.op)));
+        this->is_assignable = false;
         break;
     case UnaryOpEnum::DEREF:
+        if (type.type == TypeEnum::STR)
+        {
+            this->report_expr_error(L"strings cannot be dereferenced");
+            break;
+        }
+        switch (type.ref_spec)
+        {
+        case RefSpecifier::NON_REF:
+            this->report_error(L"cannot dereference a non-reference value");
+            break;
+        case RefSpecifier::REF:
+            this->last_type = std::make_unique<Type>(
+                SimpleType(type.type, RefSpecifier::NON_REF));
+            this->is_assignable = false;
+            break;
+        case RefSpecifier::MUT_REF:
+            this->last_type = std::make_unique<Type>(
+                SimpleType(type.type, RefSpecifier::NON_REF));
+            this->is_assignable = true;
+            break;
+        }
         break;
     }
 }
