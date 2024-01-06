@@ -500,9 +500,8 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
     this->visit(*node.expr);
     if (std::holds_alternative<FunctionType>(*this->last_type))
     {
-        this->report_error(
+        this->report_expr_error(
             L"function reference cannot be used in a unary expression");
-        this->last_type = nullptr;
         return;
     }
     auto type = std::get<SimpleType>(*this->last_type);
@@ -639,6 +638,42 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
 //         new_args, func->return_type, func->is_const);
 //     this->last_type = result_type;
 // }
+
+void SemanticChecker::Visitor::visit(const IndexExpr &node)
+{
+    this->visit(*node.expr);
+    if (!this->last_type)
+    {
+        return;
+    }
+    if (std::holds_alternative<FunctionType>(*this->last_type))
+    {
+        this->report_expr_error(L"function references cannot be indexed");
+        return;
+    }
+    auto type = std::get<SimpleType>(*this->last_type);
+    if (type != SimpleType(TypeEnum::STR, RefSpecifier::REF))
+    {
+        this->report_expr_error(
+            L"value of type `", get_type_string(type),
+            "` cannot be indexed (only `&str` values can be)");
+        return;
+    }
+    this->visit(*node.index_value);
+    if (std::holds_alternative<FunctionType>(*this->last_type))
+    {
+        this->report_expr_error(L"function references cannot be indices");
+        return;
+    }
+    type = std::get<SimpleType>(*this->last_type);
+    if (type != SimpleType(TypeEnum::U32, RefSpecifier::NON_REF))
+    {
+        this->report_expr_error(L"only `u32` values can be used as an index");
+        return;
+    }
+    this->last_type = std::make_unique<Type>(
+        SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
+}
 
 void SemanticChecker::Visitor::visit(const CastExpr &node)
 {
@@ -890,9 +925,8 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                 }
                 else
                 {
-                    this->report_error(L"referenced variable doesn't exist");
-                    this->is_assignable = false;
-                    this->last_type = nullptr;
+                    this->report_expr_error(
+                        L"referenced variable doesn't exist");
                     this->is_initialized = false;
                 }
             },
@@ -900,7 +934,7 @@ void SemanticChecker::Visitor::visit(const Expression &node)
             [this](const UnaryExpr &node) { this->visit(node); },
             //    [this](const CallExpr &node) { this->visit(node); },
             //    [this](const LambdaCallExpr &node) { this->visit(node); },
-            //    [this](const IndexExpr &node) { this->visit(node); },
+            [this](const IndexExpr &node) { this->visit(node); },
             [this](const CastExpr &node) { this->visit(node); },
             [](const auto &) {}},
         node);

@@ -190,6 +190,28 @@ TEST_CASE("Unary expressions.")
     }
 }
 
+TEST_CASE("Indexing.")
+{
+    SECTION("Correct indexing.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: &str = \"some text\";"
+                            L"var[2];"));
+    }
+    SECTION("Wrong index type.")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var: &str = \"some text\";"
+                              L"var[-2];"));
+        CHECK_INVALID(FN_WRAP(L"let var: &str = \"some text\";"
+                              L"var[1.0];"));
+        CHECK_INVALID(FN_WRAP(L"let var: &str = \"some text\";"
+                              L"var[true];"));
+        CHECK_INVALID(FN_WRAP(L"let var: &str = \"some text\";"
+                              L"var['a'];"));
+        CHECK_INVALID(FN_WRAP(L"let var: &str = \"some text\";"
+                              L"var[\"a\"];"));
+    }
+}
+
 TEST_CASE("Casting.")
 {
     SECTION("From bool")
