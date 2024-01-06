@@ -190,6 +190,222 @@ TEST_CASE("Unary expressions.")
     }
 }
 
+TEST_CASE("Binary expressions.")
+{
+    SECTION("Addition (and concatenation).")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1+1;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)+(-1);"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0+1.0;"));
+        CHECK_VALID(FN_WRAP(L"let var: &str = \"a\"+\"b\";"));
+        CHECK_VALID(FN_WRAP(L"let var: &str = \"a\"+\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"true+false;"));
+        CHECK_INVALID(FN_WRAP(L"1+(-1);"));
+        CHECK_INVALID(FN_WRAP(L"1+1.0;"));
+        CHECK_INVALID(FN_WRAP(L"1.0+(-1);"));
+        CHECK_INVALID(FN_WRAP(L"\'a\'+\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"\'a\'+\"b\";"));
+    }
+
+    SECTION("Substraction.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1-1;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)-(-1);"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0-1.0;"));
+        CHECK_INVALID(FN_WRAP(L"\"a\"-\"b\";"));
+        CHECK_INVALID(FN_WRAP(L"\"a\"-\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"true-false;"));
+        CHECK_INVALID(FN_WRAP(L"1-(-1);"));
+        CHECK_INVALID(FN_WRAP(L"1-1.0;"));
+        CHECK_INVALID(FN_WRAP(L"1.0-(-1);"));
+        CHECK_INVALID(FN_WRAP(L"\'a\'-\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"\'a\'-\"b\";"));
+    }
+
+    SECTION("Multiplication.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1*1;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)*(-1);"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0*1.0;"));
+        CHECK_INVALID(FN_WRAP(L"\"a\"*\"b\";"));
+        CHECK_INVALID(FN_WRAP(L"\"a\"*\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"true*false;"));
+        CHECK_INVALID(FN_WRAP(L"1*(-1);"));
+        CHECK_INVALID(FN_WRAP(L"1*1.0;"));
+        CHECK_INVALID(FN_WRAP(L"1.0*(-1);"));
+        CHECK_INVALID(FN_WRAP(L"\'a\'*\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"\'a\'*\"b\";"));
+    }
+
+    SECTION("Division.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1/1;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)/(-1);"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0/1.0;"));
+        CHECK_INVALID(FN_WRAP(L"\"a\"/\"b\";"));
+        CHECK_INVALID(FN_WRAP(L"\"a\"/\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"true/false;"));
+        CHECK_INVALID(FN_WRAP(L"1/(-1);"));
+        CHECK_INVALID(FN_WRAP(L"1/1.0;"));
+        CHECK_INVALID(FN_WRAP(L"1.0/(-1);"));
+        CHECK_INVALID(FN_WRAP(L"\'a\'/\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"\'a\'/\"b\";"));
+    }
+
+    SECTION("Modulus.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1%1;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)%(-1);"));
+        CHECK_INVALID(FN_WRAP(L"let var: i32 = 1%(-1);"));
+        CHECK_INVALID(FN_WRAP(L"let var: i32 = (-1)%1;"));
+        CHECK_INVALID(FN_WRAP(L"1.0%1.0;"));
+        CHECK_INVALID(FN_WRAP(L"1.0%1;"));
+        CHECK_INVALID(FN_WRAP(L"1%1.0;"));
+        CHECK_INVALID(FN_WRAP(L"\"a\"%\"b\";"));
+        CHECK_INVALID(FN_WRAP(L"\"a\"%\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"true%false;"));
+        CHECK_INVALID(FN_WRAP(L"1%(-1);"));
+        CHECK_INVALID(FN_WRAP(L"1%1.0;"));
+        CHECK_INVALID(FN_WRAP(L"1.0%(-1);"));
+        CHECK_INVALID(FN_WRAP(L"\'a\'%\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"\'a\'%\"b\";"));
+    }
+    SECTION("Exponentiation.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var: u32 = 1^^1;"));
+        CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)^^1;"));
+        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0^^1;"));
+        CHECK_INVALID(FN_WRAP(L"(-1)^^(-1);"));
+        CHECK_INVALID(FN_WRAP(L"1.0^^1.0;"));
+    }
+    SECTION("Equations.")
+    {
+        SECTION("Booleans.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: bool = true==true;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = true!=true;"));
+            CHECK_INVALID(FN_WRAP(L"true>=true;"));
+            CHECK_INVALID(FN_WRAP(L"true<=true;"));
+            CHECK_INVALID(FN_WRAP(L"true>true;"));
+            CHECK_INVALID(FN_WRAP(L"true<true;"));
+        }
+        SECTION("u32s.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1==1;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1!=1;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1>=1;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1<=1;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1>1;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1<1;"));
+        }
+        SECTION("i32s.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: bool = (-1)==(-1);"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = (-1)!=(-1);"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = (-1)>=(-1);"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = (-1)<=(-1);"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = (-1)>(-1);"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = (-1)<(-1);"));
+        }
+        SECTION("f64s.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1.0==1.0;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1.0!=1.0;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1.0>=1.0;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1.0<=1.0;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1.0>1.0;"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 1.0<1.0;"));
+        }
+        SECTION("Chars.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: bool = 'a'=='a';"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 'a'!='a';"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 'a'>='a';"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 'a'<='a';"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 'a'>'a';"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = 'a'<'a';"));
+        }
+        SECTION("Strings.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: bool = \"a\"==\"a\";"));
+            CHECK_VALID(FN_WRAP(L"let var: bool = \"a\"!=\"a\";"));
+            CHECK_INVALID(FN_WRAP(L"\"a\">=\"a\";"));
+            CHECK_INVALID(FN_WRAP(L"\"a\"<=\"a\";"));
+            CHECK_INVALID(FN_WRAP(L"\"a\">\"a\";"));
+            CHECK_INVALID(FN_WRAP(L"\"a\"<\"a\";"));
+        }
+    }
+    SECTION("Bitwise.")
+    {
+        SECTION("Alternative.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: u32 = 1|0;"));
+            CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)|(-1);"));
+            CHECK_INVALID(FN_WRAP(L"true|false;"));
+            CHECK_INVALID(FN_WRAP(L"1.0|0.0;"));
+            CHECK_INVALID(FN_WRAP(L"'a'|'a';"));
+            CHECK_INVALID(FN_WRAP(L"\"a\"|\"a\";"));
+        }
+        SECTION("Conjugation.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: u32 = 1&0;"));
+            CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)&(-1);"));
+            CHECK_INVALID(FN_WRAP(L"true&false;"));
+            CHECK_INVALID(FN_WRAP(L"1.0&0.0;"));
+            CHECK_INVALID(FN_WRAP(L"'a'&'a';"));
+            CHECK_INVALID(FN_WRAP(L"\"a\"&\"a\";"));
+        }
+        SECTION("XOR.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: u32 = 1^0;"));
+            CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)^(-1);"));
+            CHECK_INVALID(FN_WRAP(L"true^false;"));
+            CHECK_INVALID(FN_WRAP(L"1.0^0.0;"));
+            CHECK_INVALID(FN_WRAP(L"'a'^'a';"));
+            CHECK_INVALID(FN_WRAP(L"\"a\"^\"a\";"));
+        }
+        SECTION("Shifts.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: u32 = 1>>1;"));
+            CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)>>1;"));
+            CHECK_INVALID(FN_WRAP(L"1.0>>1;"));
+            CHECK_INVALID(FN_WRAP(L"'a'>>1;"));
+            CHECK_INVALID(FN_WRAP(L"\"a\">>1;"));
+            CHECK_INVALID(FN_WRAP(L"1>>(-1);"));
+            CHECK_INVALID(FN_WRAP(L"1>>1.0;"));
+
+            CHECK_VALID(FN_WRAP(L"let var: u32 = 1<<1;"));
+            CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)<<1;"));
+            CHECK_INVALID(FN_WRAP(L"1.0<<1;"));
+            CHECK_INVALID(FN_WRAP(L"'a'<<1;"));
+            CHECK_INVALID(FN_WRAP(L"\"a\"<<1;"));
+            CHECK_INVALID(FN_WRAP(L"1<<(-1);"));
+            CHECK_INVALID(FN_WRAP(L"1<<1.0;"));
+        }
+    }
+    SECTION("Logical.")
+    {
+        SECTION("Alternative.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: bool = true || false;"));
+            CHECK_INVALID(FN_WRAP(L"1||0;"));
+            CHECK_INVALID(FN_WRAP(L"1.0||0.0;"));
+            CHECK_INVALID(FN_WRAP(L"(-1)||(-1);"));
+            CHECK_INVALID(FN_WRAP(L"'a'||'a';"));
+            CHECK_INVALID(FN_WRAP(L"\"a\"||\"a\";"));
+        }
+        SECTION("Conjugation.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var: bool = true && false;"));
+            CHECK_INVALID(FN_WRAP(L"1&&0;"));
+            CHECK_INVALID(FN_WRAP(L"1.0&&0.0;"));
+            CHECK_INVALID(FN_WRAP(L"(-1)&&(-1);"));
+            CHECK_INVALID(FN_WRAP(L"'a'&&'a';"));
+            CHECK_INVALID(FN_WRAP(L"\"a\"&&\"a\";"));
+        }
+    }
+}
+
 TEST_CASE("Function calls.")
 {
     SECTION("Valid calls.")
@@ -265,6 +481,40 @@ TEST_CASE("Lambda calls.")
         CHECK_INVALID(L"fn test(a: u32, b: u32){}"
                       L"fn main(){"
                       L"  test@(_, 2, 3);"
+                      L"}");
+    }
+    SECTION("Mismatched argument type.")
+    {
+        CHECK_INVALID(L"fn test(a: u32, b: u32){}"
+                      L"fn main(){"
+                      L"  test@(1, 2.0);"
+                      L"}");
+        CHECK_INVALID(L"fn test(a: u32, b: u32){}"
+                      L"fn main(){"
+                      L"  test@(1.0, _);"
+                      L"}");
+    }
+    SECTION("Const check.")
+    {
+        CHECK_VALID(L"fn const test(a: &u32, b: u32){}"
+                    L"fn main(){"
+                    L"  let var: u32 = 1;"
+                    L"  let foo: fn(u32) = test@(&var, _);"
+                    L"}");
+        CHECK_INVALID(L"fn const test(a: &u32, b: u32){}"
+                      L"fn main(){"
+                      L"  let var: u32 = 1;"
+                      L"  let foo: fn const(u32) = test@(&var, _);"
+                      L"}");
+        CHECK_VALID(L"fn const test(a: &mut u32, b: u32){}"
+                    L"fn main(){"
+                    L"  let mut var: u32 = 1;"
+                    L"  let foo: fn(u32) = test@(&mut var, _);"
+                    L"}");
+        CHECK_INVALID(L"fn const test(a: &mut u32, b: u32){}"
+                      L"fn main(){"
+                      L"  let mut var: u32 = 1;"
+                      L"  let foo: fn const(u32) = test@(&mut var, _);"
                       L"}");
     }
 }

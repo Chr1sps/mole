@@ -286,6 +286,12 @@ TEST_CASE("Binary operators.", "[VARS], [BINOP]")
                                            I32EXPR(5, POS(1, 11)), POS(1, 9)),
                                    false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
+    COMPARE(L"let var=5/5;",
+            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+                                   BINEXPR(I32EXPR(5, POS(1, 9)), DIV,
+                                           I32EXPR(5, POS(1, 11)), POS(1, 9)),
+                                   false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
     SECTION("Nested operators.")
     {
         COMPARE(L"let var=5-5-5;",

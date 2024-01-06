@@ -50,56 +50,128 @@ std::unordered_map<UnaryOpEnum, std::unordered_map<TypeEnum, TypeEnum>>
          }},
 };
 
-// std::unordered_map<
-//     BinOpEnum,
-//     std::unordered_map<TypeEnum, std::unordered_map<TypeEnum, TypeEnum>>>
-//     binary_map = {
-//         {BinOpEnum::ADD, {
-//             {TypeEnum::U32}
-//         }};
-//     };
-// std::unordered_map<BinOpEnum, std::unordered_multimap<TypeEnum, TypeEnum>>
-//     binary_map = {};
-// std::unordered_map<BinOpEnum,
-//                    std::unordered_set<std::pair<TypeEnum, TypeEnum>>>
-//     binary_map = {
-//         {BinOpEnum::ADD,
-//          {
-//              {TypeEnum::U32, TypeEnum::U32},
-//              {TypeEnum::I32, TypeEnum::I32},
-//              {TypeEnum::F64, TypeEnum::F64},
-//          }},
-//         {BinOpEnum::SUB,
-//          {
-//              {TypeEnum::U32, TypeEnum::U32},
-//              {TypeEnum::I32, TypeEnum::I32},
-//              {TypeEnum::F64, TypeEnum::F64},
-//          }},
-//         {BinOpEnum::MUL,
-//          {
-//              {TypeEnum::U32, TypeEnum::U32},
-//              {TypeEnum::I32, TypeEnum::I32},
-//              {TypeEnum::F64, TypeEnum::F64},
-//          }},
-//         {BinOpEnum::DIV,
-//          {
-//              {TypeEnum::U32, TypeEnum::U32},
-//              {TypeEnum::I32, TypeEnum::I32},
-//              {TypeEnum::F64, TypeEnum::F64},
-//          }},
-//         {BinOpEnum::MOD,
-//          {
-//              {TypeEnum::U32, TypeEnum::U32},
-//              {TypeEnum::I32, TypeEnum::U32},
-//              {TypeEnum::F64, TypeEnum::F64},
-//          }},
-//         {BinOpEnum::EXP,
-//          {
-//              {TypeEnum::U32, TypeEnum::U32},
-//              {TypeEnum::I32, TypeEnum::U32},
-//              {TypeEnum::F64, TypeEnum::U32},
-//          }},
-// };
+std::unordered_map<
+    BinOpEnum,
+    std::unordered_map<TypeEnum, std::unordered_map<TypeEnum, TypeEnum>>>
+    binary_map = {
+        {BinOpEnum::ADD,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::I32}}},
+             {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::F64}}},
+             {TypeEnum::STR,
+              {{TypeEnum::STR, TypeEnum::STR},
+               {TypeEnum::CHAR, TypeEnum::STR}}},
+         }},
+        {BinOpEnum::SUB,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::I32}}},
+             {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::F64}}},
+         }},
+        {BinOpEnum::MUL,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::I32}}},
+             {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::F64}}},
+         }},
+        {BinOpEnum::DIV,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::I32}}},
+             {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::F64}}},
+         }},
+        {BinOpEnum::MOD,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::I32}}},
+         }},
+        {BinOpEnum::EXP,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::U32, TypeEnum::I32}}},
+             {TypeEnum::F64, {{TypeEnum::U32, TypeEnum::F64}}},
+         }},
+        {BinOpEnum::EQ,
+         {
+             {TypeEnum::BOOL, {{TypeEnum::BOOL, TypeEnum::BOOL}}},
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::BOOL}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::BOOL}}},
+             {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::BOOL}}},
+             {TypeEnum::CHAR, {{TypeEnum::CHAR, TypeEnum::BOOL}}},
+             {TypeEnum::STR, {{TypeEnum::STR, TypeEnum::BOOL}}},
+         }},
+        {BinOpEnum::NEQ,
+         {
+             {TypeEnum::BOOL, {{TypeEnum::BOOL, TypeEnum::BOOL}}},
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::BOOL}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::BOOL}}},
+             {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::BOOL}}},
+             {TypeEnum::CHAR, {{TypeEnum::CHAR, TypeEnum::BOOL}}},
+             {TypeEnum::STR, {{TypeEnum::STR, TypeEnum::BOOL}}},
+         }},
+        {BinOpEnum::GT,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::BOOL}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::BOOL}}},
+             {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::BOOL}}},
+             {TypeEnum::CHAR, {{TypeEnum::CHAR, TypeEnum::BOOL}}},
+         }},
+        {BinOpEnum::GE,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::BOOL}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::BOOL}}},
+             {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::BOOL}}},
+             {TypeEnum::CHAR, {{TypeEnum::CHAR, TypeEnum::BOOL}}},
+         }},
+        {BinOpEnum::LT,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::BOOL}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::BOOL}}},
+             {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::BOOL}}},
+             {TypeEnum::CHAR, {{TypeEnum::CHAR, TypeEnum::BOOL}}},
+         }},
+        {BinOpEnum::LE,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::BOOL}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::BOOL}}},
+             {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::BOOL}}},
+             {TypeEnum::CHAR, {{TypeEnum::CHAR, TypeEnum::BOOL}}},
+         }},
+        {BinOpEnum::BIT_AND,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::I32}}},
+         }},
+        {BinOpEnum::BIT_OR,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::I32}}},
+         }},
+        {BinOpEnum::BIT_XOR,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::I32}}},
+         }},
+        {BinOpEnum::SHL,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::U32, TypeEnum::I32}}},
+         }},
+        {BinOpEnum::SHR,
+         {
+             {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
+             {TypeEnum::I32, {{TypeEnum::U32, TypeEnum::I32}}},
+         }},
+        {BinOpEnum::AND,
+         {
+             {TypeEnum::BOOL, {{TypeEnum::BOOL, TypeEnum::BOOL}}},
+         }},
+        {BinOpEnum::OR,
+         {
+             {TypeEnum::BOOL, {{TypeEnum::BOOL, TypeEnum::BOOL}}},
+         }},
+};
 
 std::unordered_map<UnaryOpEnum, std::wstring> unary_str_map = {
     {UnaryOpEnum::INC, L"incremented"},
@@ -479,34 +551,79 @@ void SemanticChecker::Visitor::register_function_params(
 //         scope");
 // }
 
-// void SemanticChecker::Visitor::visit(const BinaryExpr &node)
-// {
-//     this->visit(*node.lhs);
-//     if (!this->last_type)
-//         return;
-//     auto left_type = *this->last_type;
+void SemanticChecker::Visitor::visit(const BinaryExpr &node)
+{
+    this->visit(*node.lhs);
+    if (!this->last_type)
+        return;
+    auto left_type_var = *this->last_type;
 
-//     this->visit(*node.rhs);
-//     if (!this->last_type)
-//         return;
-//     auto right_type = *this->last_type;
-//     if (std::holds_alternative<FunctionType>(left_type) ||
-//         std::holds_alternative<FunctionType>(right_type))
-//     {
-//         this->report_expr_error(
-//             L"function reference cannot be used in a binary expression");
-//         return;
-//     }
-//     switch (node.op)
-//     {
-//     case BinOpEnum::EQ:
-//     case BinOpEnum::NEQ:
-//         break;
+    this->visit(*node.rhs);
+    if (!this->last_type)
+        return;
+    auto right_type_var = *this->last_type;
+    if (std::holds_alternative<FunctionType>(left_type_var) ||
+        std::holds_alternative<FunctionType>(right_type_var))
+    {
+        this->report_expr_error(
+            L"function reference cannot be used in a binary expression");
+        return;
+    }
 
-//     default:
-//         break;
-//     }
-// }
+    auto left_type = std::get<SimpleType>(left_type_var);
+    auto right_type = std::get<SimpleType>(right_type_var);
+    switch (left_type.ref_spec)
+    {
+    case RefSpecifier::REF:
+        if (left_type.type != TypeEnum::STR)
+        {
+            this->report_expr_error(
+                L"references cannot be used in binary expressions");
+            return;
+        }
+    case RefSpecifier::NON_REF:
+        break;
+
+    default:
+        this->report_expr_error(
+            L"references cannot be used in binary expressions");
+        return;
+    }
+    switch (right_type.ref_spec)
+    {
+    case RefSpecifier::REF:
+        if (right_type.type != TypeEnum::STR)
+        {
+            this->report_expr_error(
+                L"references cannot be used in binary expressions");
+            return;
+        }
+    case RefSpecifier::NON_REF:
+        break;
+
+    default:
+        this->report_expr_error(
+            L"references cannot be used in binary expressions");
+        return;
+    }
+    try
+    {
+        auto result_type =
+            binary_map.at(node.op).at(left_type.type).at(right_type.type);
+        if (result_type == TypeEnum::STR)
+            this->last_type = std::make_unique<Type>(
+                SimpleType(TypeEnum::STR, RefSpecifier::REF));
+        else
+            this->last_type = std::make_unique<Type>(
+                SimpleType(result_type, RefSpecifier::NON_REF));
+    }
+    catch (const std::out_of_range &)
+    {
+        this->report_expr_error(L"binary operation doesn't support types `",
+                                get_type_string(left_type_var), L"` and `",
+                                get_type_string(right_type_var), L"`");
+    }
+}
 
 RefSpecifier get_ref_specifier(const UnaryOpEnum &op)
 {
@@ -1013,7 +1130,7 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                            this->is_initialized = false;
                        }
                    },
-                   //    [this](const BinaryExpr &node) { this->visit(node); },
+                   [this](const BinaryExpr &node) { this->visit(node); },
                    [this](const UnaryExpr &node) { this->visit(node); },
                    [this](const CallExpr &node) { this->visit(node); },
                    [this](const LambdaCallExpr &node) { this->visit(node); },

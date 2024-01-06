@@ -100,7 +100,7 @@ class SemanticChecker
 
         // void check_var_name(const VarDeclStmt &node);
 
-        // void visit(const BinaryExpr &node);
+        void visit(const BinaryExpr &node);
         void visit(const UnaryExpr &node);
         void visit(const CallExpr &node);
         void visit(const LambdaCallExpr &node);

@@ -239,7 +239,6 @@ std::optional<Token> Lexer::parse_operator(const Position &position)
                     L"this operator is not supported");
         }
     }
-    // return std::nullopt;
 }
 
 Token Lexer::parse_comment_or_operator(const Position &position)
@@ -248,17 +247,21 @@ Token Lexer::parse_comment_or_operator(const Position &position)
     if (this->last_char.has_value())
     {
         auto char_value = *(this->last_char);
-        this->get_new_char();
         switch (char_value)
         {
         case L'/':
+            this->get_new_char();
             return this->parse_line_comment(position);
             break;
         case L'*':
+            this->get_new_char();
             return this->parse_block_comment(position);
             break;
         case L'=':
+            this->get_new_char();
             return Token(TokenType::ASSIGN_SLASH, position);
+            break;
+        default:
             break;
         }
     }

@@ -173,6 +173,7 @@ TEST_CASE("Comments.", "[COMM]")
     compare_lexed_tokens(L"/* fn extern main */", LIST(T(COMMENT, 1, 1)));
     compare_lexed_tokens(L"/*\n*/", LIST(T(COMMENT, 1, 1)));
     compare_lexed_tokens(L"/***/", LIST(T(COMMENT, 1, 1)));
+    compare_lexed_tokens(L"/2", LIST(T(SLASH, 1, 1), V(INT, 2ull, 1, 2)));
 }
 
 TEST_CASE("Numericals.", "[NUMS]")
