@@ -19,50 +19,87 @@ std::unordered_map<RefSpecifier, std::wstring> ref_spec_map = {
     {RefSpecifier::REF, L"&"},
     {RefSpecifier::MUT_REF, L"&mut "},
 };
-std::unordered_map<UnaryOpEnum,
-                   std::unordered_map<TypeEnum, std::optional<TypeEnum>>>
+std::unordered_map<UnaryOpEnum, std::unordered_map<TypeEnum, TypeEnum>>
     unary_map = {
         {UnaryOpEnum::INC,
          {
-             {TypeEnum::BOOL, {}},
-             {TypeEnum::U32, {TypeEnum::U32}},
-             {TypeEnum::I32, {TypeEnum::I32}},
-             {TypeEnum::F64, {TypeEnum::F64}},
-             {TypeEnum::CHAR, {}},
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+             {TypeEnum::F64, TypeEnum::F64},
          }},
         {UnaryOpEnum::DEC,
          {
-             {TypeEnum::BOOL, {}},
-             {TypeEnum::U32, {TypeEnum::U32}},
-             {TypeEnum::I32, {TypeEnum::I32}},
-             {TypeEnum::F64, {TypeEnum::F64}},
-             {TypeEnum::CHAR, {}},
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+             {TypeEnum::F64, TypeEnum::F64},
          }},
         {UnaryOpEnum::MINUS,
          {
-             {TypeEnum::BOOL, {}},
-             {TypeEnum::U32, {TypeEnum::I32}},
-             {TypeEnum::I32, {TypeEnum::I32}},
-             {TypeEnum::F64, {TypeEnum::F64}},
-             {TypeEnum::CHAR, {}},
+             {TypeEnum::U32, TypeEnum::I32},
+             {TypeEnum::I32, TypeEnum::I32},
+             {TypeEnum::F64, TypeEnum::F64},
          }},
         {UnaryOpEnum::BIT_NEG,
          {
-             {TypeEnum::BOOL, {}},
-             {TypeEnum::U32, {TypeEnum::U32}},
-             {TypeEnum::I32, {TypeEnum::I32}},
-             {TypeEnum::F64, {}},
-             {TypeEnum::CHAR, {}},
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
          }},
         {UnaryOpEnum::NEG,
          {
-             {TypeEnum::BOOL, {TypeEnum::BOOL}},
-             {TypeEnum::U32, {}},
-             {TypeEnum::I32, {}},
-             {TypeEnum::F64, {}},
-             {TypeEnum::CHAR, {}},
+             {TypeEnum::BOOL, TypeEnum::BOOL},
          }},
 };
+
+// std::unordered_map<
+//     BinOpEnum,
+//     std::unordered_map<TypeEnum, std::unordered_map<TypeEnum, TypeEnum>>>
+//     binary_map = {
+//         {BinOpEnum::ADD, {
+//             {TypeEnum::U32}
+//         }};
+//     };
+// std::unordered_map<BinOpEnum, std::unordered_multimap<TypeEnum, TypeEnum>>
+//     binary_map = {};
+// std::unordered_map<BinOpEnum,
+//                    std::unordered_set<std::pair<TypeEnum, TypeEnum>>>
+//     binary_map = {
+//         {BinOpEnum::ADD,
+//          {
+//              {TypeEnum::U32, TypeEnum::U32},
+//              {TypeEnum::I32, TypeEnum::I32},
+//              {TypeEnum::F64, TypeEnum::F64},
+//          }},
+//         {BinOpEnum::SUB,
+//          {
+//              {TypeEnum::U32, TypeEnum::U32},
+//              {TypeEnum::I32, TypeEnum::I32},
+//              {TypeEnum::F64, TypeEnum::F64},
+//          }},
+//         {BinOpEnum::MUL,
+//          {
+//              {TypeEnum::U32, TypeEnum::U32},
+//              {TypeEnum::I32, TypeEnum::I32},
+//              {TypeEnum::F64, TypeEnum::F64},
+//          }},
+//         {BinOpEnum::DIV,
+//          {
+//              {TypeEnum::U32, TypeEnum::U32},
+//              {TypeEnum::I32, TypeEnum::I32},
+//              {TypeEnum::F64, TypeEnum::F64},
+//          }},
+//         {BinOpEnum::MOD,
+//          {
+//              {TypeEnum::U32, TypeEnum::U32},
+//              {TypeEnum::I32, TypeEnum::U32},
+//              {TypeEnum::F64, TypeEnum::F64},
+//          }},
+//         {BinOpEnum::EXP,
+//          {
+//              {TypeEnum::U32, TypeEnum::U32},
+//              {TypeEnum::I32, TypeEnum::U32},
+//              {TypeEnum::F64, TypeEnum::U32},
+//          }},
+// };
 
 std::unordered_map<UnaryOpEnum, std::wstring> unary_str_map = {
     {UnaryOpEnum::INC, L"incremented"},
@@ -91,10 +128,9 @@ constexpr std::wstring get_type_string(const Type &type)
                                }) |
                            std::views::join_with(L',');
                        result += L'(';
-                       for (const auto &i : args_string)
-                       {
-                           result += i;
-                       }
+                       std::ranges::copy(std::ranges::cbegin(args_string),
+                                         std::ranges::cend(args_string),
+                                         std::back_inserter(result));
                        result += L')';
                        if (type.return_type)
                        {
@@ -305,20 +341,17 @@ auto SemanticChecker::Visitor::find_variable(const std::wstring &name)
     return std::nullopt;
 }
 
-// std::shared_ptr<SemanticChecker::Function> SemanticChecker::Visitor::
-//     find_function(const std::wstring &name)
-// {
-//     for (auto &scope : this->functions)
-//     {
-//         auto found = std::find_if(scope.begin(), scope.end(),
-//                                   [name](std::shared_ptr<Function> foo) {
-//                                       return foo->name == name;
-//                                   });
-//         if (found != scope.end())
-//             return *found;
-//     }
-//     return nullptr;
-// }
+std::optional<FunctionType> SemanticChecker::Visitor::find_function(
+    const std::wstring &name)
+{
+    for (const auto &scope : this->function_map)
+    {
+        auto found = scope.find(name);
+        if (found != scope.end())
+            return found->second;
+    }
+    return std::nullopt;
+}
 
 // std::shared_ptr<SemanticChecker::Variable> SemanticChecker::Visitor::
 //     find_outside_variable(const std::wstring &name)
@@ -365,23 +398,12 @@ void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt &node)
     this->variable_map.back().emplace(std::make_pair(node.name, new_data));
 }
 
-// void SemanticChecker::Visitor::register_local_function(const FuncDefStmt
-// &node)
-// {
-//     std::vector<TypePtr> param_types;
-
-//     for (auto &param : node.params)
-//     {
-//         param_types.push_back(param->type);
-//     }
-
-//     auto fn_type = std::make_shared<FunctionType>(
-//         param_types, node.return_type, node.is_const);
-
-//     auto new_func = Function(node.name, fn_type);
-
-//     this->functions.back().insert(std::make_shared<Function>(new_func));
-// }
+void SemanticChecker::Visitor::register_local_function(const FuncDefStmt &node)
+{
+    auto fn_type = node.get_type();
+    this->function_map.back().emplace(
+        std::make_pair(node.name, std::move(*fn_type)));
+}
 
 // void SemanticChecker::Visitor::register_local_function(const ExternStmt
 // &node)
@@ -457,30 +479,35 @@ void SemanticChecker::Visitor::register_function_params(
 //         scope");
 // }
 
-// void SemanticChecker::Visitor::visit(const U32Expr &node)
-// {
-//     this->last_type = U32Expr::type;
-// }
-
-// void SemanticChecker::Visitor::visit(const F64Expr &node)
-// {
-//     this->last_type = F64Expr::type;
-// }
-
 // void SemanticChecker::Visitor::visit(const BinaryExpr &node)
 // {
-//     node.lhs->accept(*this);
-//     auto left_type = this->last_type;
+//     this->visit(*node.lhs);
+//     if (!this->last_type)
+//         return;
+//     auto left_type = *this->last_type;
 
-//     node.rhs->accept(*this);
-//     auto right_type = this->last_type;
-//     if (*left_type != *right_type)
+//     this->visit(*node.rhs);
+//     if (!this->last_type)
+//         return;
+//     auto right_type = *this->last_type;
+//     if (std::holds_alternative<FunctionType>(left_type) ||
+//         std::holds_alternative<FunctionType>(right_type))
 //     {
-//         this->report_error(L"binary operator type mismatch");
+//         this->report_expr_error(
+//             L"function reference cannot be used in a binary expression");
+//         return;
 //     }
+//     switch (node.op)
+//     {
+//     case BinOpEnum::EQ:
+//     case BinOpEnum::NEQ:
+//         break;
 
-//     this->last_type = left_type;
+//     default:
+//         break;
+//     }
 // }
+
 RefSpecifier get_ref_specifier(const UnaryOpEnum &op)
 {
     switch (op)
@@ -518,16 +545,18 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
                                     unary_str_map.at(node.op));
             return;
         }
-        if (auto opt_type = unary_map.at(node.op).at(type.type))
+        try
         {
+            auto result_type = unary_map.at(node.op).at(type.type);
             this->last_type = std::make_unique<Type>(
-                SimpleType(*opt_type, RefSpecifier::NON_REF));
+                SimpleType(result_type, RefSpecifier::NON_REF));
         }
-        else
+        catch (const std::out_of_range &)
         {
             this->report_expr_error(L"value of type `", get_type_string(type),
                                     L" cannot be ", unary_str_map.at(node.op));
         }
+
         /* code */
         break;
     case UnaryOpEnum::MUT_REF:
@@ -569,28 +598,54 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
     }
 }
 
-// void SemanticChecker::Visitor::visit(const CallExpr &node)
-// {
-//     node.callable->accept(*this);
-//     auto func = std::dynamic_pointer_cast<FunctionType>(this->last_type);
-//     if (!func)
-//     {
-//         this->report_error(L"given function is not a callable");
-//     }
+void SemanticChecker::Visitor::visit(const CallExpr &node)
+{
+    this->visit(*node.callable);
+    if (!this->last_type)
+        return;
 
-//     if (node.args.size() != func->arg_types.size())
-//         this->report_error(L"wrong amount of arguments in a function call");
-//     for (size_t i = 0; i < func->arg_types.size(); ++i)
-//     {
-//         auto expected_type = func->arg_types[i];
-//         (node.args[i])->accept(*this);
-//         auto actual_type = this->last_type;
-//         if (*expected_type != *actual_type)
-//             this->report_error(L"function call argument type is
-//             mismatched");
-//     }
-//     this->last_type = func->return_type;
-// }
+    if (std::holds_alternative<SimpleType>(*this->last_type))
+    {
+        this->report_expr_error(L"value of primitive type `",
+                                get_type_string(*this->last_type),
+                                L"` cannot be called");
+        return;
+    }
+    auto type = std::get<FunctionType>(*this->last_type);
+    auto expected_arg_count = type.arg_types.size();
+    auto arg_count = node.args.size();
+    if (arg_count != expected_arg_count)
+    {
+        this->report_expr_error(L"function argument count incorrect in a call "
+                                L"expression: expected ",
+                                expected_arg_count, L" arguments, found ",
+                                arg_count);
+    }
+    auto is_valid = true;
+    for (const auto &[expected_type, arg] :
+         std::views::zip(type.arg_types, node.args))
+    {
+        this->visit(*arg);
+        if (!this->last_type)
+        {
+            is_valid = false;
+            continue;
+        }
+        auto actual_type = *this->last_type;
+        if (*expected_type != actual_type)
+        {
+            this->report_expr_error(
+                L"function call argument type mismatched - expected type: `",
+                get_type_string(expected_type), "`, found: `",
+                get_type_string(actual_type), "`");
+            is_valid = false;
+        }
+    }
+    if (is_valid)
+    {
+        this->last_type = clone_type_ptr(type.return_type);
+    }
+}
 
 // void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
 // {
@@ -762,7 +817,7 @@ void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
     // this->check_function_return(node);
     // this->return_stack.pop_back();
 
-    // this->register_local_function(node);
+    this->register_local_function(node);
 }
 
 void SemanticChecker::Visitor::visit(const AssignStmt &node)
@@ -923,6 +978,12 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                     this->is_assignable = var->mut;
                     this->is_initialized = var->initialized;
                 }
+                else if (auto func = this->find_function(node.name))
+                {
+                    this->last_type = std::make_unique<Type>(*func);
+                    this->is_assignable = false;
+                    this->is_initialized = true;
+                }
                 else
                 {
                     this->report_expr_error(
@@ -932,7 +993,7 @@ void SemanticChecker::Visitor::visit(const Expression &node)
             },
             //    [this](const BinaryExpr &node) { this->visit(node); },
             [this](const UnaryExpr &node) { this->visit(node); },
-            //    [this](const CallExpr &node) { this->visit(node); },
+            [this](const CallExpr &node) { this->visit(node); },
             //    [this](const LambdaCallExpr &node) { this->visit(node); },
             [this](const IndexExpr &node) { this->visit(node); },
             [this](const CastExpr &node) { this->visit(node); },

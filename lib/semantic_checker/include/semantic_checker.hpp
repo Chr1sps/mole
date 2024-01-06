@@ -92,7 +92,7 @@ class SemanticChecker
         //     const std::wstring &name);
 
         void register_local_variable(const VarDeclStmt &node);
-        // void register_local_function(const FuncDefStmt &node);
+        void register_local_function(const FuncDefStmt &node);
         // void register_local_function(const ExternStmt &node);
 
         void register_function_params(const FuncDefStmt &node);
@@ -100,12 +100,9 @@ class SemanticChecker
 
         // void check_var_name(const VarDeclStmt &node);
 
-        // void visit(const VariableExpr &node);
-        // void visit(const U32Expr &node);
-        // void visit(const F64Expr &node);
         // void visit(const BinaryExpr &node);
         void visit(const UnaryExpr &node);
-        // void visit(const CallExpr &node);
+        void visit(const CallExpr &node);
         // void visit(const LambdaCallExpr &node);
         void visit(const IndexExpr &node);
         void visit(const CastExpr &node);

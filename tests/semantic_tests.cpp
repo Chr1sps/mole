@@ -190,6 +190,39 @@ TEST_CASE("Unary expressions.")
     }
 }
 
+TEST_CASE("Function calls.")
+{
+    SECTION("Valid calls.")
+    {
+        CHECK_VALID(L"fn test(){}"
+                    L"fn main(){"
+                    L"  test();"
+                    L"}");
+    }
+    SECTION("Mismatched argument count.")
+    {
+        CHECK_INVALID(L"fn test(){}"
+                      L"fn main(){"
+                      L"  test(1);"
+                      L"}");
+        CHECK_INVALID(L"fn test(a: i32){}"
+                      L"fn main(){"
+                      L"  test();"
+                      L"}");
+    }
+    SECTION("Mismatched argument type.")
+    {
+        CHECK_INVALID(L"fn test(a: i32){}"
+                      L"fn main(){"
+                      L"  test(1.0);"
+                      L"}");
+    }
+}
+
+TEST_CASE("Lambda calls.")
+{
+}
+
 TEST_CASE("Indexing.")
 {
     SECTION("Correct indexing.")
