@@ -45,17 +45,16 @@ std::unordered_map<RefSpecifier, std::wstring>
 };
 std::unordered_map<AssignType, std::wstring>
     JsonSerializer::Visitor::assign_map = {
-        {AssignType::NORMAL, L"NORMAL"},   {AssignType::PLUS, L"PLUS"},
-        {AssignType::MINUS, L"MINUS"},     {AssignType::MUL, L"MUL"},
-        {AssignType::DIV, L"DIV"},         {AssignType::MOD, L"MOD"},
-        {AssignType::EXP, L"EXP"},         {AssignType::BIT_AND, L"BIT_AND"},
-        {AssignType::BIT_OR, L"BIT_OR"},   {AssignType::BIT_XOR, L"BIT_XOR"},
-        {AssignType::BIT_NEG, L"BIT_NEG"}, {AssignType::SHR, L"SHR"},
-        {AssignType::SHL, L"SHL"},
+        {AssignType::NORMAL, L"NORMAL"}, {AssignType::PLUS, L"PLUS"},
+        {AssignType::MINUS, L"MINUS"},   {AssignType::MUL, L"MUL"},
+        {AssignType::DIV, L"DIV"},       {AssignType::MOD, L"MOD"},
+        {AssignType::EXP, L"EXP"},       {AssignType::BIT_AND, L"BIT_AND"},
+        {AssignType::BIT_OR, L"BIT_OR"}, {AssignType::BIT_XOR, L"BIT_XOR"},
+        {AssignType::SHR, L"SHR"},       {AssignType::SHL, L"SHL"},
 };
 std::unordered_map<TypeEnum, std::wstring> JsonSerializer::Visitor::type_map =
     {
-        {TypeEnum::BOOL, L"BOOL"}, {TypeEnum::I32, L"I32"},
+        {TypeEnum::BOOL, L"BOOL"}, {TypeEnum::U32, L"U32"},
         {TypeEnum::I32, L"I32"},   {TypeEnum::F64, L"F64"},
         {TypeEnum::CHAR, L"CHAR"}, {TypeEnum::STR, L"STR"},
 };
@@ -478,19 +477,20 @@ void JsonSerializer::Visitor::visit(const Program &node)
 {
     nlohmann::json output;
     output["type"] = "Program";
-    output["externs"] = nlohmann::json::array();
+    output["externs"] = output["globals"] = output["functions"] =
+        nlohmann::json::array();
     for (auto &ext : node.externs)
     {
         this->visit(*ext);
         output["externs"].push_back(this->last_object);
     }
-    output["globals"] = nlohmann::json::array();
+    // output["globals"] = nlohmann::json::array();
     for (auto &var : node.globals)
     {
         this->visit(*var);
         output["globals"].push_back(this->last_object);
     }
-    output["functions"] = nlohmann::json::array();
+    // output["functions"] = nlohmann::json::array();
     for (auto &function : node.functions)
     {
         this->visit(*function);

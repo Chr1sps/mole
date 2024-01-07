@@ -1,7 +1,7 @@
 #include "json_serializer.hpp"
-#include "parser.hpp"
-// #include "semantic_checker.hpp"
 #include "locale.hpp"
+#include "parser.hpp"
+#include "semantic_checker.hpp"
 #include <fstream>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/InitLLVM.h>
@@ -48,11 +48,20 @@ int main(int argc, char **argv)
     auto parser = Parser(std::move(lexer));
     parser.add_logger(&logger);
     parser.add_logger(&error_checker);
+    auto semantic_checker = SemanticChecker();
+    semantic_checker.add_logger(&logger);
+    semantic_checker.add_logger(&error_checker);
     auto program = parser.parse();
     if (!error_checker)
     {
         return std::make_error_condition(std::errc::invalid_argument).value();
     }
+    semantic_checker.verify(*program);
+    if (!error_checker)
+    {
+        return std::make_error_condition(std::errc::invalid_argument).value();
+    }
+
     if (dump_ast.getValue())
     {
         auto serializer = JsonSerializer();

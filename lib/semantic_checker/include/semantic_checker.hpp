@@ -15,9 +15,8 @@ class SemanticChecker
     {
         static const std::unordered_multimap<TypeEnum, TypeEnum> cast_map;
         TypePtr last_type, expected_return_type;
-        // std::optional<std::wstring> referenced_var;
         bool is_assignable, is_initialized, is_in_loop, is_exhaustive,
-            is_const, is_lvalue, is_return_covered;
+            is_const, is_lvalue, is_return_covered, is_local;
 
         template <typename... Args> void report_error(Args &&...data)
         {
@@ -61,45 +60,26 @@ class SemanticChecker
         std::vector<std::unordered_map<std::wstring, VarData>> variable_map;
         std::vector<std::unordered_map<std::wstring, FunctionType>>
             function_map;
-
-        // std::vector<size_t> const_scopes;
-
-        // unsigned int scope_level = 0;
-        // bool check_const;
+        std::deque<bool> const_scopes;
 
         void enter_scope();
         void leave_scope();
-        // void register_globals(const Program &node);
 
-        // void check_function_names(const VarDeclStmt &node);
         void check_function_params(const FuncDefStmt &node);
-        // void check_function_params(const ExternStmt &node);
-        // void check_function_block(const FuncDefStmt &node);
-        // void check_variable_names(const VarDeclStmt &node);
+        void check_function_params(const ExternStmt &node);
         void check_main_function(const FuncDefStmt &node);
 
         bool check_var_value_and_type(const VarDeclStmt &node);
 
-        // void check_function_return(const FuncDefStmt &node);
-
         std::optional<VarData> find_variable(const std::wstring &name);
-        std::optional<FunctionType> find_function(const std::wstring &name);
+        std::optional<FunctionType> find_function(
+            const std::wstring &name) const;
 
-        // std::shared_ptr<Variable> find_outside_variable(
-        //     const std::wstring &name);
-        // std::shared_ptr<Variable> find_outside_variable(
-        //     const std::wstring &name, const int &scope_number);
-        // std::shared_ptr<Function> find_outside_function(
-        //     const std::wstring &name);
-
-        void register_local_variable(const VarDeclStmt &node);
         void register_local_function(const FuncDefStmt &node);
-        // void register_local_function(const ExternStmt &node);
+        void register_local_function(const ExternStmt &node);
 
         void register_function_params(const FuncDefStmt &node);
-        // void unregister_function_params(const FuncDefStmt &node);
 
-        // void check_var_name(const VarDeclStmt &node);
         void check_condition_expr(const Expression &condition);
 
         void visit(const BinaryExpr &node);
@@ -116,9 +96,23 @@ class SemanticChecker
         void visit(const ReturnStmt &node);
         void visit(const AssignStmt &node);
         void visit(const ExprStmt &node);
+
+        TypePtr set_expected_return_type(TypePtr type);
+        void enter_function_scope(const bool &is_const);
+        void leave_function_scope();
+        bool is_in_const_scope() const;
+
         void visit(const FuncDefStmt &node);
+        void visit(const ExternStmt &node);
+
+        void check_name_shadowing(const std::wstring &name);
+        void check_name_not_main(const VarDeclStmt &node);
+        void register_local_variable(const VarDeclStmt &node);
+
         void visit(const VarDeclStmt &node);
-        // void visit(const ExternStmt &node);
+
+        void visit_top_level(const FuncDefStmt &node);
+        void register_top_level(const FuncDefStmt &node);
 
         void visit(const LiteralArm &node);
         void visit(const GuardArm &node);

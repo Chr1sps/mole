@@ -1012,6 +1012,10 @@ TEST_CASE("Function parameter cannot shadow a variable/function in scope")
                   L"fn foo(var: u32){}");
     CHECK_INVALID(L"fn var(){}"
                   L"fn foo(var: u32){}");
+    CHECK_VALID(L"fn goo(){let var = 1;}"
+                L"fn foo(var: u32){}");
+    CHECK_VALID(L"fn foo(var: u32){}"
+                L"fn goo(){let var = 1;}");
 }
 
 TEST_CASE("Const function cannot reference outside variables that are not "
@@ -1029,9 +1033,21 @@ TEST_CASE("Const function cannot reference outside variables that are not "
 
 TEST_CASE("Variable cannot be called 'main'.")
 {
-    CHECK_INVALID(L"let main: u32;");
-    CHECK_INVALID(L"let main: fn();");
-    CHECK_INVALID(L"let main: fn()=>u32;");
+    CHECK_INVALID(L"let mut main: u32;");
+    CHECK_INVALID(L"let mut main: fn();");
+    CHECK_INVALID(L"let mut main: fn()=>u32;");
+}
+
+TEST_CASE("Variables and functions cannot be redefined.")
+{
+    CHECK_INVALID(L"let mut value: u32;"
+                  L"let value = 1;");
+    CHECK_INVALID(L"fn value(){}"
+                  L"let value = 1;");
+    CHECK_INVALID(L"let value = 1;"
+                  L"fn value(){}");
+    CHECK_INVALID(L"fn const value(){}"
+                  L"fn value(){}");
 }
 
 TEST_CASE("Main should be of type fn()=>u32 or fn().")
@@ -1043,4 +1059,24 @@ TEST_CASE("Main should be of type fn()=>u32 or fn().")
 TEST_CASE("Main cannot have any parameters.")
 {
     CHECK_INVALID(L"fn main(x: u32){}");
+}
+
+TEST_CASE("Externs.")
+{
+    SECTION("Valid externs.")
+    {
+        CHECK_VALID(L"extern foo(x: u32);");
+        CHECK_VALID(L"extern foo(x: u32) => i32;");
+    }
+    SECTION("Main cannot be externed.")
+    {
+        CHECK_INVALID(L"extern main(x: u32);");
+        CHECK_INVALID(L"extern main();");
+        CHECK_INVALID(L"extern main()=>i32;");
+    }
+    SECTION("No redefinitions.")
+    {
+        CHECK_INVALID(L"extern foo(x: u32);"
+                      L"extern foo();");
+    }
 }

@@ -28,7 +28,7 @@ class Logger
     static const std::map<LogLevel, std::wstring> log_level_strings;
 
   public:
-    virtual void log(const LogMessage &) = 0;
+    virtual void log(const LogMessage &) noexcept = 0;
 
     virtual ~Logger()
     {
@@ -46,7 +46,7 @@ class ConsoleLogger : public Logger
     {
     }
 
-    void log(const LogMessage &msg) override;
+    void log(const LogMessage &msg) noexcept override;
 };
 
 class ExecutionLogger : public Logger
@@ -64,7 +64,7 @@ class ExecutionLogger : public Logger
     {
     }
 
-    void log(const LogMessage &msg) override;
+    void log(const LogMessage &msg) noexcept override;
 
     operator bool()
     {
@@ -85,7 +85,7 @@ class FileLogger : public Logger
     {
     }
 
-    void log(const LogMessage &msg) override;
+    void log(const LogMessage &msg) noexcept override;
 };
 
 class DebugLogger : public Logger
@@ -94,7 +94,7 @@ class DebugLogger : public Logger
 
   public:
     constexpr DebugLogger() = default;
-    void log(const LogMessage &msg) override;
+    void log(const LogMessage &msg) noexcept override;
     const std::vector<LogMessage> &get_messages() const;
 };
 

@@ -5,6 +5,7 @@
 #include <expected>
 #include <optional>
 #include <ranges>
+#include <span>
 #include <string_view>
 
 namespace
@@ -229,7 +230,7 @@ constexpr bool check_non_ref_or_string(const Type &type)
     case RefSpecifier::REF:
         if (simple.type != TypeEnum::STR)
             return false;
-
+        [[fallthrough]];
     case RefSpecifier::NON_REF:
         return true;
 
@@ -268,93 +269,49 @@ void SemanticChecker::Visitor::leave_scope()
     this->variable_map.pop_back();
 }
 
-// void SemanticChecker::Visitor::register_globals(const Program &node)
-// {
-//     for (auto &var : node.globals)
-//         var->accept(*this);
-//     for (auto &ext : node.externs)
-//         ext->accept(*this);
-//     for (auto &func : node.functions)
-//         func->accept(*this);
-// }
-
-// void SemanticChecker::Visitor::check_function_names(const VarDeclStmt &node)
-// {
-//     for (auto &scope_funcs : this->functions)
-//     {
-//         for (auto &func : scope_funcs)
-//         {
-//             if (node.name == func->name)
-//             {
-//                 this->report_error(
-//                     L"defined variable has the same name as a function");
-//             }
-//         }
-//     }
-// }
-
 void SemanticChecker::Visitor::check_function_params(const FuncDefStmt &node)
 {
     for (auto &param : node.params)
     {
         if (auto var = this->find_variable(param->name))
             this->report_error(L"param name cannot shadow a variable that is "
-                                                                             L"already in scope");
+                               L"already in scope");
         if (auto func = this->find_function(param->name))
             this->report_error(L"param name cannot shadow a function that is "
-                                                                             L"already in scope");
+                               L"already in scope");
     }
 }
 
-// void SemanticChecker::Visitor::check_function_params(const ExternStmt &node)
-// {
-//     for (auto &param : node.params)
-//     {
-//         if (auto var = this->find_variable(param->name))
-//             this->report_error(L"param name cannot shadow a variable that is
-//             "
-//                                L"already in scope");
-//         if (auto func = this->find_function(param->name))
-//             this->report_error(L"param name cannot shadow a function that is
-//             "
-//                                L"already in scope");
-//     }
-// }
+void SemanticChecker::Visitor::check_function_params(const ExternStmt &node)
+{
+    for (auto &param : node.params)
+    {
+        if (auto var = this->find_variable(param->name))
+            this->report_error(L"param name cannot shadow a variable that is "
+                               L"already in scope");
+        if (auto func = this->find_function(param->name))
+            this->report_error(L"param name cannot shadow a function that is "
+                               L"already in scope");
+    }
+}
 
-// void SemanticChecker::Visitor::check_function_block(const FuncDefStmt &node)
-// {
-//     if (node.is_const)
-//         this->const_scopes.push_back(this->scope_level);
-//     node.block->accept(*this);
-//     if (node.is_const)
-//         this->const_scopes.pop_back();
-// }
-
-// void SemanticChecker::Visitor::check_function_return(const FuncDefStmt
-// &node)
-// {
-//     auto return_type = this->return_stack.back();
-//     if (!return_type && (*(node.return_type) != NeverType()))
-//         this->report_error(L"function doesn't return when it should");
-//     if (return_type && (*(return_type) != *(node.return_type)))
-//         this->report_error(L"function returns the wrong type");
-// }
-
-// void SemanticChecker::Visitor::check_variable_names(const VarDeclStmt &node)
-// {
-//     for (auto &scope_vars : this->variables)
-//     {
-//         for (auto &var : scope_vars)
-//         {
-//             if (node.name == var->name)
-//             {
-//                 this->report_error(
-//                     L"defined variable has the same name as another
-//                     variable");
-//             }
-//         }
-//     }
-// }
+void SemanticChecker::Visitor::check_name_shadowing(const std::wstring &name)
+{
+    for (const auto &scope : this->variable_map)
+    {
+        auto iter = scope.find(name);
+        if (iter != scope.cend())
+            this->report_error(
+                L"given name is the same as that of another variable");
+    }
+    for (const auto &scope : this->function_map)
+    {
+        auto iter = scope.find(name);
+        if (iter != scope.cend())
+            this->report_error(
+                L"given name is the same as that of another function");
+    }
+}
 
 void SemanticChecker::Visitor::check_main_function(const FuncDefStmt &node)
 {
@@ -366,20 +323,17 @@ void SemanticChecker::Visitor::check_main_function(const FuncDefStmt &node)
                            L"expected return type: void or u32, found: ",
                            get_type_string(node.return_type));
     }
-    // if (*node.return_type == SimpleType(TypeEnum::U32,
-    // RefSpecifier::NON_REF))
-    //     node.block->accept(*this);
     if (!node.params.empty())
     {
         this->report_error(L"main cannot have any parameters");
     }
 }
 
-// void SemanticChecker::Visitor::check_var_name(const VarDeclStmt &node)
-// {
-//     if (node.name == L"main")
-//         this->report_error(L"variable cannot be named 'main'");
-// }
+void SemanticChecker::Visitor::check_name_not_main(const VarDeclStmt &node)
+{
+    if (node.name == L"main")
+        this->report_error(L"variable cannot be named 'main'");
+}
 
 bool SemanticChecker::Visitor::check_var_value_and_type(
     const VarDeclStmt &node)
@@ -418,17 +372,28 @@ bool SemanticChecker::Visitor::check_var_value_and_type(
 auto SemanticChecker::Visitor::find_variable(const std::wstring &name)
     -> std::optional<VarData>
 {
-    for (const auto &scope : this->variable_map)
+    for (const auto &scope :
+         std::span(this->variable_map.cbegin(), this->variable_map.cend() - 1))
     {
         auto found = scope.find(name);
-        if (found != scope.end())
+        if (found != scope.cend())
+        {
+            this->is_local = false;
             return found->second;
+        }
+    }
+    auto last_scope = this->variable_map.back();
+    auto found = last_scope.find(name);
+    if (found != last_scope.cend())
+    {
+        this->is_local = true;
+        return found->second;
     }
     return std::nullopt;
 }
 
 std::optional<FunctionType> SemanticChecker::Visitor::find_function(
-    const std::wstring &name)
+    const std::wstring &name) const
 {
     for (const auto &scope : this->function_map)
     {
@@ -438,44 +403,6 @@ std::optional<FunctionType> SemanticChecker::Visitor::find_function(
     }
     return std::nullopt;
 }
-
-// std::shared_ptr<SemanticChecker::Variable> SemanticChecker::Visitor::
-//     find_outside_variable(const std::wstring &name)
-// {
-//     if (!this->const_scopes.empty())
-//     {
-//         for (size_t i = 0;
-//              i < this->variables.size() && i < this->const_scopes.back();
-//              ++i)
-//         {
-//             auto scope = this->variables[i];
-//             auto found = std::find_if(scope.begin(), scope.end(),
-//                                       [&name](std::shared_ptr<Variable> var)
-//                                       {
-//                                           return var->name == name;
-//                                       });
-//             if (found != scope.end())
-//                 return *found;
-//         }
-//     }
-//     return nullptr;
-// }
-
-// std::shared_ptr<SemanticChecker::Function> SemanticChecker::Visitor::
-//     find_outside_function(const std::wstring &name)
-// {
-//     for (auto scope = this->functions.begin();
-//          scope < (this->functions.end() - 2); ++scope)
-//     {
-//         auto found = std::find_if(scope->begin(), scope->end(),
-//                                   [&name](std::shared_ptr<Function> foo) {
-//                                       return foo->name == name;
-//                                   });
-//         if (found != scope->end())
-//             return *found;
-//     }
-//     return nullptr;
-// }
 
 void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt &node)
 {
@@ -491,24 +418,12 @@ void SemanticChecker::Visitor::register_local_function(const FuncDefStmt &node)
         std::make_pair(node.name, std::move(*fn_type)));
 }
 
-// void SemanticChecker::Visitor::register_local_function(const ExternStmt
-// &node)
-// {
-//     std::vector<TypePtr> param_types;
-
-//     for (auto &param : node.params)
-//     {
-//         param_types.push_back(param->type);
-//     }
-
-//     auto fn_type =
-//         std::make_shared<FunctionType>(param_types, node.return_type,
-//         false);
-
-//     auto new_func = Function(node.name, fn_type);
-
-//     this->functions.back().insert(std::make_shared<Function>(new_func));
-// }
+void SemanticChecker::Visitor::register_local_function(const ExternStmt &node)
+{
+    auto fn_type = node.get_type();
+    this->function_map.back().emplace(
+        std::make_pair(node.name, std::move(*fn_type)));
+}
 
 void SemanticChecker::Visitor::register_function_params(
     const FuncDefStmt &node)
@@ -522,48 +437,6 @@ void SemanticChecker::Visitor::register_function_params(
             std::make_pair(param->name, new_data));
     }
 }
-
-// void SemanticChecker::Visitor::unregister_function_params(
-//     const FuncDefStmt &node)
-// {
-//     for (auto &param : node.params)
-//     {
-//         std::erase_if(this->variables.back(),
-//                       [&param](const std::shared_ptr<Variable> &var) {
-//                           return param->name == var->name;
-//                       });
-//     }
-// }
-
-// void SemanticChecker::Visitor::visit(const VariableExpr &node)
-// {
-//     auto variable = this->find_variable(node.name);
-//     auto func = this->find_function(node.name);
-//     if (variable)
-//     {
-//         if (!variable->initialized)
-//             this->report_error(L"variable `", node.name,
-//                                L"` is not initialized");
-//         if (this->find_outside_variable(node.name))
-//         {
-//             this->report_error(L"variable `", node.name,
-//                                L"` is accessed in a const function");
-//         }
-//         this->last_type = variable->type;
-//     }
-//     else if (func)
-//     {
-//         if (this->find_outside_function(node.name))
-//         {
-//             this->report_error(L"outside function `", node.name,
-//                                L"` is accessed in a const function");
-//         }
-//         this->last_type = func->type;
-//     }
-//     else
-//         this->report_error(L"variable `", node.name, L"` not found in
-//         scope");
-// }
 
 void SemanticChecker::Visitor::visit(const BinaryExpr &node)
 {
@@ -1021,8 +894,36 @@ void SemanticChecker::Visitor::visit(const ReturnStmt &node)
     this->is_return_covered = true;
 }
 
+void SemanticChecker::Visitor::enter_function_scope(const bool &is_const)
+{
+    this->enter_scope();
+    this->const_scopes.push_back(is_const);
+    this->is_return_covered = false;
+}
+
+void SemanticChecker::Visitor::leave_function_scope()
+{
+    this->const_scopes.pop_back();
+    this->leave_scope();
+}
+
+bool SemanticChecker::Visitor::is_in_const_scope() const
+{
+    auto iter = std::find(this->const_scopes.cbegin(),
+                          this->const_scopes.cend(), true);
+    return iter != this->const_scopes.cend();
+}
+
+TypePtr SemanticChecker::Visitor::set_expected_return_type(TypePtr type)
+{
+    auto previous_return_type = std::move(this->expected_return_type);
+    this->expected_return_type = clone_type_ptr(type);
+    return previous_return_type;
+}
+
 void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
 {
+    this->check_name_shadowing(node.name);
     if (node.name == L"main")
     {
         this->check_main_function(node);
@@ -1030,25 +931,28 @@ void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
 
     this->check_function_params(node);
 
-    // this->check_function_block(node);
-    this->enter_scope();
-    this->is_return_covered = false;
+    this->enter_function_scope(node.is_const);
     this->register_function_params(node);
-    auto previous_return_type = std::move(this->expected_return_type);
-    this->expected_return_type = clone_type_ptr(node.return_type);
+
+    auto previous_return_type =
+        this->set_expected_return_type(clone_type_ptr(node.return_type));
+
     for (const auto &stmt : node.block->statements)
     {
         this->visit(*stmt);
     }
+
     if (!this->expected_return_type)
         this->is_return_covered = true;
-    this->leave_scope();
+
+    this->leave_function_scope();
     if (!this->is_return_covered)
     {
         this->report_error(
             L"function doesn't return in each control flow path");
     }
-    this->expected_return_type = std::move(previous_return_type);
+
+    this->set_expected_return_type(std::move(previous_return_type));
 
     this->register_local_function(node);
 }
@@ -1130,8 +1034,7 @@ void SemanticChecker::Visitor::visit(const ExprStmt &node)
 
 void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
 {
-    // this->check_variable_names(node);
-    // this->check_function_names(node);
+    this->check_name_shadowing(node.name);
     auto registerable = true;
     if (node.is_mut)
     {
@@ -1149,22 +1052,23 @@ void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
             registerable = false;
     }
     registerable &= this->check_var_value_and_type(node);
-    // this->check_var_name(node);
+    this->check_name_not_main(node);
     if (registerable)
         this->register_local_variable(node);
 }
 
-// void SemanticChecker::Visitor::visit(const ExternStmt &node)
-// {
-//     if (node.name == L"main")
-//     {
-//         this->report_error(L"`main` cannot be externed");
-//     }
+void SemanticChecker::Visitor::visit(const ExternStmt &node)
+{
+    this->check_name_shadowing(node.name);
+    if (node.name == L"main")
+    {
+        this->report_error(L"`main` cannot be externed");
+    }
 
-//     this->check_function_params(node);
+    this->check_function_params(node);
 
-//     this->register_local_function(node);
-// }
+    this->register_local_function(node);
+}
 
 void SemanticChecker::Visitor::visit(const Type &node)
 {
@@ -1173,78 +1077,85 @@ void SemanticChecker::Visitor::visit(const Type &node)
 void SemanticChecker::Visitor::visit(const Expression &node)
 {
     std::visit(
-        overloaded{[this](const U32Expr &node) {
-                       this->last_type = std::make_unique<Type>(
-                           SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
-                       this->is_assignable = false;
-                       this->is_const = true;
-                       this->is_initialized = true;
-                       this->is_lvalue = false;
-                   },
-                   [this](const F64Expr &node) {
-                       this->last_type = std::make_unique<Type>(
-                           SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
-                       this->is_assignable = false;
-                       this->is_const = true;
-                       this->is_initialized = true;
-                       this->is_lvalue = false;
-                   },
-                   [this](const CharExpr &node) {
-                       this->last_type = std::make_unique<Type>(
-                           SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
-                       this->is_assignable = false;
-                       this->is_const = true;
-                       this->is_initialized = true;
-                       this->is_lvalue = false;
-                   },
-                   [this](const BoolExpr &node) {
-                       this->last_type = std::make_unique<Type>(
-                           SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
-                       this->is_assignable = false;
-                       this->is_const = true;
-                       this->is_initialized = true;
-                       this->is_lvalue = false;
-                   },
-                   [this](const StringExpr &node) {
-                       this->last_type = std::make_unique<Type>(
-                           SimpleType(TypeEnum::STR, RefSpecifier::REF));
-                       this->is_assignable = false;
-                       this->is_const = true;
-                       this->is_initialized = true;
-                       this->is_lvalue = false;
-                   },
-                   [this](const VariableExpr &node) {
-                       if (auto var = this->find_variable(node.name))
-                       {
-                           this->last_type = std::make_unique<Type>(var->type);
-                           this->is_assignable = var->mut;
-                           this->is_const = !var->mut;
-                           this->is_initialized = var->initialized;
-                           this->is_lvalue = true;
-                       }
-                       else if (auto func = this->find_function(node.name))
-                       {
-                           this->last_type = std::make_unique<Type>(*func);
-                           this->is_assignable = false;
-                           this->is_const = true;
-                           this->is_initialized = true;
-                           this->is_lvalue = true;
-                       }
-                       else
-                       {
-                           this->report_expr_error(
-                               L"referenced variable doesn't exist");
-                           this->is_initialized = false;
-                           this->is_lvalue = false;
-                       }
-                   },
-                   [this](const BinaryExpr &node) { this->visit(node); },
-                   [this](const UnaryExpr &node) { this->visit(node); },
-                   [this](const CallExpr &node) { this->visit(node); },
-                   [this](const LambdaCallExpr &node) { this->visit(node); },
-                   [this](const IndexExpr &node) { this->visit(node); },
-                   [this](const CastExpr &node) { this->visit(node); },
-                   [](const auto &) {}},
+        overloaded{
+            [this](const U32Expr &node) {
+                this->last_type = std::make_unique<Type>(
+                    SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
+                this->is_assignable = false;
+                this->is_const = true;
+                this->is_initialized = true;
+                this->is_lvalue = false;
+            },
+            [this](const F64Expr &node) {
+                this->last_type = std::make_unique<Type>(
+                    SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
+                this->is_assignable = false;
+                this->is_const = true;
+                this->is_initialized = true;
+                this->is_lvalue = false;
+            },
+            [this](const CharExpr &node) {
+                this->last_type = std::make_unique<Type>(
+                    SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
+                this->is_assignable = false;
+                this->is_const = true;
+                this->is_initialized = true;
+                this->is_lvalue = false;
+            },
+            [this](const BoolExpr &node) {
+                this->last_type = std::make_unique<Type>(
+                    SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
+                this->is_assignable = false;
+                this->is_const = true;
+                this->is_initialized = true;
+                this->is_lvalue = false;
+            },
+            [this](const StringExpr &node) {
+                this->last_type = std::make_unique<Type>(
+                    SimpleType(TypeEnum::STR, RefSpecifier::REF));
+                this->is_assignable = false;
+                this->is_const = true;
+                this->is_initialized = true;
+                this->is_lvalue = false;
+            },
+            [this](const VariableExpr &node) {
+                if (auto var = this->find_variable(node.name))
+                {
+                    this->last_type = std::make_unique<Type>(var->type);
+                    this->is_assignable = var->mut;
+                    this->is_const = !var->mut;
+                    this->is_initialized = var->initialized;
+                    this->is_lvalue = true;
+                    if (this->is_in_const_scope() && !this->is_local)
+                    {
+                        this->report_error(
+                            L"non-constant outside variable accessed in a "
+                            L"constant function body");
+                    }
+                }
+                else if (auto func = this->find_function(node.name))
+                {
+                    this->last_type = std::make_unique<Type>(*func);
+                    this->is_assignable = false;
+                    this->is_const = true;
+                    this->is_initialized = true;
+                    this->is_lvalue = true;
+                }
+                else
+                {
+                    this->report_expr_error(
+                        L"referenced variable doesn't exist");
+                    this->is_initialized = false;
+                    this->is_lvalue = false;
+                }
+            },
+            [this](const BinaryExpr &node) { this->visit(node); },
+            [this](const UnaryExpr &node) { this->visit(node); },
+            [this](const CallExpr &node) { this->visit(node); },
+            [this](const LambdaCallExpr &node) { this->visit(node); },
+            [this](const IndexExpr &node) { this->visit(node); },
+            [this](const CastExpr &node) { this->visit(node); },
+            [](const auto &) {}},
         node);
 }
 
@@ -1290,7 +1201,7 @@ void SemanticChecker::Visitor::visit(const Statement &node)
             [this](const AssignStmt &node) { this->visit(node); },
             [this](const ExprStmt &node) { this->visit(node); },
             [this](const VarDeclStmt &node) { this->visit(node); },
-            //    [this](const ExternStmt &node) { this->visit(node); },
+            [this](const ExternStmt &node) { this->visit(node); },
             [](const auto &) {}},
         node);
 }
@@ -1338,15 +1249,54 @@ void SemanticChecker::Visitor::visit(const Parameter &node)
     this->last_type = clone_type_ptr(node.type);
 }
 
+void SemanticChecker::Visitor::register_top_level(const FuncDefStmt &node)
+{
+    this->check_name_shadowing(node.name);
+    if (node.name == L"main")
+    {
+        this->check_main_function(node);
+    }
+
+    this->check_function_params(node);
+
+    this->register_local_function(node);
+}
+
+void SemanticChecker::Visitor::visit_top_level(const FuncDefStmt &node)
+{
+    this->enter_function_scope(node.is_const);
+    this->register_function_params(node);
+
+    this->set_expected_return_type(clone_type_ptr(node.return_type));
+
+    for (const auto &stmt : node.block->statements)
+    {
+        this->visit(*stmt);
+    }
+
+    if (!this->expected_return_type)
+        this->is_return_covered = true;
+
+    this->leave_function_scope();
+    if (!this->is_return_covered)
+    {
+        this->report_error(
+            L"function doesn't return in each control flow path");
+    }
+}
+
 void SemanticChecker::Visitor::visit(const Program &node)
 {
     this->enter_scope();
-    // for (auto &ext : node.externs)
-    //     this->visit(*ext);
+    for (auto &ext : node.externs)
+        this->visit(*ext);
     for (auto &var : node.globals)
         this->visit(*var);
+
     for (auto &func : node.functions)
-        this->visit(*func);
+        this->register_top_level(*func);
+    for (auto &func : node.functions)
+        this->visit_top_level(*func);
     this->leave_scope();
 }
 

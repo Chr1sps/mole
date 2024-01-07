@@ -908,27 +908,22 @@ ExprPtr Parser::parse_binary_expr()
     std::stack<ExprPtr> values;
     std::stack<BinOpData> ops;
     if (auto expr = this->parse_cast_expr())
-    {
         values.push(std::move(expr));
-    }
     else
         return nullptr;
     while (auto binop = this->parse_binop())
     {
-
         while (!ops.empty() && (binop->precedence < ops.top().precedence ||
                                 (binop->precedence == ops.top().precedence &&
                                  !binop->is_right_assoc)))
-        {
             join_into_binary_op(values, ops);
-        }
+
         ops.push(*binop);
         this->next_token();
 
         if (auto expr = this->parse_cast_expr())
-        {
             values.push(std::move(expr));
-        }
+
         else
         {
             this->report_error(
@@ -937,9 +932,8 @@ ExprPtr Parser::parse_binary_expr()
         }
     }
     while (!ops.empty())
-    {
         join_into_binary_op(values, ops);
-    }
+
     auto result = std::move(values.top());
     values.pop();
     return result;
