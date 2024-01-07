@@ -188,6 +188,50 @@ TEST_CASE("Unary expressions.")
         CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
                               L"*var;"));
     }
+    SECTION("Using uninitialized values.")
+    {
+        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                              L"++var;"));
+        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                              L"--var;"));
+        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                              L"-var;"));
+        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                              L"~var;"));
+        CHECK_INVALID(FN_WRAP(L"let mut var: bool;"
+                              L"!var;"));
+        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                              L"&var;"));
+        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                              L"&mut var;"));
+    }
+    SECTION("References.")
+    {
+        SECTION("Referencing non-lvalues.")
+        {
+            CHECK_INVALID(FN_WRAP(L"&false;"));
+            CHECK_INVALID(FN_WRAP(L"&mut false;"));
+            CHECK_INVALID(FN_WRAP(L"&3;"));
+            CHECK_INVALID(FN_WRAP(L"&mut 3;"));
+            CHECK_INVALID(FN_WRAP(L"&3.0;"));
+            CHECK_INVALID(FN_WRAP(L"&mut 3.0;"));
+            CHECK_INVALID(FN_WRAP(L"&(-3);"));
+            CHECK_INVALID(FN_WRAP(L"&mut (-3);"));
+            CHECK_INVALID(FN_WRAP(L"&'a';"));
+            CHECK_INVALID(FN_WRAP(L"&mut 'a';"));
+            CHECK_INVALID(FN_WRAP(L"&\"a\";"));
+            CHECK_INVALID(FN_WRAP(L"&mut \"a\";"));
+        }
+        SECTION("Dereferencing non-lvalues.")
+        {
+            CHECK_INVALID(FN_WRAP(L"*false;"));
+            CHECK_INVALID(FN_WRAP(L"*3;"));
+            CHECK_INVALID(FN_WRAP(L"*3.0;"));
+            CHECK_INVALID(FN_WRAP(L"*(-3);"));
+            CHECK_INVALID(FN_WRAP(L"*'a';"));
+            CHECK_INVALID(FN_WRAP(L"*\"a\";"));
+        }
+    }
 }
 
 TEST_CASE("Binary expressions.")
@@ -404,6 +448,92 @@ TEST_CASE("Binary expressions.")
             CHECK_INVALID(FN_WRAP(L"\"a\"&&\"a\";"));
         }
     }
+
+    SECTION("Using uninitialized values.")
+    {
+        SECTION("LHS.")
+        {
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var+1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var-1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var*1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var/1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var%1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var^^1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var==1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var!=1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var>=1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var<=1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var>1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var<1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: bool;"
+                                  L"var&&true;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: bool;"
+                                  L"var||false;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var&1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var|1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var^1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var<<1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"var>>1;"));
+        }
+        SECTION("RHS.")
+        {
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1+var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1-var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1*var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1/var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1%var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1^^var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1==var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1!=var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1>=var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1<=var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1<var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1>var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: bool;"
+                                  L"true&&var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: bool;"
+                                  L"true||var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1&var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1|var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1^var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1<<var;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
+                                  L"1>>var;"));
+        }
+    }
 }
 
 TEST_CASE("Function calls.")
@@ -413,6 +543,11 @@ TEST_CASE("Function calls.")
         CHECK_VALID(L"fn test(){}"
                     L"fn main(){"
                     L"  test();"
+                    L"}");
+        CHECK_VALID(L"fn test(){}"
+                    L"fn main(){"
+                    L"  let ptr = test;"
+                    L"  ptr();"
                     L"}");
     }
     SECTION("Mismatched argument count.")
@@ -439,26 +574,62 @@ TEST_CASE("Lambda calls.")
 {
     SECTION("Valid calls.")
     {
-        CHECK_VALID(L"fn test(){}"
-                    L"fn main(){"
-                    L"  test@();"
-                    L"}");
-        CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                    L"fn main(){"
-                    L"  test@(_, _);"
-                    L"}");
-        CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                    L"fn main(){"
-                    L"  test@(1, _);"
-                    L"}");
-        CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                    L"fn main(){"
-                    L"  test@(_, 2);"
-                    L"}");
-        CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                    L"fn main(){"
-                    L"  test@(1, 2);"
-                    L"}");
+        SECTION("Direct.")
+        {
+            CHECK_VALID(L"fn test(){}"
+                        L"fn main(){"
+                        L"  test@();"
+                        L"}");
+            CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                        L"fn main(){"
+                        L"  test@(_, _);"
+                        L"}");
+            CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                        L"fn main(){"
+                        L"  test@(1, _);"
+                        L"}");
+            CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                        L"fn main(){"
+                        L"  test@(_, 2);"
+                        L"}");
+            CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                        L"fn main(){"
+                        L"  test@(1, 2);"
+                        L"}");
+        }
+        SECTION("Through a reference.")
+        {
+            CHECK_VALID(L"fn test(){}"
+                        L"fn main(){"
+                        L"  let ptr = test;"
+                        L"  ptr@();"
+                        L"}");
+            CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                        L"fn main(){"
+                        L"  let ptr = test;"
+                        L"  ptr@(_, _);"
+                        L"}");
+            CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                        L"fn main(){"
+                        L"  let ptr = test;"
+                        L"  ptr@(1, _);"
+                        L"}");
+            CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                        L"fn main(){"
+                        L"  let ptr = test;"
+                        L"  ptr@(_, 2);"
+                        L"}");
+            CHECK_VALID(L"fn test(a: u32, b: u32){}"
+                        L"fn main(){"
+                        L"  let ptr = test;"
+                        L"  ptr@(1, 2);"
+                        L"}");
+        }
+    }
+    SECTION("Value is not callable.")
+    {
+        CHECK_INVALID(FN_WRAP(L"let test = 1;"
+                              L"test@(1, 2);"));
     }
     SECTION("Mismatched argument count.")
     {
@@ -668,6 +839,112 @@ TEST_CASE("Assignments.")
     }
 }
 
+TEST_CASE("Match statements.")
+{
+    SECTION("Checking for exhaustive patterns.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var = 1;"
+                            L"match(var) {else => {}}"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1;"
+                              L"match(var) {1 => {}}"));
+        CHECK_VALID(FN_WRAP(L"let var = 1;"
+                            L"match(var) {"
+                            L"1 => {}"
+                            L"else => {}"
+                            L"}"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1;"
+                              L"match(var) {"
+                              L"if (true) => {}"
+                              L"}"));
+        CHECK_VALID(FN_WRAP(L"let var = 1;"
+                            L"match(var) {"
+                            L"if (true) => {}"
+                            L"else => {}"
+                            L"}"));
+    }
+    SECTION("Type support.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var = true;"
+                            L"match(var) {else => {}}"));
+        CHECK_VALID(FN_WRAP(L"let var = 1;"
+                            L"match(var) {else => {}}"));
+        CHECK_VALID(FN_WRAP(L"let var = -1;"
+                            L"match(var) {else => {}}"));
+        CHECK_VALID(FN_WRAP(L"let var = 1.0;"
+                            L"match(var) {else => {}}"));
+        CHECK_VALID(FN_WRAP(L"let var = 'a';"
+                            L"match(var) {else => {}}"));
+        CHECK_VALID(FN_WRAP(L"let var = \"a\";"
+                            L"match(var) {else => {}}"));
+        CHECK_INVALID(L"fn foo() {}"
+                      L"fn boo() {match(foo) {else => {}}}");
+    }
+    SECTION("Literal arms.")
+    {
+        // SECTION("Compile time check.")
+        // {
+        //     CHECK_VALID(FN_WRAP(L"let var = 1;"
+        //                         L"match(var) {"
+        //                         L"(1+2) => {}"
+        //                         L"else => {}"
+        //                         L"}"));
+        //     CHECK_VALID(FN_WRAP(L"let var = 1;"
+        //                         L"let constant = 2;"
+        //                         L"match(var) {"
+        //                         L"constant => {}"
+        //                         L"else => {}"
+        //                         L"}"));
+        //     CHECK_VALID(FN_WRAP(L"let var = 1;"
+        //                         L"let constant = 2;"
+        //                         L"let const_ref = &constant;"
+        //                         L"match(var) {"
+        //                         L"*const_ref => {}"
+        //                         L"else => {}"
+        //                         L"}"));
+        //     CHECK_INVALID(FN_WRAP(L"let var = 1;"
+        //                           L"let mut mutable = 2;"
+        //                           L"let const_ref = &mutable;"
+        //                           L"match(var) {"
+        //                           L"*const_ref => {}"
+        //                           L"else => {}"
+        //                           L"}"));
+        // }
+    }
+    SECTION("Guard arms.")
+    {
+        CHECK_VALID(FN_WRAP(L"let var = 1;"
+                            L"match(var) {"
+                            L"  if(true) => {}"
+                            L"  else => {}"
+                            L"}"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1;"
+                              L"match(var) {"
+                              L"  if(1) => {}"
+                              L"  else => {}"
+                              L"}"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1;"
+                              L"match(var) {"
+                              L"  if(1.0) => {}"
+                              L"  else => {}"
+                              L"}"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1;"
+                              L"match(var) {"
+                              L"  if(-1) => {}"
+                              L"  else => {}"
+                              L"}"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1;"
+                              L"match(var) {"
+                              L"  if('a') => {}"
+                              L"  else => {}"
+                              L"}"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1;"
+                              L"match(var) {"
+                              L"  if(\"a\") => {}"
+                              L"  else => {}"
+                              L"}"));
+    }
+}
+
 TEST_CASE("Constant has no value assigned.")
 {
     CHECK_INVALID(L"let var: u32;");
@@ -699,93 +976,56 @@ TEST_CASE("Referenced value/function is not in scope.")
         CHECK_INVALID(
             L"fn foo(){let value = 5;} fn goo(){let new_value = value;}");
     }
-    // SECTION("Function arguments.")
-    // {
-    //     CHECK_VALID(L"fn foo(a: u32, b: u32) => u32 {return a + b;}");
-    //     CHECK_INVALID(L"fn foo(a: u32) => u32 {return a + b;}");
-    // }
+    SECTION("Function arguments.")
+    {
+        CHECK_VALID(L"fn foo(a: u32, b: u32) {a + b;}");
+        CHECK_INVALID(L"fn foo(a: u32) {a + b;}");
+    }
 }
 
-// TEST_CASE("Function's argument type is mismatched.")
-// {
-//     CHECK_INVALID(L"fn foo(x: u32)=>u32{return 32;}"
-//                   L"fn boo(){let value = 0.1; let falue = foo(value);}");
-//     CHECK_INVALID(L"fn foo(x: u32)=>u32{return 3;}"
-//                   L"fn boo(){let boo = foo(0.1);}");
-// }
+TEST_CASE("Function doesn't return when its type indicates otherwise.")
+{
+    CHECK_INVALID(L"fn foo(x: u32)=>u32{}");
+    CHECK_VALID(L"fn foo(x: u32){}");
+}
 
-// TEST_CASE("Function is called with a wrong amount of arguments.")
-// {
-//     CHECK_INVALID(L"fn foo(x: u32){}"
-//                   L"fn boo(){let goo = foo(1,2);}");
-//     CHECK_INVALID(L"fn foo(x: u32){}"
-//                   L"fn boo(){let goo = foo();}");
-// }
+TEST_CASE("Function returns the wrong type.")
+{
+    CHECK_INVALID(L"fn foo()=>u32{return 0.1;}");
+    CHECK_INVALID(L"fn foo()=>u32{let value = 0.1; return value;}");
+}
 
-// TEST_CASE("Referenced value is not a callable.")
-// {
-//     CHECK_INVALID(FN_WRAP(L"let foo = 5; let boo = foo();"));
-// }
+TEST_CASE("Return statement with no value in a function that does return.")
+{
+    CHECK_INVALID(L"fn foo(x: u32)=>u32{return;}");
+}
 
-// TEST_CASE("Function doesn't return when its type indicates otherwise.")
-// {
-//     CHECK_INVALID(L"fn foo(x: u32)=>u32{}");
-//     CHECK_VALID(L"fn foo(x: u32)=>!{}");
-// }
+TEST_CASE("Function returns a value when it shouldn't.")
+{
+    CHECK_INVALID(L"fn foo(x: u32){return 5;}");
+    CHECK_INVALID(L"fn foo(x: u32){return 5;}");
+}
 
-// TEST_CASE("Function returns the wrong type.")
-// {
-//     CHECK_INVALID(L"fn foo()=>u32{return 0.1;}");
-//     CHECK_INVALID(L"fn foo()=>u32{let value = 0.1; return value;}");
-// }
+TEST_CASE("Function parameter cannot shadow a variable/function in scope")
+{
+    CHECK_INVALID(L"let var = 5;"
+                  L"fn foo(var: u32){}");
+    CHECK_INVALID(L"fn var(){}"
+                  L"fn foo(var: u32){}");
+}
 
-// TEST_CASE("Return statement with no value in a function that does return.")
-// {
-//     CHECK_INVALID(L"fn foo(x: u32)=>u32{return;}");
-// }
-
-// TEST_CASE("Function returns a value when it shouldn't.")
-// {
-//     CHECK_INVALID(L"fn foo(x: u32){return 5;}");
-//     CHECK_INVALID(L"fn foo(x: u32)=>!{return 5;}");
-// }
-
-// TEST_CASE("Function parameter cannot shadow a variable/function in scope")
-// {
-//     CHECK_INVALID(L"let var = 5;"
-//                   L"fn foo(var: u32){}");
-//     CHECK_INVALID(L"fn var(){}"
-//                   L"fn foo(var: u32){}");
-// }
-
-// TEST_CASE("Const function cannot reference outside variables that are not "
-//           "passed as arguments")
-// {
-//     CHECK_INVALID(L"let var = 5;"
-//                   L"fn const foo(){let bar = var;}");
-//     CHECK_INVALID(L"let mut var = 5;"
-//                   L"fn const foo(){var = 4;}");
-//     CHECK_VALID(L"let var = 5;"
-//                 L"fn foo(){let bar = var;}");
-//     CHECK_VALID(L"let mut var = 5;"
-//                 L"fn foo(){var = 4;}");
-//     // CHECK_INVALID(L"fn foo() {"
-//     //               L"    let var = 5;"
-//     //               L"    fn const boo() {let bar = var;}"
-//     //               L"}");
-//     // CHECK_INVALID(L"fn foo() {"
-//     //               L"    let mut var = 5;"
-//     //               L"    fn const boo() {var = 4;}"
-//     //               L"}");
-//     // CHECK_VALID(L"fn foo() {"
-//     //             L"    let var = 5;"
-//     //             L"    fn boo() {let bar = var;}"
-//     //             L"}");
-//     // CHECK_VALID(L"fn foo() {"
-//     //             L"    let mut var = 5;"
-//     //             L"    fn boo() {var = 4;}"
-//     //             L"}");
-// }
+TEST_CASE("Const function cannot reference outside variables that are not "
+          "passed as arguments")
+{
+    CHECK_INVALID(L"let var = 5;"
+                  L"fn const foo(){let bar = var;}");
+    CHECK_INVALID(L"let mut var = 5;"
+                  L"fn const foo(){var = 4;}");
+    CHECK_VALID(L"let var = 5;"
+                L"fn foo(){let bar = var;}");
+    CHECK_VALID(L"let mut var = 5;"
+                L"fn foo(){var = 4;}");
+}
 
 TEST_CASE("Variable cannot be called 'main'.")
 {
@@ -804,42 +1044,3 @@ TEST_CASE("Main cannot have any parameters.")
 {
     CHECK_INVALID(L"fn main(x: u32){}");
 }
-
-// TEST_CASE("Lambda call expression with a wrong number of arguments.")
-// {
-//     CHECK_INVALID(L"fn foo(a: u32, b: u32, c: u32){} "
-//                   L"fn main(){let val = foo(_, 2);}");
-//     CHECK_INVALID(L"fn foo(a: u32, b: u32, c: u32, d: u32){} "
-//                   L"fn main(){let val = foo(_, _, 3);}");
-//     CHECK_INVALID(L"fn foo(a: u32, b: u32, c: u32, d: u32){} "
-//                   L"fn main(){let val = foo(_, _, 3, _, 5);}");
-//     CHECK_INVALID(L"fn foo(a: u32, b: u32, c: u32, d: u32){} "
-//                   L"fn main(){let val = foo(_, _, _, _, 5, ...);}");
-//     CHECK_VALID(L"fn foo(a: u32, b: u32, c: u32){} "
-//                 L"fn main(){let val = foo(1, ...);}");
-//     CHECK_VALID(L"fn foo(a: u32, b: u32, c: u32){} "
-//                 L"fn main(){let val = foo(_, 2, ...);}");
-//     CHECK_VALID(L"fn foo(a: u32, b: u32, c: u32, d: u32){} "
-//                 L"fn main(){let val = foo(_, 2, _, 4, ...);}");
-// }
-
-// TEST_CASE("Lambda call expression has mismatched types.")
-// {
-//     CHECK_INVALID(L"fn foo(a: u32, b: u32){} "
-//                   L"fn main(){let val = foo(_, 2.1);}");
-//     CHECK_INVALID(L"fn foo(a: u32, b: u32){} "
-//                   L"fn main(){let val = foo(1.05, ...);}");
-// }
-
-// TEST_CASE("Chaining function calls.")
-// {
-//     CHECK_VALID(L"fn foo(a: u32, b: u32) => u32 {return a + b;}"
-//                 L"fn main() {"
-//                 L"  let boo = foo(32, _);"
-//                 L"  let goo = boo(32);"
-//                 L"}");
-//     CHECK_VALID(L"fn foo(a: u32, b: u32) => u32 {return a + b;}"
-//                 L"fn main() {"
-//                 L"  let boo = foo(32, _)(32);"
-//                 L"}");
-// }
