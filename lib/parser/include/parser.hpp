@@ -144,4 +144,12 @@ class Parser : public Reporter
     bool is_lexer_attached() const noexcept;
 };
 
+class ParserException : public std::runtime_error
+{
+  public:
+    ParserException() : std::runtime_error("Parser error.")
+    {
+    }
+};
+
 #endif

@@ -222,7 +222,7 @@ void JsonSerializer::Visitor::visit(const Expression &node)
         node);
 }
 
-void JsonSerializer::Visitor::visit(const Block &node)
+void JsonSerializer::Visitor::visit_block(const Block &node)
 {
     nlohmann::json output;
     output["type"] = "Block";
@@ -333,7 +333,7 @@ void JsonSerializer::Visitor::visit(const FuncDefStmt &node)
         this->visit(*node.return_type);
         output["return_type"] = this->last_object;
     }
-    this->visit(*node.block);
+    this->visit_block(*node.block);
     output["block"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
@@ -411,7 +411,7 @@ void JsonSerializer::Visitor::visit(const ExternStmt &node)
 void JsonSerializer::Visitor::visit(const Statement &node)
 {
     std::visit(
-        overloaded{[this](const Block &node) { this->visit(node); },
+        overloaded{[this](const Block &node) { this->visit_block(node); },
                    [this](const IfStmt &node) { this->visit(node); },
                    [this](const WhileStmt &node) { this->visit(node); },
                    [this](const MatchStmt &node) { this->visit(node); },

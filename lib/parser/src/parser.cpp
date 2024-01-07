@@ -88,6 +88,7 @@ void Parser::report_error(const std::wstring &msg)
     this->report(LogLevel::ERROR, L"Parser error at [",
                  this->current_token->position.line, ",",
                  this->current_token->position.column, "]: ", msg, ".");
+    throw ParserException();
 }
 
 void Parser::next_token()
@@ -116,24 +117,35 @@ ProgramPtr Parser::parse()
     std::vector<std::unique_ptr<VarDeclStmt>> globals;
     std::vector<std::unique_ptr<FuncDefStmt>> functions;
     std::vector<std::unique_ptr<ExternStmt>> externs;
-
-    while (this->current_token)
+    try
     {
-        if (auto func = this->parse_func_def_stmt())
-            functions.push_back(std::move(func));
-        else if (auto ext = this->parse_extern_stmt())
-            externs.push_back(std::move(ext));
-        else if (auto var = this->parse_var_decl_stmt())
-            globals.push_back(std::move(var));
-        else
+
+        while (this->current_token)
         {
-            this->report_error(L"function definition, extern statement or "
-                               L"variable declaration expected");
-            return nullptr;
+            if (auto func = this->parse_func_def_stmt())
+                functions.push_back(std::move(func));
+            else if (auto ext = this->parse_extern_stmt())
+                externs.push_back(std::move(ext));
+            else if (auto var = this->parse_var_decl_stmt())
+                globals.push_back(std::move(var));
+            else
+            {
+                this->report_error(L"function definition, extern statement or "
+                                   L"variable declaration expected");
+                return nullptr;
+            }
         }
+        return std::make_unique<Program>(
+            std::move(globals), std::move(functions), std::move(externs));
     }
-    return std::make_unique<Program>(std::move(globals), std::move(functions),
-                                     std::move(externs));
+    catch (const LexerException &)
+    {
+        return nullptr;
+    }
+    catch (const ParserException &)
+    {
+        return nullptr;
+    }
 }
 
 // EXTERN_STMT = KW_EXTERN, FUNC_NAME_AND_PARAMS, SEMICOLON;

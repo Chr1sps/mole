@@ -30,7 +30,9 @@ class JsonSerializer
         void visit(const IndexExpr &node);
         void visit(const CastExpr &node);
 
-        void visit(const Block &node);
+        // vvv this CANNOT be called visit because clang :)
+
+        void visit_block(const Block &node);
         void visit(const IfStmt &node);
         void visit(const WhileStmt &node);
         void visit(const MatchStmt &node);

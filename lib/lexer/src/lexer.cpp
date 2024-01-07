@@ -102,7 +102,7 @@ const std::map<wchar_t, CharNode> Lexer::char_nodes{
 #undef CHAR_NODE
 #undef EMPTY_NODE
 
-Token Lexer::report_and_consume(const std::wstring &msg)
+Token Lexer::report_and_throw(const std::wstring &msg)
 {
     this->report(LogLevel::ERROR, L"Lexer error at [", this->position.line,
                  ",", this->position.column, "]: ", msg, ".");
@@ -151,7 +151,7 @@ std::optional<Token> Lexer::parse_alpha_or_placeholder(
         return Token(name_iter->second, position);
 
     if (name.length() == this->max_var_name_size && this->is_alpha_char())
-        return this->report_and_consume(L"variable name length is too long");
+        return this->report_and_throw(L"variable name length is too long");
 
     return Token(TokenType::IDENTIFIER, name, position);
 }
@@ -202,7 +202,7 @@ std::optional<Token> Lexer::parse_number_token(const Position &position)
         auto floating = this->parse_floating();
 
         if (!floating.has_value())
-            return this->report_and_consume(
+            return this->report_and_throw(
                 L"the floating part couldn't be parsed");
 
         if (integral.has_value())
@@ -211,7 +211,7 @@ std::optional<Token> Lexer::parse_number_token(const Position &position)
         return Token(TokenType::DOUBLE, *floating, position);
     }
     if (!integral.has_value())
-        return this->report_and_consume(
+        return this->report_and_throw(
             L"the integral part exceeds the u32 limit");
 
     return Token(TokenType::INT, *integral, position);
@@ -235,7 +235,7 @@ std::optional<Token> Lexer::parse_operator(const Position &position)
             if (node.type.has_value())
                 return Token(*node.type, position);
             else
-                return this->report_and_consume(
+                return this->report_and_throw(
                     L"this operator is not supported");
         }
     }
@@ -426,7 +426,7 @@ Token Lexer::parse_char(const Position &position)
         value = *opt_char;
 
     if (this->last_char != L'\'')
-        return this->report_and_consume(L"invalid char in a char literal");
+        return this->report_and_throw(L"invalid char in a char literal");
 
     this->get_new_char();
     return Token(TokenType::CHAR, value, position);
@@ -449,7 +449,7 @@ Token Lexer::parse_str(const Position &position)
             break;
     }
     if (this->last_char != L'\"')
-        return this->report_and_consume(L"str literal isn't enclosed");
+        return this->report_and_throw(L"str literal isn't enclosed");
 
     this->get_new_char();
     return Token(TokenType::STRING, out_stream.str(), position);
@@ -486,7 +486,7 @@ std::optional<Token> Lexer::get_token()
             else if (this->is_an_operator_char())
                 return this->parse_operator(position);
             else
-                return this->report_and_consume(L"invalid char");
+                return this->report_and_throw(L"invalid char");
 
             break;
         }

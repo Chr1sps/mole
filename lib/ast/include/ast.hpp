@@ -25,8 +25,7 @@ struct AstNode
     }
 
   protected:
-    inline constexpr AstNode(const Position &position) noexcept
-        : position(position)
+    constexpr AstNode(const Position &position) noexcept : position(position)
     {
     }
 };
@@ -63,10 +62,9 @@ struct FunctionType;
 using Type = std::variant<SimpleType, FunctionType>;
 using TypePtr = std::unique_ptr<Type>;
 
-namespace
-{
+// This function is (unfortunatelly) needed to transfer around TypePtrs, since
+// certain std::variants cannot be used in std::optionals.
 constexpr TypePtr clone_type_ptr(const TypePtr &type) noexcept;
-} // namespace
 
 struct SimpleType
 {
@@ -516,31 +514,28 @@ constexpr bool operator==(const Program &, const Program &) noexcept;
 // ===== TYPES =====
 // =================
 
-namespace
-{
-inline constexpr TypePtr clone_type_ptr(const TypePtr &type) noexcept
+constexpr TypePtr clone_type_ptr(const TypePtr &type) noexcept
 {
     if (type)
         return std::make_unique<Type>(*type);
     return nullptr;
 }
-} // namespace
 
-inline constexpr SimpleType::SimpleType(const TypeEnum &type,
-                                        const RefSpecifier &ref_spec) noexcept
+constexpr SimpleType::SimpleType(const TypeEnum &type,
+                                 const RefSpecifier &ref_spec) noexcept
     : type(type), ref_spec(ref_spec)
 {
 }
 
-inline constexpr FunctionType::FunctionType(std::vector<TypePtr> arg_types,
-                                            TypePtr return_type,
-                                            const bool &is_const) noexcept
+constexpr FunctionType::FunctionType(std::vector<TypePtr> arg_types,
+                                     TypePtr return_type,
+                                     const bool &is_const) noexcept
     : arg_types(std::move(arg_types)), return_type(std::move(return_type)),
       is_const(is_const)
 {
 }
 
-inline constexpr FunctionType::FunctionType(const FunctionType &other) noexcept
+constexpr FunctionType::FunctionType(const FunctionType &other) noexcept
     : arg_types(), return_type(clone_type_ptr(other.return_type)),
       is_const(other.is_const)
 {
@@ -549,7 +544,7 @@ inline constexpr FunctionType::FunctionType(const FunctionType &other) noexcept
                    [](const TypePtr &arg) { return clone_type_ptr(arg); });
 }
 
-inline constexpr FunctionType &FunctionType::operator=(
+constexpr FunctionType &FunctionType::operator=(
     const FunctionType &other) noexcept
 {
     std::transform(other.arg_types.cbegin(), other.arg_types.cend(),
@@ -564,48 +559,46 @@ inline constexpr FunctionType &FunctionType::operator=(
 // ===== EXPRESSIONS =====
 // =======================
 
-inline constexpr VariableExpr::VariableExpr(const std::wstring &name,
-                                            const Position &position) noexcept
+constexpr VariableExpr::VariableExpr(const std::wstring &name,
+                                     const Position &position) noexcept
     : AstNode(position), name(name)
 {
 }
 
-inline constexpr BinaryExpr::BinaryExpr(ExprPtr lhs, ExprPtr rhs,
-                                        const BinOpEnum &op,
-                                        const Position &position) noexcept
+constexpr BinaryExpr::BinaryExpr(ExprPtr lhs, ExprPtr rhs, const BinOpEnum &op,
+                                 const Position &position) noexcept
     : AstNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
 {
 }
 
-inline constexpr UnaryExpr::UnaryExpr(ExprPtr expr, const UnaryOpEnum &op,
-                                      const Position &position) noexcept
+constexpr UnaryExpr::UnaryExpr(ExprPtr expr, const UnaryOpEnum &op,
+                               const Position &position) noexcept
     : AstNode(position), expr(std::move(expr)), op(op)
 {
 }
 
-inline constexpr CallExpr::CallExpr(ExprPtr callable,
-                                    std::vector<ExprPtr> args,
-                                    const Position &position) noexcept
+constexpr CallExpr::CallExpr(ExprPtr callable, std::vector<ExprPtr> args,
+                             const Position &position) noexcept
     : AstNode(position), callable(std::move(callable)), args(std::move(args))
 {
 }
 
-inline constexpr LambdaCallExpr::LambdaCallExpr(
-    ExprPtr callable, std::vector<ExprPtr> args,
-    const Position &position) noexcept
+constexpr LambdaCallExpr::LambdaCallExpr(ExprPtr callable,
+                                         std::vector<ExprPtr> args,
+                                         const Position &position) noexcept
     : AstNode(position), callable(std::move(callable)), args(std::move(args))
 {
 }
 
-inline constexpr IndexExpr::IndexExpr(ExprPtr expr, ExprPtr index_value,
-                                      const Position &position) noexcept
+constexpr IndexExpr::IndexExpr(ExprPtr expr, ExprPtr index_value,
+                               const Position &position) noexcept
     : AstNode(position), expr(std::move(expr)),
       index_value(std::move(index_value))
 {
 }
 
-inline constexpr CastExpr::CastExpr(ExprPtr expr, TypePtr type,
-                                    const Position &position) noexcept
+constexpr CastExpr::CastExpr(ExprPtr expr, TypePtr type,
+                             const Position &position) noexcept
     : AstNode(position), expr(std::move(expr)), type(std::move(type))
 {
 }
@@ -613,8 +606,8 @@ inline constexpr CastExpr::CastExpr(ExprPtr expr, TypePtr type,
 inline const std::shared_ptr<SimpleType> U32Expr::type =
     std::make_shared<SimpleType>(TypeEnum::U32, RefSpecifier::NON_REF);
 
-inline constexpr U32Expr::U32Expr(const unsigned long long &value,
-                                  const Position &position) noexcept
+constexpr U32Expr::U32Expr(const unsigned long long &value,
+                           const Position &position) noexcept
     : AstNode(position), value(value)
 {
 }
@@ -622,38 +615,38 @@ inline constexpr U32Expr::U32Expr(const unsigned long long &value,
 inline const std::shared_ptr<SimpleType> F64Expr::type =
     std::make_shared<SimpleType>(TypeEnum::F64, RefSpecifier::NON_REF);
 
-inline constexpr F64Expr::F64Expr(const double &value,
-                                  const Position &position) noexcept
+constexpr F64Expr::F64Expr(const double &value,
+                           const Position &position) noexcept
     : AstNode(position), value(value)
 {
 }
 
-inline constexpr StringExpr::StringExpr(const std::wstring &value,
-                                        const Position &position) noexcept
+constexpr StringExpr::StringExpr(const std::wstring &value,
+                                 const Position &position) noexcept
     : AstNode(position), value(value)
 {
 }
 
-inline constexpr CharExpr::CharExpr(const wchar_t &value,
-                                    const Position &position) noexcept
+constexpr CharExpr::CharExpr(const wchar_t &value,
+                             const Position &position) noexcept
     : AstNode(position), value(value)
 {
 }
 
-inline constexpr BoolExpr::BoolExpr(const bool &value,
-                                    const Position &position) noexcept
+constexpr BoolExpr::BoolExpr(const bool &value,
+                             const Position &position) noexcept
     : AstNode(position), value(value)
 {
 }
 
-inline constexpr Position get_expr_position(const Expression &expr)
+constexpr Position get_expr_position(const Expression &expr)
 {
     return std::visit(
         [](const AstNode &node) -> Position { return node.position; }, expr);
 }
 
-inline constexpr void set_expr_position(Expression &expr,
-                                        const Position &position) noexcept
+constexpr void set_expr_position(Expression &expr,
+                                 const Position &position) noexcept
 {
     std::visit([&position](AstNode &node) { node.position = position; }, expr);
 }
@@ -662,92 +655,87 @@ inline constexpr void set_expr_position(Expression &expr,
 // ===== STATEMENTS =====
 // ======================
 
-inline constexpr ReturnStmt::ReturnStmt(const Position &position) noexcept
+constexpr ReturnStmt::ReturnStmt(const Position &position) noexcept
     : AstNode(position), expr()
 {
 }
 
-inline constexpr ReturnStmt::ReturnStmt(ExprPtr expr,
-                                        const Position &position) noexcept
+constexpr ReturnStmt::ReturnStmt(ExprPtr expr,
+                                 const Position &position) noexcept
     : AstNode(position), expr(std::move(expr))
 {
 }
 
-inline constexpr ContinueStmt::ContinueStmt(const Position &position) noexcept
+constexpr ContinueStmt::ContinueStmt(const Position &position) noexcept
     : AstNode(position)
 {
 }
 
-inline constexpr BreakStmt::BreakStmt(const Position &position) noexcept
+constexpr BreakStmt::BreakStmt(const Position &position) noexcept
     : AstNode(position)
 {
 }
 
-inline constexpr AssignStmt::AssignStmt(ExprPtr lhs, const AssignType &type,
-                                        ExprPtr rhs,
-                                        const Position &position) noexcept
+constexpr AssignStmt::AssignStmt(ExprPtr lhs, const AssignType &type,
+                                 ExprPtr rhs,
+                                 const Position &position) noexcept
     : AstNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), type(type)
 {
 }
 
-inline constexpr ExprStmt::ExprStmt(ExprPtr expr,
-                                    const Position &position) noexcept
+constexpr ExprStmt::ExprStmt(ExprPtr expr, const Position &position) noexcept
     : AstNode(position), expr(std::move(expr))
 {
 }
 
-inline constexpr WhileStmt::WhileStmt(ExprPtr condition_expr,
-                                      StmtPtr statement,
-                                      const Position &position) noexcept
+constexpr WhileStmt::WhileStmt(ExprPtr condition_expr, StmtPtr statement,
+                               const Position &position) noexcept
     : AstNode(position), condition_expr(std::move(condition_expr)),
       statement(std::move(statement))
 {
 }
 
-inline constexpr IfStmt::IfStmt(ExprPtr condition_expr, StmtPtr then_block,
-                                StmtPtr else_block,
-                                const Position &position) noexcept
+constexpr IfStmt::IfStmt(ExprPtr condition_expr, StmtPtr then_block,
+                         StmtPtr else_block, const Position &position) noexcept
     : AstNode(position), condition_expr(std::move(condition_expr)),
       then_block(std::move(then_block)), else_block(std::move(else_block))
 {
 }
 
-inline constexpr MatchStmt::MatchStmt(ExprPtr matched_expr,
-                                      std::vector<MatchArmPtr> match_arms,
-                                      const Position &position) noexcept
+constexpr MatchStmt::MatchStmt(ExprPtr matched_expr,
+                               std::vector<MatchArmPtr> match_arms,
+                               const Position &position) noexcept
     : AstNode(position), matched_expr(std::move(matched_expr)),
       match_arms(std::move(match_arms))
 {
 }
 
-inline constexpr Block::Block(std::vector<StmtPtr> statements,
-                              const Position &position) noexcept
+constexpr Block::Block(std::vector<StmtPtr> statements,
+                       const Position &position) noexcept
     : AstNode(position), statements(std::move(statements))
 {
 }
 
-inline constexpr VarDeclStmt::VarDeclStmt(const std::wstring &name,
-                                          TypePtr type, ExprPtr value,
-                                          const bool &is_mut,
-                                          const Position &position) noexcept
+constexpr VarDeclStmt::VarDeclStmt(const std::wstring &name, TypePtr type,
+                                   ExprPtr value, const bool &is_mut,
+                                   const Position &position) noexcept
     : AstNode(position), name(name), type(std::move(type)),
       initial_value(std::move(value)), is_mut(is_mut)
 {
 }
 
-inline constexpr FuncDefStmt::FuncDefStmt(const std::wstring &name,
-                                          std::vector<ParamPtr> params,
-                                          TypePtr return_type, BlockPtr block,
-                                          const bool &is_const,
-                                          const Position &position) noexcept
+constexpr FuncDefStmt::FuncDefStmt(const std::wstring &name,
+                                   std::vector<ParamPtr> params,
+                                   TypePtr return_type, BlockPtr block,
+                                   const bool &is_const,
+                                   const Position &position) noexcept
     : AstNode(position), name(name), params(std::move(params)),
       return_type(std::move(return_type)), block(std::move(block)),
       is_const(is_const)
 {
 }
 
-inline constexpr std::unique_ptr<FunctionType> FuncDefStmt::get_type()
-    const noexcept
+constexpr std::unique_ptr<FunctionType> FuncDefStmt::get_type() const noexcept
 {
     std::vector<TypePtr> param_types;
     for (auto &param_ptr : this->params)
@@ -757,17 +745,16 @@ inline constexpr std::unique_ptr<FunctionType> FuncDefStmt::get_type()
         std::move(param_types), std::move(cloned_type), this->is_const);
 }
 
-inline constexpr ExternStmt::ExternStmt(const std::wstring &name,
-                                        std::vector<ParamPtr> params,
-                                        TypePtr return_type,
-                                        const Position &position) noexcept
+constexpr ExternStmt::ExternStmt(const std::wstring &name,
+                                 std::vector<ParamPtr> params,
+                                 TypePtr return_type,
+                                 const Position &position) noexcept
     : AstNode(position), name(name), params(std::move(params)),
       return_type(std::move(return_type))
 {
 }
 
-inline constexpr std::unique_ptr<FunctionType> ExternStmt::get_type()
-    const noexcept
+constexpr std::unique_ptr<FunctionType> ExternStmt::get_type() const noexcept
 {
     std::vector<TypePtr> param_types;
     for (auto &param_ptr : this->params)
@@ -781,28 +768,26 @@ inline constexpr std::unique_ptr<FunctionType> ExternStmt::get_type()
 // ===== MATCH ARMS =====
 // ======================
 
-inline constexpr MatchArmBase::MatchArmBase(StmtPtr block,
-                                            const Position &position) noexcept
+constexpr MatchArmBase::MatchArmBase(StmtPtr block,
+                                     const Position &position) noexcept
     : AstNode(position), block(std::move(block))
 {
 }
 
-inline constexpr GuardArm::GuardArm(ExprPtr condition_expr, StmtPtr block,
-                                    const Position &position) noexcept
+constexpr GuardArm::GuardArm(ExprPtr condition_expr, StmtPtr block,
+                             const Position &position) noexcept
     : MatchArmBase(std::move(block), position),
       condition_expr(std::move(condition_expr))
 {
 }
 
-inline constexpr LiteralArm::LiteralArm(std::vector<ExprPtr> literals,
-                                        StmtPtr block,
-                                        const Position &position) noexcept
+constexpr LiteralArm::LiteralArm(std::vector<ExprPtr> literals, StmtPtr block,
+                                 const Position &position) noexcept
     : MatchArmBase(std::move(block), position), literals(std::move(literals))
 {
 }
 
-inline constexpr ElseArm::ElseArm(StmtPtr block,
-                                  const Position &position) noexcept
+constexpr ElseArm::ElseArm(StmtPtr block, const Position &position) noexcept
     : MatchArmBase(std::move(block), position)
 {
 }
@@ -811,8 +796,8 @@ inline constexpr ElseArm::ElseArm(StmtPtr block,
 // ===== PARAMETER =====
 // =====================
 
-inline constexpr Parameter::Parameter(const std::wstring &name, TypePtr type,
-                                      const Position &position) noexcept
+constexpr Parameter::Parameter(const std::wstring &name, TypePtr type,
+                               const Position &position) noexcept
     : AstNode(position), name(name), type(std::move(type))
 {
 }
@@ -821,7 +806,7 @@ inline constexpr Parameter::Parameter(const std::wstring &name, TypePtr type,
 // ===== PROGRAM =====
 // ===================
 
-inline constexpr Program::Program(
+constexpr Program::Program(
     std::vector<std::unique_ptr<VarDeclStmt>> globals,
     std::vector<std::unique_ptr<FuncDefStmt>> functions,
     std::vector<std::unique_ptr<ExternStmt>> externs) noexcept
@@ -858,7 +843,7 @@ constexpr bool compare_ptr_vectors(
 
 } // namespace
 
-inline constexpr bool operator==(const Type &first, const Type &other) noexcept
+constexpr bool operator==(const Type &first, const Type &other) noexcept
 {
     return std::visit(
         overloaded{
@@ -875,8 +860,8 @@ inline constexpr bool operator==(const Type &first, const Type &other) noexcept
         first, other);
 }
 
-inline constexpr bool operator==(const Expression &first,
-                                 const Expression &other) noexcept
+constexpr bool operator==(const Expression &first,
+                          const Expression &other) noexcept
 {
     return std::visit(
         overloaded{
@@ -942,23 +927,22 @@ inline constexpr bool operator==(const Expression &first,
         first, other);
 }
 
-inline constexpr bool operator==(const Block &first,
-                                 const Block &other) noexcept
+constexpr bool operator==(const Block &first, const Block &other) noexcept
 {
     return compare_ptr_vectors(first.statements, other.statements) &&
            first.position == other.position;
 }
 
-inline constexpr bool operator==(const VarDeclStmt &first,
-                                 const VarDeclStmt &other) noexcept
+constexpr bool operator==(const VarDeclStmt &first,
+                          const VarDeclStmt &other) noexcept
 {
     return first.name == other.name && equal_or_null(first.type, other.type) &&
            equal_or_null(first.initial_value, other.initial_value) &&
            first.is_mut == other.is_mut && first.position == other.position;
 }
 
-inline constexpr bool operator==(const FuncDefStmt &first,
-                                 const FuncDefStmt &other) noexcept
+constexpr bool operator==(const FuncDefStmt &first,
+                          const FuncDefStmt &other) noexcept
 {
     // auto equal_blocks = *first.block == *other.block;
     auto equal_blocks = compare_ptr_vectors(first.block->statements,
@@ -971,8 +955,8 @@ inline constexpr bool operator==(const FuncDefStmt &first,
            first.position == other.position;
 }
 
-inline constexpr bool operator==(const ExternStmt &first,
-                                 const ExternStmt &other) noexcept
+constexpr bool operator==(const ExternStmt &first,
+                          const ExternStmt &other) noexcept
 {
     return first.name == other.name &&
            compare_ptr_vectors(first.params, other.params) &&
@@ -980,8 +964,8 @@ inline constexpr bool operator==(const ExternStmt &first,
            first.position == other.position;
 }
 
-inline constexpr bool operator==(const Statement &first,
-                                 const Statement &second) noexcept
+constexpr bool operator==(const Statement &first,
+                          const Statement &second) noexcept
 {
     return std::visit(
         overloaded{
@@ -1040,8 +1024,8 @@ inline constexpr bool operator==(const Statement &first,
         first, second);
 }
 
-inline constexpr bool operator==(const MatchArm &first,
-                                 const MatchArm &other) noexcept
+constexpr bool operator==(const MatchArm &first,
+                          const MatchArm &other) noexcept
 {
     return std::visit(
         overloaded{
@@ -1060,8 +1044,7 @@ inline constexpr bool operator==(const MatchArm &first,
         first, other);
 }
 
-inline constexpr bool operator==(const Program &first,
-                                 const Program &other) noexcept
+constexpr bool operator==(const Program &first, const Program &other) noexcept
 {
     return compare_ptr_vectors(first.externs, other.externs) &&
            compare_ptr_vectors(first.functions, other.functions) &&
@@ -1069,8 +1052,8 @@ inline constexpr bool operator==(const Program &first,
            first.position == other.position; // not needed, but whatever
 }
 
-inline constexpr bool operator==(const Parameter &first,
-                                 const Parameter &other) noexcept
+constexpr bool operator==(const Parameter &first,
+                          const Parameter &other) noexcept
 {
     return first.name == other.name && *first.type == *other.type &&
            first.position == other.position;

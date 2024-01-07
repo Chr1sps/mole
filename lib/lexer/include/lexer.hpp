@@ -31,7 +31,7 @@ class Lexer : public Reporter
     std::optional<wchar_t> last_char;
     std::vector<Logger *> loggers;
 
-    Token report_and_consume(const std::wstring &msg);
+    Token report_and_throw(const std::wstring &msg);
 
     std::optional<wchar_t> get_new_char();
     std::optional<wchar_t> get_nonempty_char();
@@ -91,6 +91,14 @@ class Lexer : public Reporter
     static LexerPtr from_file(const std::string &path,
                               const unsigned long long &max_var_name_size,
                               const unsigned long long &max_str_length);
+};
+
+class LexerException : public std::runtime_error
+{
+  public:
+    LexerException() : std::runtime_error("Lexer error.")
+    {
+    }
 };
 
 #endif
