@@ -274,10 +274,12 @@ void SemanticChecker::Visitor::check_function_params(const FuncDefStmt &node)
     for (auto &param : node.params)
     {
         if (auto var = this->find_variable(param->name))
-            this->report_error(L"param name cannot shadow a variable that is "
+            this->report_error(param->position,
+                               L"param name cannot shadow a variable that is "
                                L"already in scope");
         if (auto func = this->find_function(param->name))
-            this->report_error(L"param name cannot shadow a function that is "
+            this->report_error(param->position,
+                               L"param name cannot shadow a function that is "
                                L"already in scope");
     }
 }
@@ -287,29 +289,32 @@ void SemanticChecker::Visitor::check_function_params(const ExternStmt &node)
     for (auto &param : node.params)
     {
         if (auto var = this->find_variable(param->name))
-            this->report_error(L"param name cannot shadow a variable that is "
+            this->report_error(node.position,
+                               L"param name cannot shadow a variable that is "
                                L"already in scope");
         if (auto func = this->find_function(param->name))
-            this->report_error(L"param name cannot shadow a function that is "
+            this->report_error(node.position,
+                               L"param name cannot shadow a function that is "
                                L"already in scope");
     }
 }
 
-void SemanticChecker::Visitor::check_name_shadowing(const std::wstring &name)
+void SemanticChecker::Visitor::check_name_shadowing(const std::wstring &name,
+                                                    const Position &pos)
 {
     for (const auto &scope : this->variable_map)
     {
         auto iter = scope.find(name);
         if (iter != scope.cend())
             this->report_error(
-                L"given name is the same as that of another variable");
+                pos, L"given name is the same as that of another variable");
     }
     for (const auto &scope : this->function_map)
     {
         auto iter = scope.find(name);
         if (iter != scope.cend())
             this->report_error(
-                L"given name is the same as that of another function");
+                pos, L"given name is the same as that of another function");
     }
 }
 
@@ -319,20 +324,21 @@ void SemanticChecker::Visitor::check_main_function(const FuncDefStmt &node)
           *node.return_type ==
               SimpleType(TypeEnum::U32, RefSpecifier::NON_REF)))
     {
-        this->report_error(L"wrong main function return type declaration - "
+        this->report_error(node.position,
+                           L"wrong main function return type declaration - "
                            L"expected return type: void or u32, found: ",
                            get_type_string(node.return_type));
     }
     if (!node.params.empty())
     {
-        this->report_error(L"main cannot have any parameters");
+        this->report_error(node.position, L"main cannot have any parameters");
     }
 }
 
 void SemanticChecker::Visitor::check_name_not_main(const VarDeclStmt &node)
 {
     if (node.name == L"main")
-        this->report_error(L"variable cannot be named 'main'");
+        this->report_error(node.position, L"variable cannot be named 'main'");
 }
 
 bool SemanticChecker::Visitor::check_var_value_and_type(
@@ -351,7 +357,8 @@ bool SemanticChecker::Visitor::check_var_value_and_type(
             if (!((!value_type && !node.type) ||
                   (value_type && node.type && *value_type == *node.type)))
             {
-                this->report_error(L"variable of declared type: `",
+                this->report_error(node.position,
+                                   L"variable of declared type: `",
                                    get_type_string(node.type),
                                    L"` cannot be assigned a value of type: `",
                                    get_type_string(value_type), L'`');
@@ -361,6 +368,7 @@ bool SemanticChecker::Visitor::check_var_value_and_type(
         if (!this->is_initialized)
         {
             this->report_error(
+                node.position,
                 L"initial value expression in a variable declaration contains"
                 L"an uninitialized variable");
             return false;
@@ -446,7 +454,8 @@ void SemanticChecker::Visitor::visit(const BinaryExpr &node)
     auto left_type_var = *this->last_type;
     auto is_left_const = this->is_const;
     if (!this->is_initialized)
-        this->report_error(L"left hand side variable of a binary expression "
+        this->report_error(get_expr_position(*node.lhs),
+                           L"left hand side variable of a binary expression "
                            L"is not initialized");
 
     this->visit(*node.rhs);
@@ -455,19 +464,22 @@ void SemanticChecker::Visitor::visit(const BinaryExpr &node)
     auto right_type_var = *this->last_type;
     auto is_right_const = this->is_const;
     if (!this->is_initialized)
-        this->report_error(L"right hand side variable of a binary expression "
+        this->report_error(get_expr_position(*node.rhs),
+                           L"right hand side variable of a binary expression "
                            L"is not initialized");
 
     this->is_const = is_left_const && is_right_const;
     if (!check_non_ref_or_string(left_type_var))
     {
         this->report_expr_error(
+            get_expr_position(*node.lhs),
             L"left hand side type cannot be used in a binary expression");
         return;
     }
     if (!check_non_ref_or_string(right_type_var))
     {
         this->report_expr_error(
+            get_expr_position(*node.rhs),
             L"right hand side type cannot be used in a binary expression");
         return;
     }
@@ -486,7 +498,8 @@ void SemanticChecker::Visitor::visit(const BinaryExpr &node)
     }
     catch (const std::out_of_range &)
     {
-        this->report_expr_error(L"binary operation doesn't support types `",
+        this->report_expr_error(node.position,
+                                L"binary operation doesn't support types `",
                                 get_type_string(left_type_var), L"` and `",
                                 get_type_string(right_type_var), L"`");
     }
@@ -512,11 +525,13 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
     if (std::holds_alternative<FunctionType>(*this->last_type))
     {
         this->report_expr_error(
+            get_expr_position(*node.expr),
             L"function reference cannot be used in a unary expression");
         return;
     }
     if (!this->is_initialized)
         this->report_error(
+            get_expr_position(*node.expr),
             L"variable used in a unary expression isn't initialized");
 
     auto type = std::get<SimpleType>(*this->last_type);
@@ -529,7 +544,8 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
     case UnaryOpEnum::NEG:
         if (type.ref_spec != RefSpecifier::NON_REF)
         {
-            this->report_expr_error(L"reference type value cannot be ",
+            this->report_expr_error(node.position,
+                                    L"reference type value cannot be ",
                                     unary_str_map.at(node.op));
             return;
         }
@@ -541,8 +557,9 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
         }
         catch (const std::out_of_range &)
         {
-            this->report_expr_error(L"value of type `", get_type_string(type),
-                                    L" cannot be ", unary_str_map.at(node.op));
+            this->report_expr_error(node.position, L"value of type `",
+                                    get_type_string(type), L" cannot be ",
+                                    unary_str_map.at(node.op));
         }
 
         /* code */
@@ -553,12 +570,13 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
         if (type.ref_spec != RefSpecifier::NON_REF)
         {
             this->report_expr_error(
-                L"references cannot be referenced further");
+                node.position, L"references cannot be referenced further");
             break;
         }
         if (!this->is_lvalue)
         {
-            this->report_expr_error(L"referenced values must be variables");
+            this->report_expr_error(node.position,
+                                    L"referenced values must be variables");
             break;
         }
         this->last_type = std::make_unique<Type>(
@@ -569,13 +587,15 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
     case UnaryOpEnum::DEREF:
         if (type.type == TypeEnum::STR)
         {
-            this->report_expr_error(L"strings cannot be dereferenced");
+            this->report_expr_error(node.position,
+                                    L"strings cannot be dereferenced");
             break;
         }
         switch (type.ref_spec)
         {
         case RefSpecifier::NON_REF:
-            this->report_error(L"cannot dereference a non-reference value");
+            this->report_error(node.position,
+                               L"cannot dereference a non-reference value");
             break;
         case RefSpecifier::REF:
             this->last_type = std::make_unique<Type>(
@@ -602,13 +622,14 @@ void SemanticChecker::Visitor::visit(const CallExpr &node)
 
     if (std::holds_alternative<SimpleType>(*this->last_type))
     {
-        this->report_expr_error(L"value of primitive type `",
-                                get_type_string(*this->last_type),
-                                L"` cannot be called");
+        this->report_expr_error(
+            get_expr_position(*node.callable), L"value of primitive type `",
+            get_type_string(*this->last_type), L"` cannot be called");
         return;
     }
     if (!this->is_initialized)
         this->report_error(
+            get_expr_position(*node.callable),
             L"callable variable in a call expression is not initialized");
 
     auto type = std::get<FunctionType>(*this->last_type);
@@ -617,7 +638,8 @@ void SemanticChecker::Visitor::visit(const CallExpr &node)
     auto arg_count = node.args.size();
     if (arg_count != expected_arg_count)
     {
-        this->report_expr_error(L"function argument count incorrect in a call "
+        this->report_expr_error(node.position,
+                                L"function argument count incorrect in a call "
                                 L"expression: expected ",
                                 expected_arg_count, L" arguments, found ",
                                 arg_count);
@@ -635,11 +657,13 @@ void SemanticChecker::Visitor::visit(const CallExpr &node)
         }
         auto actual_type = *this->last_type;
         if (!this->is_initialized)
-            this->report_error(L"variable used as a call expression argument "
+            this->report_error(get_expr_position(*arg),
+                               L"variable used as a call expression argument "
                                L"is not initialized");
         if (*expected_type != actual_type)
         {
             this->report_expr_error(
+                get_expr_position(*arg),
                 L"function call argument type mismatched - expected type: `",
                 get_type_string(expected_type), "`, found: `",
                 get_type_string(actual_type), "`");
@@ -661,9 +685,9 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
 
     if (std::holds_alternative<SimpleType>(*this->last_type))
     {
-        this->report_expr_error(L"value of primitive type `",
-                                get_type_string(*this->last_type),
-                                L"` cannot be called");
+        this->report_expr_error(
+            get_expr_position(*node.callable), L"value of primitive type `",
+            get_type_string(*this->last_type), L"` cannot be called");
         return;
     }
     auto type = std::get<FunctionType>(*this->last_type);
@@ -672,6 +696,7 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
     if (arg_count != expected_arg_count)
     {
         this->report_expr_error(
+            node.position,
             L"function argument count incorrect in a lambda call "
             L"expression: expected ",
             expected_arg_count, L" arguments, found ", arg_count);
@@ -695,7 +720,8 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
             auto actual_type = *this->last_type;
             if (*expected_type != actual_type)
             {
-                this->report_expr_error(L"function call argument type "
+                this->report_expr_error(get_expr_position(*arg),
+                                        L"function call argument type "
                                         L"mismatched - expected type: `",
                                         get_type_string(expected_type),
                                         L"`, found: `",
@@ -703,7 +729,8 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
                 is_valid = false;
             }
             if (!this->is_initialized)
-                this->report_error(L"variable used as a call expression "
+                this->report_error(get_expr_position(*arg),
+                                   L"variable used as a call expression "
                                    L"argument is not initialized");
             if (std::holds_alternative<SimpleType>(actual_type))
             {
@@ -739,14 +766,16 @@ void SemanticChecker::Visitor::visit(const IndexExpr &node)
     }
     if (std::holds_alternative<FunctionType>(*this->last_type))
     {
-        this->report_expr_error(L"function references cannot be indexed");
+        this->report_expr_error(get_expr_position(*node.expr),
+                                L"function references cannot be indexed");
         return;
     }
     auto type = std::get<SimpleType>(*this->last_type);
     if (type != SimpleType(TypeEnum::STR, RefSpecifier::REF))
     {
         this->report_expr_error(
-            L"value of type `", get_type_string(type),
+            get_expr_position(*node.expr), L"value of type `",
+            get_type_string(type),
             "` cannot be indexed (only `&str` values can be)");
         return;
     }
@@ -754,13 +783,15 @@ void SemanticChecker::Visitor::visit(const IndexExpr &node)
     is_const &= this->is_const;
     if (std::holds_alternative<FunctionType>(*this->last_type))
     {
-        this->report_expr_error(L"function references cannot be indices");
+        this->report_expr_error(get_expr_position(*node.index_value),
+                                L"function references cannot be indices");
         return;
     }
     type = std::get<SimpleType>(*this->last_type);
     if (type != SimpleType(TypeEnum::U32, RefSpecifier::NON_REF))
     {
-        this->report_expr_error(L"only `u32` values can be used as an index");
+        this->report_expr_error(get_expr_position(*node.index_value),
+                                L"only `u32` values can be used as an index");
         return;
     }
     this->last_type = std::make_unique<Type>(
@@ -774,14 +805,16 @@ void SemanticChecker::Visitor::visit(const CastExpr &node)
     auto to_type = std::get<SimpleType>((*node.type));
     std::visit(
         overloaded{
-            [this, &to_type](const SimpleType &from_type) {
+            [this, &node, &to_type](const SimpleType &from_type) {
                 if (from_type.ref_spec != RefSpecifier::NON_REF)
                 {
-                    this->report_error(L"cannot cast from a reference value");
+                    this->report_error(node.position,
+                                       L"cannot cast from a reference value");
                 }
                 if (to_type.ref_spec != RefSpecifier::NON_REF)
                 {
-                    this->report_error(L"cannot cast to a reference type");
+                    this->report_error(node.position,
+                                       L"cannot cast to a reference type");
                     this->last_type = nullptr;
                     return;
                 }
@@ -794,6 +827,7 @@ void SemanticChecker::Visitor::visit(const CastExpr &node)
                 if (iter == this->cast_map.cend())
                 {
                     this->report_error(
+                        node.position,
                         L"cast between two types not supported");
                     this->last_type = nullptr;
                 }
@@ -802,8 +836,9 @@ void SemanticChecker::Visitor::visit(const CastExpr &node)
                     this->last_type = std::make_unique<Type>(to_type);
                 }
             },
-            [this](const FunctionType &) {
-                this->report_error(L"function references cannot be cast");
+            [this, &node](const FunctionType &) {
+                this->report_error(node.position,
+                                   L"function references cannot be cast");
                 this->last_type = nullptr;
             }},
         *this->last_type);
@@ -826,6 +861,7 @@ void SemanticChecker::Visitor::check_condition_expr(
     if (*this->last_type != SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF))
     {
         this->report_error(
+            get_expr_position(condition),
             L"expected type `bool` in a condition expression, found `",
             get_type_string(this->last_type), L"`");
     }
@@ -860,7 +896,8 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
         return;
     if (!check_non_ref_or_string(*this->last_type))
     {
-        this->report_error(L"cannot match a value of type `",
+        this->report_error(get_expr_position(*node.matched_expr),
+                           L"cannot match a value of type `",
                            get_type_string(this->last_type), "`");
     }
     this->is_exhaustive = false;
@@ -870,7 +907,8 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
     }
     if (!this->is_exhaustive)
     {
-        this->report_error(L"match statement is not exhaustive");
+        this->report_error(node.position,
+                           L"match statement is not exhaustive");
     }
 }
 
@@ -886,7 +924,7 @@ void SemanticChecker::Visitor::visit(const ReturnStmt &node)
           (return_type && this->expected_return_type &&
            *return_type == *this->expected_return_type)))
     {
-        this->report_error(L"expected `",
+        this->report_error(get_expr_position(*node.expr), L"expected `",
                            get_type_string(this->expected_return_type),
                            L"` expression type in a return statement, found `",
                            get_type_string(return_type), L"`");
@@ -923,7 +961,7 @@ TypePtr SemanticChecker::Visitor::set_expected_return_type(TypePtr type)
 
 void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
 {
-    this->check_name_shadowing(node.name);
+    this->check_name_shadowing(node.name, node.position);
     if (node.name == L"main")
     {
         this->check_main_function(node);
@@ -949,6 +987,7 @@ void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
     if (!this->is_return_covered)
     {
         this->report_error(
+            node.position,
             L"function doesn't return in each control flow path");
     }
 
@@ -963,6 +1002,7 @@ void SemanticChecker::Visitor::visit(const AssignStmt &node)
     if (!this->is_assignable)
     {
         this->report_error(
+            get_expr_position(*node.lhs),
             L"left side of the assignment statement is non-assignable");
         return;
     }
@@ -983,12 +1023,14 @@ void SemanticChecker::Visitor::visit(const AssignStmt &node)
     case AssignType::NORMAL:
         if (lhs_type != rhs_type)
         {
-            this->report_error(L"assigned value type does not match the left "
+            this->report_error(node.position,
+                               L"assigned value type does not match the left "
                                L"side of the assignment statement");
         }
         if (!this->is_initialized)
         {
-            this->report_error(L"expression assigned to a variable contains "
+            this->report_error(node.position,
+                               L"expression assigned to a variable contains "
                                L"an uninitialized variable");
         }
         break;
@@ -1034,20 +1076,22 @@ void SemanticChecker::Visitor::visit(const ExprStmt &node)
 
 void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
 {
-    this->check_name_shadowing(node.name);
+    this->check_name_shadowing(node.name, node.position);
     auto registerable = true;
     if (node.is_mut)
     {
         if (!(node.initial_value || node.type))
         {
-            this->report_error(L"mutable must have either a type or a "
+            this->report_error(node.position,
+                               L"mutable must have either a type or a "
                                L"value assigned to it");
             registerable = false;
         }
     }
     else if (!node.initial_value)
     {
-        this->report_error(L"constant must have a value assigned to it");
+        this->report_error(node.position,
+                           L"constant must have a value assigned to it");
         if (!node.type)
             registerable = false;
     }
@@ -1059,10 +1103,10 @@ void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
 
 void SemanticChecker::Visitor::visit(const ExternStmt &node)
 {
-    this->check_name_shadowing(node.name);
+    this->check_name_shadowing(node.name, node.position);
     if (node.name == L"main")
     {
-        this->report_error(L"`main` cannot be externed");
+        this->report_error(node.position, L"`main` cannot be externed");
     }
 
     this->check_function_params(node);
@@ -1129,6 +1173,7 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                     if (this->is_in_const_scope() && !this->is_local)
                     {
                         this->report_error(
+                            node.position,
                             L"non-constant outside variable accessed in a "
                             L"constant function body");
                     }
@@ -1144,7 +1189,7 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                 else
                 {
                     this->report_expr_error(
-                        L"referenced variable doesn't exist");
+                        node.position, L"referenced variable doesn't exist");
                     this->is_initialized = false;
                     this->is_lvalue = false;
                 }
@@ -1187,6 +1232,7 @@ void SemanticChecker::Visitor::visit(const Statement &node)
                 if (!this->is_in_loop)
                 {
                     this->report_error(
+                        node.position,
                         L"break statement can only be used in a loop");
                 }
             },
@@ -1194,6 +1240,7 @@ void SemanticChecker::Visitor::visit(const Statement &node)
                 if (!this->is_in_loop)
                 {
                     this->report_error(
+                        node.position,
                         L"continue statement can only be used in a loop");
                 }
             },
@@ -1216,6 +1263,7 @@ void SemanticChecker::Visitor::visit(const LiteralArm &node)
         if (!this->is_const)
         {
             this->report_error(
+                get_expr_position(*literal),
                 L"only values that can evaluate at compile time are allowed "
                 L"in literal match arm expressions");
         }
@@ -1251,7 +1299,7 @@ void SemanticChecker::Visitor::visit(const Parameter &node)
 
 void SemanticChecker::Visitor::register_top_level(const FuncDefStmt &node)
 {
-    this->check_name_shadowing(node.name);
+    this->check_name_shadowing(node.name, node.position);
     if (node.name == L"main")
     {
         this->check_main_function(node);
@@ -1281,6 +1329,7 @@ void SemanticChecker::Visitor::visit_top_level(const FuncDefStmt &node)
     if (!this->is_return_covered)
     {
         this->report_error(
+            node.position,
             L"function doesn't return in each control flow path");
     }
 }

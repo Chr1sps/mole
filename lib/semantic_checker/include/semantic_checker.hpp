@@ -18,15 +18,18 @@ class SemanticChecker
         bool is_assignable, is_initialized, is_in_loop, is_exhaustive,
             is_const, is_lvalue, is_return_covered, is_local;
 
-        template <typename... Args> void report_error(Args &&...data)
+        template <typename... Args>
+        void report_error(const Position &pos, Args &&...data)
         {
-            this->report(LogLevel::ERROR, data...);
+            this->report(LogLevel::ERROR, "Semantic error at [", pos.line, ",",
+                         pos.column, "]: ", data..., ".");
             this->value = false;
         }
 
-        template <typename... Args> void report_expr_error(Args &&...data)
+        template <typename... Args>
+        void report_expr_error(const Position &pos, Args &&...data)
         {
-            this->report_error(data...);
+            this->report_error(pos, data...);
             this->last_type = nullptr;
             this->is_assignable = false;
         }
@@ -105,7 +108,8 @@ class SemanticChecker
         void visit(const FuncDefStmt &node);
         void visit(const ExternStmt &node);
 
-        void check_name_shadowing(const std::wstring &name);
+        void check_name_shadowing(const std::wstring &name,
+                                  const Position &pos);
         void check_name_not_main(const VarDeclStmt &node);
         void register_local_variable(const VarDeclStmt &node);
 
