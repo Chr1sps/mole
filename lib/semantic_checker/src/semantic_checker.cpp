@@ -234,7 +234,7 @@ const std::unordered_multimap<TypeEnum, TypeEnum>
 };
 
 SemanticChecker::Visitor::Visitor() noexcept
-    : last_type(nullptr), return_type(nullptr), is_assignable(false),
+    : last_type(nullptr), return_type(std::nullopt), is_assignable(false),
       value(true)
 {
 }
@@ -919,19 +919,66 @@ void SemanticChecker::Visitor::visit(const Block &node)
     this->leave_scope();
 }
 
-// void SemanticChecker::Visitor::visit(const ReturnStmt &node)
-// {
-//     if (!(this->return_stack.back()))
-//     {
-//         if (node.expr)
-//         {
-//             (*(node.expr))->accept(*this);
-//             this->return_stack.back() = this->last_type;
-//         }
-//         else
-//             this->return_stack.back() = std::make_shared<NeverType>();
-//     }
-// }
+void SemanticChecker::Visitor::check_condition_expr(
+    const Expression &condition)
+{
+    this->visit(condition);
+    if (!this->last_type)
+        return;
+    if (*this->last_type != SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF))
+    {
+        this->report_error(
+            L"expected type `bool` in a condition expression, found `",
+            get_type_string(this->last_type), L"`");
+    }
+}
+
+void SemanticChecker::Visitor::visit(const IfStmt &node)
+{
+    this->check_condition_expr(*node.condition_expr);
+    this->visit(*node.then_block);
+    std::optional<TypePtr> return_type = this->return_type.transform(
+        [](const TypePtr &value) { return clone_type_ptr(value); });
+    if (node.else_block)
+    {
+        this->visit(*node.else_block);
+        if (!(this->return_type && return_type &&
+              ((!*this->return_type && !*return_type) ||
+               (**this->return_type == **return_type))))
+        {
+            this->return_type = std::nullopt;
+        }
+    }
+    else
+    {
+        this->return_type = std::nullopt;
+    }
+}
+
+void SemanticChecker::Visitor::visit(const WhileStmt &node)
+{
+    this->check_condition_expr(*node.condition_expr);
+    this->is_in_loop = true;
+    this->visit(*node.statement);
+    this->is_in_loop = false;
+}
+
+void SemanticChecker::Visitor::visit(const MatchStmt &node)
+{
+}
+
+void SemanticChecker::Visitor::visit(const ReturnStmt &node)
+{
+    if (node.expr)
+    {
+        this->visit(*node.expr);
+        this->return_type = clone_type_ptr(this->last_type);
+    }
+    else
+    {
+        this->return_type = nullptr;
+    }
+}
 
 void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
 {
@@ -1142,6 +1189,12 @@ void SemanticChecker::Visitor::visit(const Expression &node)
 
 void SemanticChecker::Visitor::visit(const Statement &node)
 {
+    if (this->return_type)
+    {
+        this->report(LogLevel::WARNING, L"this statement will not execute - "
+                                        L"it is after a return statement");
+        return;
+    }
     std::visit(
         overloaded{
             [this](const Block &node) {
@@ -1150,12 +1203,24 @@ void SemanticChecker::Visitor::visit(const Statement &node)
                     this->visit(*stmt);
                 }
             },
-            //    [this](const IfStmt &node) { this->visit(node); },
-            //    [this](const WhileStmt &node) { this->visit(node); },
-            //    [this](const MatchStmt &node) { this->visit(node); },
-            //    [this](const ReturnStmt &node) { this->visit(node); },
-            //    [this](const BreakStmt &node) { this->visit(node); },
-            //    [this](const ContinueStmt &node) { this->visit(node); },
+            [this](const IfStmt &node) { this->visit(node); },
+            [this](const WhileStmt &node) { this->visit(node); },
+            [this](const MatchStmt &node) { this->visit(node); },
+            [this](const ReturnStmt &node) { this->visit(node); },
+            [this](const BreakStmt &node) {
+                if (!this->is_in_loop)
+                {
+                    this->report_error(
+                        L"break statement can only be used in a loop");
+                }
+            },
+            [this](const ContinueStmt &node) {
+                if (!this->is_in_loop)
+                {
+                    this->report_error(
+                        L"continue statement can only be used in a loop");
+                }
+            },
             [this](const FuncDefStmt &node) { this->visit(node); },
             [this](const AssignStmt &node) { this->visit(node); },
             [this](const ExprStmt &node) { this->visit(node); },

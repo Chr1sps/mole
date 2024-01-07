@@ -14,9 +14,10 @@ class SemanticChecker
     class Visitor : public AstVisitor, public Reporter
     {
         static const std::unordered_multimap<TypeEnum, TypeEnum> cast_map;
-        TypePtr last_type, return_type;
+        TypePtr last_type;
+        std::optional<TypePtr> return_type;
         // std::optional<std::wstring> referenced_var;
-        bool is_assignable, is_initialized;
+        bool is_assignable, is_initialized, is_in_loop;
 
         template <typename... Args> void report_error(Args &&...data)
         {
@@ -99,6 +100,7 @@ class SemanticChecker
         // void unregister_function_params(const FuncDefStmt &node);
 
         // void check_var_name(const VarDeclStmt &node);
+        void check_condition_expr(const Expression &condition);
 
         void visit(const BinaryExpr &node);
         void visit(const UnaryExpr &node);
@@ -108,7 +110,10 @@ class SemanticChecker
         void visit(const CastExpr &node);
 
         void visit(const Block &node);
-        // void visit(const ReturnStmt &node);
+        void visit(const IfStmt &node);
+        void visit(const WhileStmt &node);
+        void visit(const MatchStmt &node);
+        void visit(const ReturnStmt &node);
         void visit(const AssignStmt &node);
         void visit(const ExprStmt &node);
         void visit(const FuncDefStmt &node);
