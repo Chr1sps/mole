@@ -10,30 +10,18 @@
 
 namespace
 {
-std::unordered_map<TypeEnum, std::wstring> type_map = {
+const std::unordered_map<TypeEnum, std::wstring> type_map = {
     {TypeEnum::BOOL, L"bool"}, {TypeEnum::U32, L"u32"},
     {TypeEnum::I32, L"i32"},   {TypeEnum::F64, L"f64"},
     {TypeEnum::CHAR, L"char"}, {TypeEnum::STR, L"str"},
 };
-std::unordered_map<RefSpecifier, std::wstring> ref_spec_map = {
+const std::unordered_map<RefSpecifier, std::wstring> ref_spec_map = {
     {RefSpecifier::NON_REF, L""},
     {RefSpecifier::REF, L"&"},
     {RefSpecifier::MUT_REF, L"&mut "},
 };
-std::unordered_map<UnaryOpEnum, std::unordered_map<TypeEnum, TypeEnum>>
+const std::unordered_map<UnaryOpEnum, std::unordered_map<TypeEnum, TypeEnum>>
     unary_map = {
-        {UnaryOpEnum::INC,
-         {
-             {TypeEnum::U32, TypeEnum::U32},
-             {TypeEnum::I32, TypeEnum::I32},
-             {TypeEnum::F64, TypeEnum::F64},
-         }},
-        {UnaryOpEnum::DEC,
-         {
-             {TypeEnum::U32, TypeEnum::U32},
-             {TypeEnum::I32, TypeEnum::I32},
-             {TypeEnum::F64, TypeEnum::F64},
-         }},
         {UnaryOpEnum::MINUS,
          {
              {TypeEnum::U32, TypeEnum::I32},
@@ -51,7 +39,7 @@ std::unordered_map<UnaryOpEnum, std::unordered_map<TypeEnum, TypeEnum>>
          }},
 };
 
-std::unordered_map<
+const std::unordered_map<
     BinOpEnum,
     std::unordered_map<TypeEnum, std::unordered_map<TypeEnum, TypeEnum>>>
     binary_map = {
@@ -174,9 +162,86 @@ std::unordered_map<
          }},
 };
 
-std::unordered_map<UnaryOpEnum, std::wstring> unary_str_map = {
-    {UnaryOpEnum::INC, L"incremented"},
-    {UnaryOpEnum::DEC, L"decremented"},
+const std::unordered_map<AssignType,
+                         std::unordered_multimap<TypeEnum, TypeEnum>>
+    assign_map = {
+        {AssignType::NORMAL,
+         {
+             {TypeEnum::BOOL, TypeEnum::BOOL},
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+             {TypeEnum::F64, TypeEnum::F64},
+             {TypeEnum::CHAR, TypeEnum::CHAR},
+             {TypeEnum::STR, TypeEnum::STR},
+         }},
+        {AssignType::PLUS,
+         {
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+             {TypeEnum::F64, TypeEnum::F64},
+             {TypeEnum::STR, TypeEnum::CHAR},
+             {TypeEnum::STR, TypeEnum::STR},
+         }},
+        {AssignType::MINUS,
+         {
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+             {TypeEnum::F64, TypeEnum::F64},
+         }},
+        {AssignType::MUL,
+         {
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+             {TypeEnum::F64, TypeEnum::F64},
+         }},
+        {AssignType::DIV,
+         {
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+             {TypeEnum::F64, TypeEnum::F64},
+         }},
+        {AssignType::MOD,
+         {
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+         }},
+        {AssignType::EXP,
+         {
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::U32},
+             {TypeEnum::F64, TypeEnum::U32},
+         }},
+        {AssignType::BIT_AND,
+         {
+             {TypeEnum::BOOL, TypeEnum::BOOL},
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+         }},
+        {AssignType::BIT_OR,
+         {
+             {TypeEnum::BOOL, TypeEnum::BOOL},
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+         }},
+        {AssignType::BIT_XOR,
+         {
+             {TypeEnum::BOOL, TypeEnum::BOOL},
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::I32},
+         }},
+        {AssignType::SHL,
+         {
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::U32},
+         }},
+        {AssignType::SHR,
+         {
+             {TypeEnum::U32, TypeEnum::U32},
+             {TypeEnum::I32, TypeEnum::U32},
+         }},
+};
+
+const std::unordered_map<UnaryOpEnum, std::wstring> unary_str_map = {
     {UnaryOpEnum::MINUS, L"negated"},
     {UnaryOpEnum::NEG, L"negated logically"},
     {UnaryOpEnum::BIT_NEG, L"negated bitwise"},
@@ -186,8 +251,8 @@ constexpr std::wstring get_type_string(const Type &type)
 {
     return std::visit(
         overloaded{[](const SimpleType &type) {
-                       return ref_spec_map[type.ref_spec] +
-                              type_map[type.type];
+                       return ref_spec_map.at(type.ref_spec) +
+                              type_map.at(type.type);
                    },
                    [](const FunctionType &type) {
                        std::wstring result = L"fn";
@@ -485,6 +550,7 @@ void SemanticChecker::Visitor::visit(const BinaryExpr &node)
     }
     auto left_type = std::get<SimpleType>(left_type_var);
     auto right_type = std::get<SimpleType>(right_type_var);
+
     try
     {
         auto result_type =
@@ -537,8 +603,6 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
     auto type = std::get<SimpleType>(*this->last_type);
     switch (node.op)
     {
-    case UnaryOpEnum::INC:
-    case UnaryOpEnum::DEC:
     case UnaryOpEnum::MINUS:
     case UnaryOpEnum::BIT_NEG:
     case UnaryOpEnum::NEG:
@@ -573,7 +637,7 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
                 node.position, L"references cannot be referenced further");
             break;
         }
-        if (!this->is_lvalue)
+        if (this->ref_spec == RefSpecifier::NON_REF)
         {
             this->report_expr_error(node.position,
                                     L"referenced values must be variables");
@@ -581,8 +645,7 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
         }
         this->last_type = std::make_unique<Type>(
             SimpleType(type.type, get_ref_specifier(node.op)));
-        this->is_assignable = false;
-        this->is_lvalue = false;
+        this->ref_spec = RefSpecifier::NON_REF;
         break;
     case UnaryOpEnum::DEREF:
         if (type.type == TypeEnum::STR)
@@ -598,16 +661,10 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
                                L"cannot dereference a non-reference value");
             break;
         case RefSpecifier::REF:
-            this->last_type = std::make_unique<Type>(
-                SimpleType(type.type, RefSpecifier::NON_REF));
-            this->is_assignable = false;
-            this->is_lvalue = true;
-            break;
         case RefSpecifier::MUT_REF:
             this->last_type = std::make_unique<Type>(
                 SimpleType(type.type, RefSpecifier::NON_REF));
-            this->is_assignable = true;
-            this->is_lvalue = true;
+            this->ref_spec = type.ref_spec;
             break;
         }
         break;
@@ -720,18 +777,19 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
             auto actual_type = *this->last_type;
             if (*expected_type != actual_type)
             {
-                this->report_expr_error(get_expr_position(*arg),
-                                        L"function call argument type "
-                                        L"mismatched - expected type: `",
-                                        get_type_string(expected_type),
-                                        L"`, found: `",
-                                        get_type_string(actual_type), L"`");
+                this->report_expr_error(
+                    ((arg) ? (get_expr_position(*arg)) : (node.position)),
+                    L"function call argument type "
+                    L"mismatched - expected type: `",
+                    get_type_string(expected_type), L"`, found: `",
+                    get_type_string(actual_type), L"`");
                 is_valid = false;
             }
             if (!this->is_initialized)
-                this->report_error(get_expr_position(*arg),
-                                   L"variable used as a call expression "
-                                   L"argument is not initialized");
+                this->report_error(
+                    ((arg) ? (get_expr_position(*arg)) : (node.position)),
+                    L"variable used as a call expression "
+                    L"argument is not initialized");
             if (std::holds_alternative<SimpleType>(actual_type))
             {
                 auto simple = std::get<SimpleType>(actual_type);
@@ -852,6 +910,58 @@ void SemanticChecker::Visitor::visit(const Block &node)
     this->leave_scope();
 }
 
+void SemanticChecker::Visitor::visit(const AssignStmt &node)
+{
+    this->visit(*node.lhs);
+    if (!this->last_type)
+        return;
+    if (this->ref_spec != RefSpecifier::MUT_REF)
+    {
+        this->report_error(
+            get_expr_position(*node.lhs),
+            L"left side of the assignment statement is non-assignable");
+        return;
+    }
+    auto left_type_var = *this->last_type;
+
+    this->visit(*node.rhs);
+    if (!this->last_type)
+        return;
+    auto right_type_var = *this->last_type;
+    if (!this->is_initialized)
+        this->report_error(get_expr_position(*node.rhs),
+                           L"right hand side variable of an assignment"
+                           L"is not initialized");
+
+    if (!check_non_ref_or_string(left_type_var))
+    {
+        this->report_expr_error(
+            get_expr_position(*node.lhs),
+            L"left hand side type cannot be used in an assignment");
+        return;
+    }
+    if (!check_non_ref_or_string(right_type_var))
+    {
+        this->report_expr_error(
+            get_expr_position(*node.rhs),
+            L"right hand side type cannot be used in an assignment");
+        return;
+    }
+    auto left_type = std::get<SimpleType>(left_type_var);
+    auto right_type = std::get<SimpleType>(right_type_var);
+    auto op_map = assign_map.at(node.type);
+    decltype(op_map)::value_type type_pair =
+        std::make_pair(left_type.type, right_type.type);
+    auto iter = std::find(op_map.cbegin(), op_map.cend(), type_pair);
+    if (iter == op_map.cend())
+    {
+        this->report_error(node.position, L"value of type `",
+                           get_type_string(right_type),
+                           L"` cannot be assigned to a value of type `",
+                           get_type_string(left_type), L"` ");
+    }
+}
+
 void SemanticChecker::Visitor::check_condition_expr(
     const Expression &condition)
 {
@@ -924,10 +1034,11 @@ void SemanticChecker::Visitor::visit(const ReturnStmt &node)
           (return_type && this->expected_return_type &&
            *return_type == *this->expected_return_type)))
     {
-        this->report_error(get_expr_position(*node.expr), L"expected `",
-                           get_type_string(this->expected_return_type),
-                           L"` expression type in a return statement, found `",
-                           get_type_string(return_type), L"`");
+        this->report_error(
+            ((node.expr) ? (get_expr_position(*node.expr)) : (node.position)),
+            L"expected `", get_type_string(this->expected_return_type),
+            L"` expression type in a return statement, found `",
+            get_type_string(return_type), L"`");
     }
     this->is_return_covered = true;
 }
@@ -996,79 +1107,6 @@ void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
     this->register_local_function(node);
 }
 
-void SemanticChecker::Visitor::visit(const AssignStmt &node)
-{
-    this->visit(*node.lhs);
-    if (!this->is_assignable)
-    {
-        this->report_error(
-            get_expr_position(*node.lhs),
-            L"left side of the assignment statement is non-assignable");
-        return;
-    }
-    auto lhs_type = *this->last_type;
-    this->visit(*node.rhs);
-    auto rhs_type = *this->last_type;
-    switch (node.type)
-    {
-    case AssignType::PLUS:
-    case AssignType::MINUS:
-    case AssignType::MUL:
-    case AssignType::DIV:
-
-    case AssignType::BIT_AND:
-    case AssignType::BIT_OR:
-    case AssignType::BIT_XOR:
-
-    case AssignType::NORMAL:
-        if (lhs_type != rhs_type)
-        {
-            this->report_error(node.position,
-                               L"assigned value type does not match the left "
-                               L"side of the assignment statement");
-        }
-        if (!this->is_initialized)
-        {
-            this->report_error(node.position,
-                               L"expression assigned to a variable contains "
-                               L"an uninitialized variable");
-        }
-        break;
-    case AssignType::SHL:
-    case AssignType::SHR:
-        break;
-    case AssignType::EXP:
-        break;
-    case AssignType::MOD:
-        break;
-    }
-
-    // if (auto var = this->find_variable(node.name))
-    // {
-    //     if (!(var->mut))
-    //     {
-    //         this->report_error(L"constant value cannot be reassigned");
-    //     }
-
-    //     if (this->find_outside_variable(node.name))
-    //     {
-    //         this->report_error(L"variable `", node.name,
-    //                            "` is reassigned in a constant function");
-    //     }
-
-    //     auto var_type = var->type;
-    //     node.value->accept(*this);
-    //     auto assigned_type = this->last_type;
-    //     if (var_type != assigned_type)
-    //         this->report_error(
-    //             L"mismatched types in an assignment expression");
-    // }
-    // else
-    // {
-    //     this->report_error(L"reassigned variable is not in scope");
-    // }
-}
-
 void SemanticChecker::Visitor::visit(const ExprStmt &node)
 {
     this->visit(*node.expr);
@@ -1125,51 +1163,46 @@ void SemanticChecker::Visitor::visit(const Expression &node)
             [this](const U32Expr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
-                this->is_assignable = false;
+                this->ref_spec = RefSpecifier::NON_REF;
                 this->is_const = true;
                 this->is_initialized = true;
-                this->is_lvalue = false;
             },
             [this](const F64Expr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
-                this->is_assignable = false;
+                this->ref_spec = RefSpecifier::NON_REF;
                 this->is_const = true;
                 this->is_initialized = true;
-                this->is_lvalue = false;
             },
             [this](const CharExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
-                this->is_assignable = false;
+                this->ref_spec = RefSpecifier::NON_REF;
                 this->is_const = true;
                 this->is_initialized = true;
-                this->is_lvalue = false;
             },
             [this](const BoolExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
-                this->is_assignable = false;
+                this->ref_spec = RefSpecifier::NON_REF;
                 this->is_const = true;
                 this->is_initialized = true;
-                this->is_lvalue = false;
             },
             [this](const StringExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::STR, RefSpecifier::REF));
-                this->is_assignable = false;
+                this->ref_spec = RefSpecifier::NON_REF;
                 this->is_const = true;
                 this->is_initialized = true;
-                this->is_lvalue = false;
             },
             [this](const VariableExpr &node) {
                 if (auto var = this->find_variable(node.name))
                 {
                     this->last_type = std::make_unique<Type>(var->type);
-                    this->is_assignable = var->mut;
+                    this->ref_spec = (var->mut) ? (RefSpecifier::MUT_REF)
+                                                : (RefSpecifier::REF);
                     this->is_const = !var->mut;
                     this->is_initialized = var->initialized;
-                    this->is_lvalue = true;
                     if (this->is_in_const_scope() && !this->is_local)
                     {
                         this->report_error(
@@ -1181,18 +1214,13 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                 else if (auto func = this->find_function(node.name))
                 {
                     this->last_type = std::make_unique<Type>(*func);
-                    this->is_assignable = false;
+                    this->ref_spec = RefSpecifier::REF;
                     this->is_const = true;
                     this->is_initialized = true;
-                    this->is_lvalue = true;
                 }
                 else
-                {
                     this->report_expr_error(
                         node.position, L"referenced variable doesn't exist");
-                    this->is_initialized = false;
-                    this->is_lvalue = false;
-                }
             },
             [this](const BinaryExpr &node) { this->visit(node); },
             [this](const UnaryExpr &node) { this->visit(node); },

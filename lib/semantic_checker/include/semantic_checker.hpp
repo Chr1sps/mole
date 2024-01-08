@@ -15,8 +15,9 @@ class SemanticChecker
     {
         static const std::unordered_multimap<TypeEnum, TypeEnum> cast_map;
         TypePtr last_type, expected_return_type;
-        bool is_assignable, is_initialized, is_in_loop, is_exhaustive,
-            is_const, is_lvalue, is_return_covered, is_local;
+        bool is_initialized, is_in_loop, is_exhaustive, is_const,
+            is_return_covered, is_local;
+        RefSpecifier ref_spec;
 
         template <typename... Args>
         void report_error(const Position &pos, Args &&...data)
@@ -31,7 +32,7 @@ class SemanticChecker
         {
             this->report_error(pos, data...);
             this->last_type = nullptr;
-            this->is_assignable = false;
+            this->ref_spec = RefSpecifier::NON_REF;
         }
 
         struct VarData

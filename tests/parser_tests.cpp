@@ -362,18 +362,6 @@ TEST_CASE("Binary operators.", "[VARS], [BINOP]")
 TEST_CASE("Unary operators.", "[VARS], [UNOP]")
 {
     COMPARE(
-        L"let var=++5;",
-        PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
-                               UNEXPR(I32EXPR(5, POS(1, 11)), INC, POS(1, 9)),
-                               false, POS(1, 1))),
-                FUNCTIONS(), EXTERNS()));
-    COMPARE(
-        L"let var=--5;",
-        PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
-                               UNEXPR(I32EXPR(5, POS(1, 11)), DEC, POS(1, 9)),
-                               false, POS(1, 1))),
-                FUNCTIONS(), EXTERNS()));
-    COMPARE(
         L"let var=!5;",
         PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
                                UNEXPR(I32EXPR(5, POS(1, 10)), NEG, POS(1, 9)),
@@ -412,45 +400,38 @@ TEST_CASE("Unary operators.", "[VARS], [UNOP]")
     SECTION("Nested.")
     {
         COMPARE(
-            L"let var=++---~!5;",
-            PROGRAM(
-                GLOBALS(GLOBAL(
-                    L"var", nullptr,
-                    UNEXPR(UNEXPR(UNEXPR(UNEXPR(UNEXPR(I32EXPR(5, POS(1, 16)),
-                                                       NEG, POS(1, 15)),
-                                                BIT_NEG, POS(1, 14)),
-                                         MINUS, POS(1, 13)),
-                                  DEC, POS(1, 11)),
-                           INC, POS(1, 9)),
-                    false, POS(1, 1))),
-                FUNCTIONS(), EXTERNS()));
+            L"let var=-~!5;",
+            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+                                   UNEXPR(UNEXPR(UNEXPR(I32EXPR(5, POS(1, 12)),
+                                                        NEG, POS(1, 11)),
+                                                 BIT_NEG, POS(1, 10)),
+                                          MINUS, POS(1, 9)),
+                                   false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
+        COMPARE(
+            L"let var=&mut *&5;",
+            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+                                   UNEXPR(UNEXPR(UNEXPR(I32EXPR(5, POS(1, 16)),
+                                                        REF, POS(1, 15)),
+                                                 DEREF, POS(1, 14)),
+                                          MUT_REF, POS(1, 9)),
+                                   false, POS(1, 1))),
+                    FUNCTIONS(), EXTERNS()));
     }
 }
 
 TEST_CASE("Nested operators - mixed.")
 {
     COMPARE(
-        L"let var=--2+--2;",
+        L"let var=-2+-2;",
         PROGRAM(
             GLOBALS(GLOBAL(
                 L"var", nullptr,
-                BINEXPR(UNEXPR(I32EXPR(2, POS(1, 11)), DEC, POS(1, 9)), ADD,
-                        UNEXPR(I32EXPR(2, POS(1, 15)), DEC, POS(1, 13)),
+                BINEXPR(UNEXPR(I32EXPR(2, POS(1, 10)), MINUS, POS(1, 9)), ADD,
+                        UNEXPR(I32EXPR(2, POS(1, 13)), MINUS, POS(1, 12)),
                         POS(1, 9)),
                 false, POS(1, 1))),
             FUNCTIONS(), EXTERNS()));
-    // COMPARE(
-    //     L"let var=++1;",
-    //     PROGRAM(
-    //         GLOBALS(GLOBAL(
-    //             L"var", nullptr,
-    //             BINEXPR(UNEXPR(I32EXPR(2, POS(1, 11)), DEC, POS(1, 9)), ADD,
-    //                     UNEXPR(I32EXPR(2, POS(1, 15)), DEC, POS(1, 13)),
-    //                     POS(1, 9)),
-    //             false, POS(1, 1))),
-    //         FUNCTIONS(), EXTERNS()));
-    // COMPARE(L"let var=++1*--2+!3*~4-5>>6;",
-    //         L"let var=(((((++1)*(--2))+((!3)*(~4)))-5)>>6);");
 }
 
 TEST_CASE("Function definitions.", "[FUNC]")

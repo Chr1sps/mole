@@ -77,10 +77,6 @@ TEST_CASE("Unary expressions.")
     SECTION("On bool.")
     {
         CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
-                              L"++var;"));
-        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
-                              L"--var;"));
-        CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
                               L"-var;"));
         CHECK_INVALID(FN_WRAP(L"let var: bool = true;"
                               L"~var;"));
@@ -95,10 +91,6 @@ TEST_CASE("Unary expressions.")
     }
     SECTION("On u32.")
     {
-        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
-                            L"++var;"));
-        CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
-                            L"--var;"));
         CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
                             L"-var;"));
         CHECK_VALID(FN_WRAP(L"let var: u32 = 1;"
@@ -115,10 +107,6 @@ TEST_CASE("Unary expressions.")
     SECTION("On i32.")
     {
         CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
-                            L"++var;"));
-        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
-                            L"--var;"));
-        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
                             L"-var;"));
         CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
                             L"~var;"));
@@ -133,10 +121,6 @@ TEST_CASE("Unary expressions.")
     }
     SECTION("On f64.")
     {
-        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
-                            L"++var;"));
-        CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
-                            L"--var;"));
         CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0;"
                             L"-var;"));
         CHECK_INVALID(FN_WRAP(L"let var: f64 = 1.0;"
@@ -153,10 +137,6 @@ TEST_CASE("Unary expressions.")
     SECTION("On char.")
     {
         CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
-                              L"++var;"));
-        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
-                              L"--var;"));
-        CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
                               L"-var;"));
         CHECK_INVALID(FN_WRAP(L"let var: char = 'a';"
                               L"~var;"));
@@ -172,10 +152,6 @@ TEST_CASE("Unary expressions.")
     SECTION("On string.")
     {
         CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
-                              L"++var;"));
-        CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
-                              L"--var;"));
-        CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
                               L"-var;"));
         CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
                               L"~var;"));
@@ -190,10 +166,6 @@ TEST_CASE("Unary expressions.")
     }
     SECTION("Using uninitialized values.")
     {
-        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                              L"++var;"));
-        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                              L"--var;"));
         CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
                               L"-var;"));
         CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
@@ -832,10 +804,106 @@ TEST_CASE("Assignments.")
     }
     SECTION("Simple assignments.")
     {
-        CHECK_VALID(FN_WRAP(L"let mut var = 1; var += 1;"));
-        CHECK_VALID(FN_WRAP(L"let mut var = 1; var -= 1;"));
-        CHECK_VALID(FN_WRAP(L"let mut var = 1; var *= 1;"));
-        CHECK_VALID(FN_WRAP(L"let mut var = 1; var /= 1;"));
+        SECTION("Plus.")
+        {
+            CHECK_INVALID(FN_WRAP(L"let mut var = true; var += true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var += 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = (-1); var += (-1);"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1.0; var += 1.0;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = \"a\"; var += \"a\";"));
+            CHECK_VALID(FN_WRAP(L"let mut var = \"a\"; var += 'a';"));
+        }
+        SECTION("Minus.")
+        {
+            CHECK_INVALID(FN_WRAP(L"let mut var = true; var -= true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var -= 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = (-1); var -= (-1);"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1.0; var -= 1.0;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var -= \"a\";"));
+        }
+        SECTION("Multiplication.")
+        {
+            CHECK_INVALID(FN_WRAP(L"let mut var = true; var *= true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var *= 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = (-1); var *= (-1);"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1.0; var *= 1.0;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var *= \"a\";"));
+        }
+        SECTION("Division.")
+        {
+            CHECK_INVALID(FN_WRAP(L"let mut var = true; var /= true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var /= 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = (-1); var /= (-1);"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1.0; var /= 1.0;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var /= \"a\";"));
+        }
+        SECTION("Modulo.")
+        {
+            CHECK_INVALID(FN_WRAP(L"let mut var = true; var %= true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var %= 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = (-1); var %= (-1);"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = 1.0; var %= 1.0;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var %= \"a\";"));
+        }
+        SECTION("Exponentiation.")
+        {
+            CHECK_INVALID(FN_WRAP(L"let mut var = true; var ^^= true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var ^^= 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = (-1); var ^^= 1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = (-1); var ^^= (-1);"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = 1.0; var ^^= 1.0;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var ^^= \"a\";"));
+        }
+        SECTION("Bit and.")
+        {
+            CHECK_VALID(FN_WRAP(L"let mut var = true; var &= true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var &= 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = (-1); var &= (-1);"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = 1.0; var &= 1.0;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var &= \"a\";"));
+        }
+        SECTION("Bit or.")
+        {
+            CHECK_VALID(FN_WRAP(L"let mut var = true; var |= true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var |= 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = (-1); var |= (-1);"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = 1.0; var |= 1.0;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var |= \"a\";"));
+        }
+        SECTION("Bit xor.")
+        {
+            CHECK_VALID(FN_WRAP(L"let mut var = true; var ^= true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var ^= 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = (-1); var ^= (-1);"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = 1.0; var ^= 1.0;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var ^= \"a\";"));
+        }
+        SECTION("Shift left.")
+        {
+            CHECK_INVALID(FN_WRAP(L"let mut var = true; var <<= true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var <<= 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = -1; var <<= 1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = (-1); var <<= (-1);"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = 1.0; var <<= 1.0;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var <<= \"a\";"));
+        }
+        SECTION("Shift right.")
+        {
+            CHECK_INVALID(FN_WRAP(L"let mut var = true; var >>= true;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = 1; var >>= 1;"));
+            CHECK_VALID(FN_WRAP(L"let mut var = -1; var >>= 1;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = (-1); var >>= (-1);"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = 1.0; var >>= 1.0;"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var >>= \"a\";"));
+        }
+    }
+    SECTION("No const reassignments.")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var = 1; var = 2;"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1; var += 2;"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1; var -= 2;"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1; var *= 2;"));
+        CHECK_INVALID(FN_WRAP(L"let var = 1; var /= 2;"));
     }
 }
 
@@ -1078,5 +1146,57 @@ TEST_CASE("Externs.")
     {
         CHECK_INVALID(L"extern foo(x: u32);"
                       L"extern foo();");
+    }
+}
+
+TEST_CASE("Returns in if statements.")
+{
+    SECTION("Return value required.")
+    {
+        CHECK_VALID(L"fn test(a: bool)=>u32{"
+                    L"if (a) {}"
+                    L"return 0;"
+                    L"}");
+        CHECK_VALID(L"fn test(a: bool)=>u32{"
+                    L"if (a) return 1;"
+                    L"return 0;"
+                    L"}");
+        CHECK_VALID(L"fn test(a: bool)=>u32{"
+                    L"if (a) return 1;"
+                    L"else return 0;"
+                    L"}");
+        CHECK_VALID(L"fn test(a: bool)=>u32{"
+                    L"return 0;"
+                    L"if (a) return 1;"
+                    L"}");
+        CHECK_VALID(L"fn test(a: bool)=>u32{"
+                    L"return 0;"
+                    L"if (a) return 1;"
+                    L"else {}"
+                    L"}");
+        CHECK_INVALID(L"fn test(a: bool)=>u32{"
+                      L"if (a) return 1;"
+                      L"}");
+        CHECK_INVALID(L"fn test(a: bool)=>u32{"
+                      L"if (a) {}"
+                      L"else return 0;"
+                      L"}");
+    }
+}
+
+TEST_CASE("While, break, continue statements.")
+{
+    SECTION("Break and continue cannot be outside while loop.")
+    {
+        CHECK_INVALID(FN_WRAP(L"break;"));
+        CHECK_INVALID(FN_WRAP(L"continue;"));
+        CHECK_VALID(FN_WRAP(L"let a = true;"
+                            L"while(a){"
+                            L"continue;"
+                            L"}"));
+        CHECK_VALID(FN_WRAP(L"let a = true;"
+                            L"while(a){"
+                            L"break;"
+                            L"}"));
     }
 }

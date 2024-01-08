@@ -38,9 +38,8 @@ std::map<TokenType, BinOpData> Parser::binary_map{
         TokenType::token_type, UnaryOpEnum::un_op_type                        \
     }
 std::map<TokenType, UnaryOpEnum> Parser::unary_map{
-    UNOP(INCREMENT, INC),   UNOP(DECREMENT, DEC), UNOP(NEG, NEG),
-    UNOP(BIT_NEG, BIT_NEG), UNOP(MINUS, MINUS),   UNOP(AMPERSAND, REF),
-    UNOP(STAR, DEREF)};
+    UNOP(NEG, NEG), UNOP(BIT_NEG, BIT_NEG), UNOP(MINUS, MINUS),
+    UNOP(AMPERSAND, REF), UNOP(STAR, DEREF)};
 #undef UNOP
 
 #define TYPE(token_type, type)                                                \

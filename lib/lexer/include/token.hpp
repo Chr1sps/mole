@@ -12,11 +12,9 @@ enum class TokenType
     SEMICOLON, // ';'
 
     PLUS,        // '+'
-    INCREMENT,   // '++'
     ASSIGN_PLUS, // '+='
 
     MINUS,        // '-'
-    DECREMENT,    // '--'
     ASSIGN_MINUS, // '-='
 
     STAR,        // '*'

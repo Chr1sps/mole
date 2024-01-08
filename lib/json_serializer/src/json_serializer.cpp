@@ -35,6 +35,7 @@ std::unordered_map<UnaryOpEnum, std::wstring>
         {UnaryOpEnum::BIT_NEG, L"BIT_NEG"}, {UnaryOpEnum::DEC, L"DEC"},
         {UnaryOpEnum::INC, L"INC"},         {UnaryOpEnum::NEG, L"NEG"},
         {UnaryOpEnum::REF, L"REF"},         {UnaryOpEnum::MINUS, L"MINUS"},
+        {UnaryOpEnum::MUT_REF, L"MUT_REF"}, {UnaryOpEnum::DEREF, L"DEREF"},
 };
 
 std::unordered_map<RefSpecifier, std::wstring>

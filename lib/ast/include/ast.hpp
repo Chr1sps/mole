@@ -153,8 +153,6 @@ enum class BinOpEnum
 
 enum class UnaryOpEnum
 {
-    INC,
-    DEC,
     MINUS,
 
     BIT_NEG,

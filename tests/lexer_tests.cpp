@@ -129,9 +129,7 @@ TEST_CASE("Single char tokens (with no branching alternatives).", "[OPS]")
 
 TEST_CASE("Multiple char tokens.", "[OPS]")
 {
-    compare_lexed_tokens(L"++", LIST(T(INCREMENT, 1, 1)));
     compare_lexed_tokens(L"+=", LIST(T(ASSIGN_PLUS, 1, 1)));
-    compare_lexed_tokens(L"--", LIST(T(DECREMENT, 1, 1)));
     compare_lexed_tokens(L"-=", LIST(T(ASSIGN_MINUS, 1, 1)));
     compare_lexed_tokens(L"*=", LIST(T(ASSIGN_STAR, 1, 1)));
     compare_lexed_tokens(L"/=", LIST(T(ASSIGN_SLASH, 1, 1)));
@@ -156,10 +154,10 @@ TEST_CASE("Multiple char tokens.", "[OPS]")
 
 TEST_CASE("Combined operators.")
 {
-    compare_lexed_tokens(L"+++", LIST(T(INCREMENT, 1, 1), T(PLUS, 1, 3)));
-    compare_lexed_tokens(L"++++",
-                         LIST(T(INCREMENT, 1, 1), T(INCREMENT, 1, 3)));
-    compare_lexed_tokens(L"++==", LIST(T(INCREMENT, 1, 1), T(EQUAL, 1, 3)));
+    compare_lexed_tokens(L"+++",
+                         LIST(T(PLUS, 1, 1), T(PLUS, 1, 2), T(PLUS, 1, 3)));
+    compare_lexed_tokens(
+        L"++==", LIST(T(PLUS, 1, 1), T(ASSIGN_PLUS, 1, 2), T(ASSIGN, 1, 4)));
     compare_lexed_tokens(L">>>=",
                          LIST(T(SHIFT_RIGHT, 1, 1), T(GREATER_EQUAL, 1, 3)));
     compare_lexed_tokens(L">>=>",
