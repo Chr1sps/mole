@@ -1038,9 +1038,9 @@ TEST_CASE("Externs.")
     }
 }
 
-TEST_CASE("Returns in if statements.")
+TEST_CASE("Return statements coverage.")
 {
-    SECTION("Return value required.")
+    SECTION("If statements.")
     {
         CHECK_VALID(L"fn test(a: bool)=>u32{"
                     L"if (a) {}"
@@ -1070,6 +1070,26 @@ TEST_CASE("Returns in if statements.")
                       L"if (a) {}"
                       L"else return 0;"
                       L"}");
+    }
+    SECTION("Blocks.")
+    {
+        CHECK_VALID(L"fn test()=>u32{"
+                    L"{return 1;}"
+                    L"}");
+    }
+    SECTION("While statements.")
+    {
+        CHECK_INVALID(L"fn test(a: bool)=>u32{"
+                      L"while (a) return 1;"
+                      L"}");
+        CHECK_VALID(L"fn test(a: bool)=>u32{"
+                    L"while (a) {}"
+                    L"return 1;"
+                    L"}");
+        CHECK_VALID(L"fn test(a: bool)=>u32{"
+                    L"while (a) return 1;"
+                    L"return 1;"
+                    L"}");
     }
 }
 

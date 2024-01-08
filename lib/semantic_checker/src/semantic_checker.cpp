@@ -509,26 +509,26 @@ void SemanticChecker::Visitor::visit(const BinaryExpr &node)
     if (!this->last_type)
         return;
     auto left_type_var = *this->last_type;
-    auto is_left_const = this->is_const;
+    // auto is_left_const = this->is_const;
 
     this->visit(*node.rhs);
     if (!this->last_type)
         return;
     auto right_type_var = *this->last_type;
-    auto is_right_const = this->is_const;
+    // auto is_right_const = this->is_const;
 
-    this->is_const = is_left_const && is_right_const;
+    // this->is_const = is_left_const && is_right_const;
     if (!check_non_ref_or_string(left_type_var))
     {
         this->report_expr_error(
-            get_expr_position(*node.lhs),
+            get_position(*node.lhs),
             L"left hand side type cannot be used in a binary expression");
         return;
     }
     if (!check_non_ref_or_string(right_type_var))
     {
         this->report_expr_error(
-            get_expr_position(*node.rhs),
+            get_position(*node.rhs),
             L"right hand side type cannot be used in a binary expression");
         return;
     }
@@ -575,7 +575,7 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
     if (std::holds_alternative<FunctionType>(*this->last_type))
     {
         this->report_expr_error(
-            get_expr_position(*node.expr),
+            get_position(*node.expr),
             L"function reference cannot be used in a unary expression");
         return;
     }
@@ -660,13 +660,13 @@ void SemanticChecker::Visitor::visit(const CallExpr &node)
     if (std::holds_alternative<SimpleType>(*this->last_type))
     {
         this->report_expr_error(
-            get_expr_position(*node.callable), L"value of primitive type `",
+            get_position(*node.callable), L"value of primitive type `",
             get_type_string(*this->last_type), L"` cannot be called");
         return;
     }
 
     auto type = std::get<FunctionType>(*this->last_type);
-    auto is_const = type.is_const;
+    // auto is_const = type.is_const;
     auto expected_arg_count = type.arg_types.size();
     auto arg_count = node.args.size();
     if (arg_count != expected_arg_count)
@@ -682,7 +682,7 @@ void SemanticChecker::Visitor::visit(const CallExpr &node)
          std::views::zip(type.arg_types, node.args))
     {
         this->visit(*arg);
-        is_const &= this->is_const;
+        // is_const &= this->is_const;
         if (!this->last_type)
         {
             is_valid = false;
@@ -692,7 +692,7 @@ void SemanticChecker::Visitor::visit(const CallExpr &node)
         if (*expected_type != actual_type)
         {
             this->report_expr_error(
-                get_expr_position(*arg),
+                get_position(*arg),
                 L"function call argument type mismatched - expected type: `",
                 get_type_string(expected_type), "`, found: `",
                 get_type_string(actual_type), "`");
@@ -702,7 +702,7 @@ void SemanticChecker::Visitor::visit(const CallExpr &node)
     if (is_valid)
     {
         this->last_type = clone_type_ptr(type.return_type);
-        this->is_const = is_const;
+        // this->is_const = is_const;
     }
 }
 
@@ -715,7 +715,7 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
     if (std::holds_alternative<SimpleType>(*this->last_type))
     {
         this->report_expr_error(
-            get_expr_position(*node.callable), L"value of primitive type `",
+            get_position(*node.callable), L"value of primitive type `",
             get_type_string(*this->last_type), L"` cannot be called");
         return;
     }
@@ -732,7 +732,7 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
     }
     auto is_valid = true;
     auto is_const = type.is_const;
-    auto is_compile_time = type.is_const;
+    // auto is_compile_time = type.is_const;
     std::vector<TypePtr> remaining_args;
     for (const auto &[expected_type, arg] :
          std::views::zip(type.arg_types, node.args))
@@ -740,7 +740,7 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
         if (arg)
         {
             this->visit(*arg);
-            is_compile_time &= this->is_const;
+            // is_compile_time &= this->is_const;
             if (!this->last_type)
             {
                 is_valid = false;
@@ -750,7 +750,7 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
             if (*expected_type != actual_type)
             {
                 this->report_expr_error(
-                    ((arg) ? (get_expr_position(*arg)) : (node.position)),
+                    ((arg) ? (get_position(*arg)) : (node.position)),
                     L"function call argument type "
                     L"mismatched - expected type: `",
                     get_type_string(expected_type), L"`, found: `",
@@ -777,21 +777,21 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
             FunctionType(std::move(remaining_args),
                          clone_type_ptr(type.return_type), is_const);
         this->last_type = std::make_unique<Type>(std::move(fn_type));
-        this->is_const = is_compile_time;
+        // this->is_const = is_compile_time;
     }
 }
 
 void SemanticChecker::Visitor::visit(const IndexExpr &node)
 {
     this->visit(*node.expr);
-    auto is_const = this->is_const;
+    // auto is_const = this->is_const;
     if (!this->last_type)
     {
         return;
     }
     if (std::holds_alternative<FunctionType>(*this->last_type))
     {
-        this->report_expr_error(get_expr_position(*node.expr),
+        this->report_expr_error(get_position(*node.expr),
                                 L"function references cannot be indexed");
         return;
     }
@@ -799,29 +799,29 @@ void SemanticChecker::Visitor::visit(const IndexExpr &node)
     if (type != SimpleType(TypeEnum::STR, RefSpecifier::REF))
     {
         this->report_expr_error(
-            get_expr_position(*node.expr), L"value of type `",
+            get_position(*node.expr), L"value of type `",
             get_type_string(type),
             "` cannot be indexed (only `&str` values can be)");
         return;
     }
     this->visit(*node.index_value);
-    is_const &= this->is_const;
+    // is_const &= this->is_const;
     if (std::holds_alternative<FunctionType>(*this->last_type))
     {
-        this->report_expr_error(get_expr_position(*node.index_value),
+        this->report_expr_error(get_position(*node.index_value),
                                 L"function references cannot be indices");
         return;
     }
     type = std::get<SimpleType>(*this->last_type);
     if (type != SimpleType(TypeEnum::U32, RefSpecifier::NON_REF))
     {
-        this->report_expr_error(get_expr_position(*node.index_value),
+        this->report_expr_error(get_position(*node.index_value),
                                 L"only `u32` values can be used as an index");
         return;
     }
     this->last_type = std::make_unique<Type>(
         SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
-    this->is_const = is_const;
+    // this->is_const = is_const;
 }
 
 void SemanticChecker::Visitor::visit(const CastExpr &node)
@@ -885,7 +885,7 @@ void SemanticChecker::Visitor::visit(const AssignStmt &node)
     if (this->ref_spec != RefSpecifier::MUT_REF)
     {
         this->report_error(
-            get_expr_position(*node.lhs),
+            get_position(*node.lhs),
             L"left side of the assignment statement is non-assignable");
         return;
     }
@@ -899,14 +899,14 @@ void SemanticChecker::Visitor::visit(const AssignStmt &node)
     if (!check_non_ref_or_string(left_type_var))
     {
         this->report_expr_error(
-            get_expr_position(*node.lhs),
+            get_position(*node.lhs),
             L"left hand side type cannot be used in an assignment");
         return;
     }
     if (!check_non_ref_or_string(right_type_var))
     {
         this->report_expr_error(
-            get_expr_position(*node.rhs),
+            get_position(*node.rhs),
             L"right hand side type cannot be used in an assignment");
         return;
     }
@@ -934,7 +934,7 @@ void SemanticChecker::Visitor::check_condition_expr(
     if (*this->last_type != SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF))
     {
         this->report_error(
-            get_expr_position(condition),
+            get_position(condition),
             L"expected type `bool` in a condition expression, found `",
             get_type_string(this->last_type), L"`");
     }
@@ -942,6 +942,7 @@ void SemanticChecker::Visitor::check_condition_expr(
 
 void SemanticChecker::Visitor::visit(const IfStmt &node)
 {
+    auto prev_return_covered = this->is_return_covered;
     this->check_condition_expr(*node.condition_expr);
     this->visit(*node.then_block);
     auto is_then_return_covered = this->is_return_covered;
@@ -949,9 +950,10 @@ void SemanticChecker::Visitor::visit(const IfStmt &node)
     {
         this->visit(*node.else_block);
         this->is_return_covered &= is_then_return_covered;
+        this->is_return_covered |= prev_return_covered;
     }
     else
-        this->is_return_covered = false;
+        this->is_return_covered = prev_return_covered;
 }
 
 void SemanticChecker::Visitor::visit(const WhileStmt &node)
@@ -960,6 +962,7 @@ void SemanticChecker::Visitor::visit(const WhileStmt &node)
     this->is_in_loop = true;
     this->visit(*node.statement);
     this->is_in_loop = false;
+    this->is_return_covered = false;
 }
 
 void SemanticChecker::Visitor::visit(const MatchStmt &node)
@@ -969,13 +972,18 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
         return;
     if (!check_non_ref_or_string(*this->last_type))
     {
-        this->report_error(get_expr_position(*node.matched_expr),
+        this->report_error(get_position(*node.matched_expr),
                            L"cannot match a value of type `",
                            get_type_string(this->last_type), "`");
     }
     this->is_exhaustive = false;
     for (const auto &arm : node.match_arms)
     {
+        if (this->is_exhaustive)
+        {
+            this->report_warning(get_position(*arm),
+                                 L"this arm will not be reached");
+        }
         this->visit(*arm);
     }
     if (!this->is_exhaustive)
@@ -998,7 +1006,7 @@ void SemanticChecker::Visitor::visit(const ReturnStmt &node)
            *return_type == *this->expected_return_type)))
     {
         this->report_error(
-            ((node.expr) ? (get_expr_position(*node.expr)) : (node.position)),
+            ((node.expr) ? (get_position(*node.expr)) : (node.position)),
             L"expected `", get_type_string(this->expected_return_type),
             L"` expression type in a return statement, found `",
             get_type_string(return_type), L"`");
@@ -1127,31 +1135,31 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
                 this->ref_spec = RefSpecifier::NON_REF;
-                this->is_const = true;
+                // this->is_const = true;
             },
             [this](const F64Expr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
                 this->ref_spec = RefSpecifier::NON_REF;
-                this->is_const = true;
+                // this->is_const = true;
             },
             [this](const CharExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
                 this->ref_spec = RefSpecifier::NON_REF;
-                this->is_const = true;
+                // this->is_const = true;
             },
             [this](const BoolExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
                 this->ref_spec = RefSpecifier::NON_REF;
-                this->is_const = true;
+                // this->is_const = true;
             },
             [this](const StringExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::STR, RefSpecifier::REF));
                 this->ref_spec = RefSpecifier::NON_REF;
-                this->is_const = true;
+                // this->is_const = true;
             },
             [this](const VariableExpr &node) {
                 if (auto var = this->find_variable(node.name))
@@ -1159,7 +1167,7 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                     this->last_type = std::make_unique<Type>(var->type);
                     this->ref_spec = (var->mut) ? (RefSpecifier::MUT_REF)
                                                 : (RefSpecifier::REF);
-                    this->is_const = !var->mut;
+                    // this->is_const = !var->mut;
                     if (this->is_in_const_scope() && !this->is_local)
                     {
                         this->report_error(
@@ -1172,7 +1180,7 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                 {
                     this->last_type = std::make_unique<Type>(*func);
                     this->ref_spec = RefSpecifier::REF;
-                    this->is_const = true;
+                    // this->is_const = true;
                 }
                 else
                     this->report_expr_error(
@@ -1191,11 +1199,10 @@ void SemanticChecker::Visitor::visit(const Expression &node)
 void SemanticChecker::Visitor::visit(const Statement &node)
 {
     if (this->is_return_covered)
-    {
-        this->report(LogLevel::WARNING, L"this statement will not execute - "
-                                        L"it is after a return statement");
-        return;
-    }
+        this->report_warning(get_position(node),
+                             L"this statement will not execute - "
+                             L"it is after a return statement");
+
     std::visit(
         overloaded{
             [this](const Block &node) {
@@ -1244,13 +1251,13 @@ void SemanticChecker::Visitor::visit(const LiteralArm &node)
         this->visit(*literal);
         if (!this->last_type)
             continue;
-        if (!this->is_const)
-        {
-            this->report_error(
-                get_expr_position(*literal),
-                L"only values that can evaluate at compile time are allowed "
-                L"in literal match arm expressions");
-        }
+        // if (!this->is_const)
+        // {
+        //     this->report_error(
+        //         get_position(*literal),
+        //         L"only values that can evaluate at compile time are allowed
+        //         " L"in literal match arm expressions");
+        // }
     }
     this->visit(*node.block);
 }

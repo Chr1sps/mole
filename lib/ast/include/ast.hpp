@@ -261,7 +261,7 @@ struct BoolExpr : public AstNode
     constexpr BoolExpr(const bool &value, const Position &position) noexcept;
 };
 
-constexpr Position get_expr_position(const Expression &expr);
+constexpr Position get_position(const Expression &expr);
 constexpr void set_expr_position(Expression &expr,
                                  const Position &position) noexcept;
 
@@ -430,6 +430,8 @@ struct ExternStmt : public AstNode
     constexpr std::unique_ptr<FunctionType> get_type() const noexcept;
 };
 
+constexpr Position get_position(const Statement &stmt);
+
 // ======================
 // ===== MATCH ARMS =====
 // ======================
@@ -453,6 +455,8 @@ struct GuardArm : public MatchArmBase
     constexpr GuardArm(ExprPtr condition_expr, StmtPtr block,
                        const Position &position) noexcept;
 };
+
+constexpr Position get_position(const MatchArm &arm);
 
 struct LiteralArm : public MatchArmBase
 
@@ -637,7 +641,7 @@ constexpr BoolExpr::BoolExpr(const bool &value,
 {
 }
 
-constexpr Position get_expr_position(const Expression &expr)
+constexpr Position get_position(const Expression &expr)
 {
     return std::visit(
         [](const AstNode &node) -> Position { return node.position; }, expr);
@@ -762,6 +766,12 @@ constexpr std::unique_ptr<FunctionType> ExternStmt::get_type() const noexcept
                                           std::move(cloned_type), false);
 }
 
+constexpr Position get_position(const Statement &stmt)
+{
+    return std::visit(
+        [](const AstNode &node) -> Position { return node.position; }, stmt);
+}
+
 // ======================
 // ===== MATCH ARMS =====
 // ======================
@@ -788,6 +798,13 @@ constexpr LiteralArm::LiteralArm(std::vector<ExprPtr> literals, StmtPtr block,
 constexpr ElseArm::ElseArm(StmtPtr block, const Position &position) noexcept
     : MatchArmBase(std::move(block), position)
 {
+}
+
+constexpr Position get_position(const MatchArm &arm)
+{
+    return std::visit(
+        [](const MatchArmBase &node) -> Position { return node.position; },
+        arm);
 }
 
 // =====================

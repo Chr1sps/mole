@@ -519,13 +519,13 @@ StmtPtr Parser::parse_assign_or_expr_stmt()
         if (auto op_and_rhs = this->parse_assign_part())
         {
             auto [op, rhs] = std::move(*op_and_rhs);
-            auto position = get_expr_position(*lhs);
+            auto position = get_position(*lhs);
             result = std::make_unique<Statement>(
                 AssignStmt(std::move(lhs), op, std::move(rhs), position));
         }
         else
         {
-            auto position = get_expr_position(*lhs);
+            auto position = get_position(*lhs);
             result = std::make_unique<Statement>(
                 ExprStmt(std::move(lhs), position));
         }
@@ -722,7 +722,7 @@ std::optional<std::tuple<Position, std::vector<ExprPtr>>> Parser::
     ExprPtr expr = this->parse_unary_expr();
     if (expr)
     {
-        auto position = get_expr_position(*expr);
+        auto position = get_position(*expr);
         std::vector<ExprPtr> conditions;
         conditions.push_back(std::move(expr));
         while (this->current_token == TokenType::BIT_OR)
@@ -893,7 +893,7 @@ void join_into_binary_op(std::stack<ExprPtr> &values,
     auto lhs = std::move(values.top());
     values.pop();
 
-    auto position = get_expr_position(*lhs);
+    auto position = get_position(*lhs);
     auto new_expr = std::make_unique<Expression>(
         BinaryExpr(std::move(lhs), std::move(rhs), op, position));
     values.push(std::move(new_expr));
@@ -958,7 +958,7 @@ ExprPtr Parser::parse_cast_expr()
     {
         return nullptr;
     }
-    auto position = get_expr_position(*lhs);
+    auto position = get_position(*lhs);
     while (this->current_token == TokenType::KW_AS)
     {
         this->next_token();
@@ -971,7 +971,7 @@ ExprPtr Parser::parse_cast_expr()
         {
             this->report_error(L"no type name given in a cast expression");
         }
-        position = get_expr_position(*lhs);
+        position = get_position(*lhs);
     }
     return lhs;
 }
@@ -1061,7 +1061,7 @@ ExprPtr Parser::parse_call(ExprPtr &&expr)
             TokenType::R_PAREN,
             L"expected right parenthesis in call expression"))
         return nullptr;
-    auto position = get_expr_position(*expr);
+    auto position = get_position(*expr);
     return std::make_unique<Expression>(
         CallExpr(std::move(expr), std::move(args), position));
 }
@@ -1112,7 +1112,7 @@ ExprPtr Parser::parse_lambda_call(ExprPtr &&expr)
             TokenType::R_PAREN,
             L"expected right parenthesis in lambda call expression"))
         return nullptr;
-    auto position = get_expr_position(*expr);
+    auto position = get_position(*expr);
     return std::make_unique<Expression>(
         LambdaCallExpr(std::move(expr), std::move(*args), position));
 }
@@ -1177,7 +1177,7 @@ ExprPtr Parser::parse_index(ExprPtr &&expr)
             L"expected right square bracket in an index expression"))
         return nullptr;
 
-    auto position = get_expr_position(*expr);
+    auto position = get_position(*expr);
     return std::make_unique<Expression>(
         IndexExpr(std::move(expr), std::move(param), position));
 }

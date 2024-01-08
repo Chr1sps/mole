@@ -15,7 +15,7 @@ class SemanticChecker
     {
         static const std::unordered_multimap<TypeEnum, TypeEnum> cast_map;
         TypePtr last_type, expected_return_type;
-        bool is_in_loop, is_exhaustive, is_const, is_return_covered, is_local;
+        bool is_in_loop, is_exhaustive, is_return_covered, is_local;
         RefSpecifier ref_spec;
 
         template <typename... Args>
@@ -24,6 +24,13 @@ class SemanticChecker
             this->report(LogLevel::ERROR, "Semantic error at [", pos.line, ",",
                          pos.column, "]: ", data..., ".");
             this->value = false;
+        }
+
+        template <typename... Args>
+        void report_warning(const Position &pos, Args &&...data)
+        {
+            this->report(LogLevel::WARNING, "Semantic warning at [", pos.line,
+                         ",", pos.column, "]: ", data..., ".");
         }
 
         template <typename... Args>
