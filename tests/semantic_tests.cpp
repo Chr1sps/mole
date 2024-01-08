@@ -164,19 +164,6 @@ TEST_CASE("Unary expressions.")
         CHECK_INVALID(FN_WRAP(L"let var= \"a\";"
                               L"*var;"));
     }
-    SECTION("Using uninitialized values.")
-    {
-        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                              L"-var;"));
-        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                              L"~var;"));
-        CHECK_INVALID(FN_WRAP(L"let mut var: bool;"
-                              L"!var;"));
-        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                              L"&var;"));
-        CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                              L"&mut var;"));
-    }
     SECTION("References.")
     {
         SECTION("Referencing non-lvalues.")
@@ -418,92 +405,6 @@ TEST_CASE("Binary expressions.")
             CHECK_INVALID(FN_WRAP(L"(-1)&&(-1);"));
             CHECK_INVALID(FN_WRAP(L"'a'&&'a';"));
             CHECK_INVALID(FN_WRAP(L"\"a\"&&\"a\";"));
-        }
-    }
-
-    SECTION("Using uninitialized values.")
-    {
-        SECTION("LHS.")
-        {
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var+1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var-1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var*1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var/1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var%1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var^^1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var==1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var!=1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var>=1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var<=1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var>1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var<1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: bool;"
-                                  L"var&&true;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: bool;"
-                                  L"var||false;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var&1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var|1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var^1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var<<1;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"var>>1;"));
-        }
-        SECTION("RHS.")
-        {
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1+var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1-var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1*var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1/var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1%var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1^^var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1==var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1!=var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1>=var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1<=var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1<var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1>var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: bool;"
-                                  L"true&&var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: bool;"
-                                  L"true||var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1&var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1|var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1^var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1<<var;"));
-            CHECK_INVALID(FN_WRAP(L"let mut var: u32;"
-                                  L"1>>var;"));
         }
     }
 }
@@ -1023,18 +924,6 @@ TEST_CASE("Constant cannot be reassigned.")
 {
     CHECK_INVALID(FN_WRAP(L"let value = 5; value = 4;"));
     CHECK_VALID(FN_WRAP(L"let mut value = 5; value = 4;"));
-}
-
-TEST_CASE("Using an uninitialized variable in an expression.")
-{
-    CHECK_INVALID(FN_WRAP(L"let mut value: u32; let new_value = value;"));
-    CHECK_INVALID(FN_WRAP(L"let mut value: u32;"
-                          L"let mut new_value: u32;"
-                          L"new_value = value;"));
-    CHECK_VALID(FN_WRAP(L"let mut value: u32 = 3; let new_value = value;"));
-    CHECK_VALID(FN_WRAP(L"let mut value: u32 = 3;"
-                        L"let mut new_value: u32;"
-                        L"new_value = value;"));
 }
 
 TEST_CASE("Referenced value/function is not in scope.")

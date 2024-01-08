@@ -430,14 +430,6 @@ bool SemanticChecker::Visitor::check_var_value_and_type(
                 return false;
             }
         }
-        if (!this->is_initialized)
-        {
-            this->report_error(
-                node.position,
-                L"initial value expression in a variable declaration contains"
-                L"an uninitialized variable");
-            return false;
-        }
     }
     return true;
 }
@@ -480,7 +472,7 @@ std::optional<FunctionType> SemanticChecker::Visitor::find_function(
 void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt &node)
 {
     auto type = (node.type) ? (*node.type) : (*this->last_type);
-    auto new_data = VarData(type, node.is_mut, node.initial_value != nullptr);
+    auto new_data = VarData(type, node.is_mut);
     this->variable_map.back().emplace(std::make_pair(node.name, new_data));
 }
 
@@ -505,7 +497,7 @@ void SemanticChecker::Visitor::register_function_params(
     {
         this->visit(*param);
         auto type = *this->last_type;
-        auto new_data = VarData(type, false, true);
+        auto new_data = VarData(type, false);
         this->variable_map.back().emplace(
             std::make_pair(param->name, new_data));
     }
@@ -518,20 +510,12 @@ void SemanticChecker::Visitor::visit(const BinaryExpr &node)
         return;
     auto left_type_var = *this->last_type;
     auto is_left_const = this->is_const;
-    if (!this->is_initialized)
-        this->report_error(get_expr_position(*node.lhs),
-                           L"left hand side variable of a binary expression "
-                           L"is not initialized");
 
     this->visit(*node.rhs);
     if (!this->last_type)
         return;
     auto right_type_var = *this->last_type;
     auto is_right_const = this->is_const;
-    if (!this->is_initialized)
-        this->report_error(get_expr_position(*node.rhs),
-                           L"right hand side variable of a binary expression "
-                           L"is not initialized");
 
     this->is_const = is_left_const && is_right_const;
     if (!check_non_ref_or_string(left_type_var))
@@ -595,10 +579,6 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
             L"function reference cannot be used in a unary expression");
         return;
     }
-    if (!this->is_initialized)
-        this->report_error(
-            get_expr_position(*node.expr),
-            L"variable used in a unary expression isn't initialized");
 
     auto type = std::get<SimpleType>(*this->last_type);
     switch (node.op)
@@ -684,10 +664,6 @@ void SemanticChecker::Visitor::visit(const CallExpr &node)
             get_type_string(*this->last_type), L"` cannot be called");
         return;
     }
-    if (!this->is_initialized)
-        this->report_error(
-            get_expr_position(*node.callable),
-            L"callable variable in a call expression is not initialized");
 
     auto type = std::get<FunctionType>(*this->last_type);
     auto is_const = type.is_const;
@@ -713,10 +689,6 @@ void SemanticChecker::Visitor::visit(const CallExpr &node)
             continue;
         }
         auto actual_type = *this->last_type;
-        if (!this->is_initialized)
-            this->report_error(get_expr_position(*arg),
-                               L"variable used as a call expression argument "
-                               L"is not initialized");
         if (*expected_type != actual_type)
         {
             this->report_expr_error(
@@ -785,11 +757,6 @@ void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
                     get_type_string(actual_type), L"`");
                 is_valid = false;
             }
-            if (!this->is_initialized)
-                this->report_error(
-                    ((arg) ? (get_expr_position(*arg)) : (node.position)),
-                    L"variable used as a call expression "
-                    L"argument is not initialized");
             if (std::holds_alternative<SimpleType>(actual_type))
             {
                 auto simple = std::get<SimpleType>(actual_type);
@@ -928,10 +895,6 @@ void SemanticChecker::Visitor::visit(const AssignStmt &node)
     if (!this->last_type)
         return;
     auto right_type_var = *this->last_type;
-    if (!this->is_initialized)
-        this->report_error(get_expr_position(*node.rhs),
-                           L"right hand side variable of an assignment"
-                           L"is not initialized");
 
     if (!check_non_ref_or_string(left_type_var))
     {
@@ -1165,35 +1128,30 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                     SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
                 this->ref_spec = RefSpecifier::NON_REF;
                 this->is_const = true;
-                this->is_initialized = true;
             },
             [this](const F64Expr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
                 this->ref_spec = RefSpecifier::NON_REF;
                 this->is_const = true;
-                this->is_initialized = true;
             },
             [this](const CharExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
                 this->ref_spec = RefSpecifier::NON_REF;
                 this->is_const = true;
-                this->is_initialized = true;
             },
             [this](const BoolExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
                 this->ref_spec = RefSpecifier::NON_REF;
                 this->is_const = true;
-                this->is_initialized = true;
             },
             [this](const StringExpr &node) {
                 this->last_type = std::make_unique<Type>(
                     SimpleType(TypeEnum::STR, RefSpecifier::REF));
                 this->ref_spec = RefSpecifier::NON_REF;
                 this->is_const = true;
-                this->is_initialized = true;
             },
             [this](const VariableExpr &node) {
                 if (auto var = this->find_variable(node.name))
@@ -1202,7 +1160,6 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                     this->ref_spec = (var->mut) ? (RefSpecifier::MUT_REF)
                                                 : (RefSpecifier::REF);
                     this->is_const = !var->mut;
-                    this->is_initialized = var->initialized;
                     if (this->is_in_const_scope() && !this->is_local)
                     {
                         this->report_error(
@@ -1216,7 +1173,6 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                     this->last_type = std::make_unique<Type>(*func);
                     this->ref_spec = RefSpecifier::REF;
                     this->is_const = true;
-                    this->is_initialized = true;
                 }
                 else
                     this->report_expr_error(

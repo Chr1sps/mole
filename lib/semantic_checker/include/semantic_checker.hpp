@@ -15,8 +15,7 @@ class SemanticChecker
     {
         static const std::unordered_multimap<TypeEnum, TypeEnum> cast_map;
         TypePtr last_type, expected_return_type;
-        bool is_initialized, is_in_loop, is_exhaustive, is_const,
-            is_return_covered, is_local;
+        bool is_in_loop, is_exhaustive, is_const, is_return_covered, is_local;
         RefSpecifier ref_spec;
 
         template <typename... Args>
@@ -38,17 +37,13 @@ class SemanticChecker
         struct VarData
         {
             Type type;
-            bool mut, initialized;
+            bool mut;
 
-            VarData(const Type &type, const bool &mut,
-                    const bool &initialized = false)
-                : type(type), mut(mut), initialized(initialized)
+            VarData(const Type &type, const bool &mut) : type(type), mut(mut)
             {
             }
 
-            VarData(const VarData &other)
-                : type(other.type), mut(other.mut),
-                  initialized(other.initialized)
+            VarData(const VarData &other) : type(other.type), mut(other.mut)
             {
             }
 
@@ -56,7 +51,6 @@ class SemanticChecker
             {
                 this->type = other.type;
                 this->mut = other.mut;
-                this->initialized = other.initialized;
                 return *this;
             }
         };
