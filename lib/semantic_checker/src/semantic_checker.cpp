@@ -491,8 +491,7 @@ void SemanticChecker::Visitor::register_local_function(const ExternDef &node)
         std::make_pair(node.name, std::move(*fn_type)));
 }
 
-void SemanticChecker::Visitor::register_function_params(
-    const FuncDef &node)
+void SemanticChecker::Visitor::register_function_params(const FuncDef &node)
 {
     for (auto &param : node.params)
     {
@@ -870,11 +869,16 @@ void SemanticChecker::Visitor::visit(const CastExpr &node)
         *this->last_type);
 }
 
-void SemanticChecker::Visitor::visit(const Block &node)
+void SemanticChecker::Visitor::visit_block(const Block &node)
 {
+    bool is_return_covered = false;
     this->enter_scope();
     for (auto &stmt : node.statements)
+    {
         this->visit(*stmt);
+        is_return_covered |= this->is_return_covered;
+    }
+    this->is_return_covered = is_return_covered;
     this->leave_scope();
 }
 
@@ -924,6 +928,7 @@ void SemanticChecker::Visitor::visit(const AssignStmt &node)
                            L"` cannot be assigned to a value of type `",
                            get_type_string(left_type), L"` ");
     }
+    this->is_return_covered = false;
 }
 
 void SemanticChecker::Visitor::check_condition_expr(
@@ -943,7 +948,6 @@ void SemanticChecker::Visitor::check_condition_expr(
 
 void SemanticChecker::Visitor::visit(const IfStmt &node)
 {
-    auto prev_return_covered = this->is_return_covered;
     this->check_condition_expr(*node.condition_expr);
     this->visit(*node.then_block);
     auto is_then_return_covered = this->is_return_covered;
@@ -951,10 +955,9 @@ void SemanticChecker::Visitor::visit(const IfStmt &node)
     {
         this->visit(*node.else_block);
         this->is_return_covered &= is_then_return_covered;
-        this->is_return_covered |= prev_return_covered;
     }
     else
-        this->is_return_covered = prev_return_covered;
+        this->is_return_covered = false;
 }
 
 void SemanticChecker::Visitor::visit(const WhileStmt &node)
@@ -980,6 +983,7 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
     auto previous_matched_type =
         std::exchange(this->matched_type, clone_type_ptr(this->last_type));
     auto previous_is_exhaustive = std::exchange(this->is_exhaustive, false);
+    auto is_return_covered = true;
     for (const auto &arm : node.match_arms)
     {
         if (this->is_exhaustive)
@@ -988,6 +992,7 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
                                  L"this arm will not be reached");
         }
         this->visit(*arm);
+        is_return_covered &= this->is_return_covered;
     }
     if (!this->is_exhaustive)
     {
@@ -995,6 +1000,7 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
                              L"match statement is not exhaustive");
     }
     this->matched_type = std::move(previous_matched_type);
+    this->is_return_covered = is_return_covered && this->is_exhaustive;
     this->is_exhaustive = previous_is_exhaustive;
 }
 
@@ -1023,7 +1029,6 @@ void SemanticChecker::Visitor::enter_function_scope(const bool &is_const)
 {
     this->enter_scope();
     this->const_scopes.push_back(is_const);
-    this->is_return_covered = false;
 }
 
 void SemanticChecker::Visitor::leave_function_scope()
@@ -1037,11 +1042,6 @@ bool SemanticChecker::Visitor::is_in_const_scope() const
     auto iter = std::find(this->const_scopes.cbegin(),
                           this->const_scopes.cend(), true);
     return iter != this->const_scopes.cend();
-}
-
-void SemanticChecker::Visitor::visit(const ExprStmt &node)
-{
-    this->visit(*node.expr);
 }
 
 void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
@@ -1069,6 +1069,7 @@ void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
     this->check_name_not_main(node);
     if (registerable)
         this->register_local_variable(node);
+    this->is_return_covered = false;
 }
 
 void SemanticChecker::Visitor::visit(const ExternDef &node)
@@ -1162,16 +1163,7 @@ void SemanticChecker::Visitor::visit(const Statement &node)
 
     std::visit(
         overloaded{
-            [this](const Block &node) {
-                for (const auto &stmt : node.statements)
-                {
-                    this->visit(*stmt);
-                }
-                if (!this->expected_return_type)
-                {
-                    this->is_return_covered = true;
-                }
-            },
+            [this](const Block &node) { this->visit_block(node); },
             [this](const IfStmt &node) { this->visit(node); },
             [this](const WhileStmt &node) { this->visit(node); },
             [this](const MatchStmt &node) { this->visit(node); },
@@ -1183,6 +1175,7 @@ void SemanticChecker::Visitor::visit(const Statement &node)
                         node.position,
                         L"break statement can only be used in a loop");
                 }
+                this->is_return_covered = false;
             },
             [this](const ContinueStmt &node) {
                 if (!this->is_in_loop)
@@ -1191,9 +1184,13 @@ void SemanticChecker::Visitor::visit(const Statement &node)
                         node.position,
                         L"continue statement can only be used in a loop");
                 }
+                this->is_return_covered = false;
             },
             [this](const AssignStmt &node) { this->visit(node); },
-            [this](const ExprStmt &node) { this->visit(node); },
+            [this](const ExprStmt &node) {
+                this->visit(*node.expr);
+                this->is_return_covered = false;
+            },
             [this](const VarDeclStmt &node) { this->visit(node); }},
         node);
 }
@@ -1263,13 +1260,9 @@ void SemanticChecker::Visitor::visit_top_level(const FuncDef &node)
 
     this->expected_return_type = clone_type_ptr(node.return_type);
 
-    for (const auto &stmt : node.block->statements)
-    {
-        this->visit(*stmt);
-    }
-
-    if (!this->expected_return_type)
-        this->is_return_covered = true;
+    this->is_return_covered = false;
+    this->visit_block(*node.block);
+    this->is_return_covered |= !this->expected_return_type;
 
     this->leave_function_scope();
     if (!this->is_return_covered)
@@ -1295,10 +1288,9 @@ void SemanticChecker::Visitor::visit(const Program &node)
     this->leave_scope();
 }
 
-bool SemanticChecker::verify(const Program &program)
+void SemanticChecker::check(const Program &program)
 {
     this->visitor.visit(program);
-    return this->visitor.value;
 }
 
 void SemanticChecker::add_logger(Logger *logger)

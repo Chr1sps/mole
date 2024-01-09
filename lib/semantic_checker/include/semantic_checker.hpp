@@ -85,13 +85,12 @@ class SemanticChecker
         void visit(const IndexExpr &node);
         void visit(const CastExpr &node);
 
-        void visit(const Block &node);
+        void visit_block(const Block &node);
         void visit(const IfStmt &node);
         void visit(const WhileStmt &node);
         void visit(const MatchStmt &node);
         void visit(const ReturnStmt &node);
         void visit(const AssignStmt &node);
-        void visit(const ExprStmt &node);
 
         void enter_function_scope(const bool &is_const);
         void leave_function_scope();
@@ -127,7 +126,7 @@ class SemanticChecker
   public:
     void add_logger(Logger *logger);
     void remove_logger(Logger *logger);
-    bool verify(const Program &program);
+    void check(const Program &program);
 };
 
 template <typename... Args>

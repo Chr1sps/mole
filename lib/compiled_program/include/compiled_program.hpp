@@ -85,16 +85,24 @@ class CompiledProgram
     CompiledProgram(const CompiledProgram &) = delete;
     CompiledProgram(CompiledProgram &&) = default;
 
-    void output_ir(llvm::raw_ostream &output);
-    void output_bytecode(llvm::raw_ostream &output);
+    void output_ir(llvm::raw_fd_ostream &output);
+    void output_bytecode(llvm::raw_fd_ostream &output);
     // int execute();
 };
 
 class CompilationException : std::runtime_error
 {
+    const char *what_str;
+
   public:
-    CompilationException() : std::runtime_error("IR Generator error.")
+    CompilationException(const char *what_str)
+        : std::runtime_error(what_str), what_str(what_str)
     {
+    }
+
+    const char *what() const noexcept override
+    {
+        return this->what_str;
     }
 };
 #endif

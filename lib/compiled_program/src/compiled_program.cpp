@@ -1,17 +1,40 @@
-#include "ir_generator.hpp"
+#include "compiled_program.hpp"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Host.h"
 #include <fstream>
 #include <ranges>
 
 CompiledProgram::Visitor::Visitor(const Program &program)
     : context(std::make_unique<llvm::LLVMContext>())
 {
+
+    std::string logs;
+
+    auto target_triple = llvm::sys::getDefaultTargetTriple();
+    auto target = llvm::TargetRegistry::lookupTarget(target_triple, logs);
+    if (!target)
+        throw CompilationException(logs.c_str());
+    llvm::TargetOptions target_options;
+    auto target_machine = target->createTargetMachine(
+        target_triple, "generic", "", target_options, llvm::Reloc::PIC_);
+    auto data_layout = target_machine->createDataLayout();
+
     this->module = std::make_unique<llvm::Module>("mole", *this->context);
+    this->module->setTargetTriple(target_triple);
+    this->module->setDataLayout(data_layout);
+
     this->builder = std::make_unique<llvm::IRBuilder<>>(*this->context);
     this->visit(program);
-    if (!llvm::verifyModule(*this->module))
-        throw CompilationException();
+
+    auto out = llvm::raw_string_ostream(logs);
+
+    if (llvm::verifyModule(*this->module, &out))
+        throw CompilationException(logs.c_str());
 }
 
 CompiledProgram::CompiledProgram(const Program &program) : visitor(program)
@@ -334,12 +357,15 @@ void CompiledProgram::Visitor::visit(const BinaryExpr &node)
     else if (lhs->getType()->isIntegerTy())
     {
         if (this->is_signed)
+        {
             this->create_signed_binop(lhs, rhs, node.op);
+        }
         else
             this->create_unsigned_binop(lhs, rhs, node.op);
     }
     else if (lhs->getType()->isDoubleTy())
         this->create_double_binop(lhs, rhs, node.op);
+    this->last_type = lhs->getType();
 }
 
 void CompiledProgram::Visitor::visit(const UnaryExpr &node)
@@ -356,8 +382,9 @@ void CompiledProgram::Visitor::visit(const CallExpr &node)
         this->visit(*arg);
         args.push_back(this->last_value);
     }
-    this->last_value =
-        this->builder->CreateCall(llvm::cast<llvm::Function>(callable), args);
+    auto func = llvm::cast<llvm::Function>(callable);
+    this->last_value = this->builder->CreateCall(func, args);
+    this->last_type = func->getReturnType();
 }
 
 void CompiledProgram::Visitor::visit(const IndexExpr &node)
@@ -371,6 +398,7 @@ void CompiledProgram::Visitor::visit(const IndexExpr &node)
     this->last_value = this->builder->CreateSExtOrTrunc(
         this->builder->CreateLoad(this->builder->getInt32Ty(), address),
         this->builder->getInt32Ty());
+    this->last_type = this->builder->getInt32Ty();
 }
 
 void CompiledProgram::Visitor::visit(const CastExpr &node)
@@ -398,6 +426,8 @@ void CompiledProgram::Visitor::visit(const CastExpr &node)
             this->last_value = this->builder->CreateFPToUI(
                 this->last_value, llvm::Type::getInt32Ty(*this->context),
                 "f64_to_u32");
+    case TypeEnum::CHAR:
+        this->last_type = this->builder->getInt32Ty();
         break;
 
     case TypeEnum::I32:
@@ -415,6 +445,7 @@ void CompiledProgram::Visitor::visit(const CastExpr &node)
             this->last_value = this->builder->CreateFPToSI(
                 this->last_value, llvm::Type::getInt32Ty(*this->context),
                 "f64_to_i32");
+        this->last_type = this->builder->getInt32Ty();
         break;
 
     case TypeEnum::F64:
@@ -434,11 +465,14 @@ void CompiledProgram::Visitor::visit(const CastExpr &node)
                     this->last_value, llvm::Type::getDoubleTy(*this->context),
                     "u32_to_f64");
         }
+        this->last_type = this->builder->getDoubleTy();
+        break;
+
+    case TypeEnum::BOOL:
+        this->last_type = this->builder->getInt1Ty();
         break;
 
     default:
-        // Casting to bool is only allowed for bool values and casting to char
-        // from u32 doesn't do anything, so we can default it.
         break;
     }
 }
@@ -453,11 +487,13 @@ void CompiledProgram::Visitor::visit(const Expression &node)
             [this](const U32Expr &node) {
                 this->last_value = llvm::ConstantInt::get(
                     this->builder->getInt32Ty(), node.value);
+                this->last_type = this->builder->getInt32Ty();
                 this->is_signed = false;
             },
             [this](const F64Expr &node) {
                 this->last_value = llvm::ConstantFP::get(
                     this->builder->getDoubleTy(), node.value);
+                this->last_type = this->builder->getDoubleTy();
             },
             [this](const StringExpr &node) {
                 const char *data =
@@ -467,14 +503,17 @@ void CompiledProgram::Visitor::visit(const Expression &node)
                     this->builder->CreateGlobalStringPtr(
                         llvm::StringRef(data, size)),
                     llvm::Type::getInt32PtrTy(*this->context));
+                this->last_type = llvm::Type::getInt32PtrTy(*this->context);
             },
             [this](const CharExpr &node) {
                 this->last_value = llvm::ConstantInt::get(
                     this->builder->getInt32Ty(), node.value);
+                this->last_type = this->builder->getInt32Ty();
             },
             [this](const BoolExpr &node) {
                 this->last_value = llvm::ConstantInt::getBool(
                     this->builder->getInt1Ty(), node.value);
+                this->last_type = this->builder->getInt1Ty();
             },
             [this](const BinaryExpr &node) { this->visit(node); },
             // [this](const UnaryExpr &node) { this->visit(node); },
@@ -790,12 +829,12 @@ void CompiledProgram::Visitor::visit(const Program &node)
         this->create_entrypoint(iter->second);
 }
 
-void CompiledProgram::output_bytecode(llvm::raw_ostream &output)
+void CompiledProgram::output_bytecode(llvm::raw_fd_ostream &output)
 {
     llvm::WriteBitcodeToFile(*this->visitor.module, output);
 }
 
-void CompiledProgram::output_ir(llvm::raw_ostream &output)
+void CompiledProgram::output_ir(llvm::raw_fd_ostream &output)
 {
     output << *this->visitor.module;
 }

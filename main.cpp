@@ -1,3 +1,4 @@
+#include "compiled_program.hpp"
 #include "json_serializer.hpp"
 #include "locale.hpp"
 #include "parser.hpp"
@@ -14,12 +15,17 @@ int main(int argc, char **argv)
     llvm::cl::OptionCategory mole_opts("Mole options");
     llvm::cl::opt<std::string> input_file(llvm::cl::Positional,
                                           llvm::cl::desc("<input file>"),
-                                          llvm::cl::Required);
+                                          llvm::cl::init("../example.mole")
+                                          //   llvm::cl::Required
+    );
     llvm::cl::opt<bool> dump_ast(
         "ast-dump",
         llvm::cl::desc(
             "Dump the abstract syntax tree of the file as a JSON object."),
         llvm::cl::init(false), llvm::cl::cat(mole_opts));
+    llvm::cl::opt<bool> dump_ir("ir-dump", llvm::cl::desc("Dump the LLVM IR."),
+                                llvm::cl::init(false),
+                                llvm::cl::cat(mole_opts));
     llvm::cl::opt<std::string> output_file(
         "o", llvm::cl::desc("Specify the output file."),
         llvm::cl::value_desc("filename"),
@@ -56,7 +62,7 @@ int main(int argc, char **argv)
     {
         return std::make_error_condition(std::errc::invalid_argument).value();
     }
-    semantic_checker.verify(*program);
+    semantic_checker.check(*program);
     if (!error_checker)
     {
         return std::make_error_condition(std::errc::invalid_argument).value();
@@ -82,6 +88,29 @@ int main(int argc, char **argv)
         else
             std::cout << result.dump(4) << std::endl;
         return 0;
+    }
+    else
+    {
+        try
+        {
+            auto compiled = CompiledProgram(*program);
+            if (dump_ir.getValue())
+            {
+                compiled.output_ir(llvm::outs());
+            }
+            else
+            {
+                std::error_code code;
+                llvm::raw_fd_ostream output("./out.o", code);
+                compiled.output_bytecode(output);
+            }
+        }
+        catch (const CompilationException &e)
+        {
+            std::cerr << e.what() << '\n';
+            return std::make_error_condition(std::errc::invalid_argument)
+                .value();
+        }
     }
     return 0;
 }

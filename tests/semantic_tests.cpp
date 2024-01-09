@@ -23,7 +23,7 @@ bool check_errors(const std::wstring &source)
     auto checker = SemanticChecker();
     auto logger = DebugLogger();
     checker.add_logger(&logger);
-    checker.verify(*program);
+    checker.check(*program);
     return !logger.contains_errors();
 }
 
@@ -35,7 +35,7 @@ bool check_errors_and_warnings(const std::wstring &source)
     auto checker = SemanticChecker();
     auto logger = DebugLogger();
     checker.add_logger(&logger);
-    checker.verify(*program);
+    checker.check(*program);
     return !logger.contains_errors() && logger.contains_warnings();
 }
 
@@ -1096,34 +1096,46 @@ TEST_CASE("Return statements coverage.")
 {
     SECTION("If statements.")
     {
-        CHECK_VALID(L"fn test(a: bool)=>u32{"
-                    L"if (a) {}"
-                    L"return 0;"
-                    L"}");
-        CHECK_VALID(L"fn test(a: bool)=>u32{"
-                    L"if (a) return 1;"
-                    L"return 0;"
-                    L"}");
-        CHECK_VALID(L"fn test(a: bool)=>u32{"
-                    L"if (a) return 1;"
-                    L"else return 0;"
-                    L"}");
-        CHECK_VALID(L"fn test(a: bool)=>u32{"
-                    L"return 0;"
-                    L"if (a) return 1;"
-                    L"}");
-        CHECK_VALID(L"fn test(a: bool)=>u32{"
-                    L"return 0;"
-                    L"if (a) return 1;"
-                    L"else {}"
-                    L"}");
-        CHECK_INVALID(L"fn test(a: bool)=>u32{"
-                      L"if (a) return 1;"
-                      L"}");
-        CHECK_INVALID(L"fn test(a: bool)=>u32{"
-                      L"if (a) {}"
-                      L"else return 0;"
-                      L"}");
+        SECTION("Not nested.")
+        {
+            CHECK_VALID(L"fn test(a: bool)=>u32{"
+                        L"if (a) {}"
+                        L"return 0;"
+                        L"}");
+            CHECK_VALID(L"fn test(a: bool)=>u32{"
+                        L"if (a) return 1;"
+                        L"return 0;"
+                        L"}");
+            CHECK_VALID(L"fn test(a: bool)=>u32{"
+                        L"if (a) return 1;"
+                        L"else return 0;"
+                        L"}");
+            CHECK_VALID(L"fn test(a: bool)=>u32{"
+                        L"return 0;"
+                        L"if (a) return 1;"
+                        L"}");
+            CHECK_VALID(L"fn test(a: bool)=>u32{"
+                        L"return 0;"
+                        L"if (a) return 1;"
+                        L"else {}"
+                        L"}");
+            CHECK_INVALID(L"fn test(a: bool)=>u32{"
+                          L"if (a) return 1;"
+                          L"}");
+            CHECK_INVALID(L"fn test(a: bool)=>u32{"
+                          L"if (a) {}"
+                          L"else return 0;"
+                          L"}");
+        }
+        SECTION("Nested.")
+        {
+            CHECK_INVALID(L"fn test(a: bool)=>u32{"
+                          L"if (a) {"
+                          L"    if (a) return 0;"
+                          L"    else return 0;"
+                          L"}"
+                          L"}");
+        }
     }
     SECTION("Blocks.")
     {
@@ -1144,6 +1156,37 @@ TEST_CASE("Return statements coverage.")
                     L"while (a) return 1;"
                     L"return 1;"
                     L"}");
+    }
+    SECTION("Match statements.")
+    {
+        CHECK_VALID(L"fn test(var: u32)=>u32{"
+                    L"    match(var) {"
+                    L"        1 => return 0;"
+                    L"        if (var > 2) => return 0;"
+                    L"        else => return 0;"
+                    L"    }"
+                    L"}");
+        CHECK_INVALID(L"fn test(var: u32)=>u32{"
+                      L"    match(var) {"
+                      L"        1 => {}"
+                      L"        if (var > 2) => return 0;"
+                      L"        else => return 0;"
+                      L"    }"
+                      L"}");
+        CHECK_INVALID(L"fn test(var: u32)=>u32{"
+                      L"    match(var) {"
+                      L"        1 => return 0;"
+                      L"        if (var > 2) => {}"
+                      L"        else => return 0;"
+                      L"    }"
+                      L"}");
+        CHECK_INVALID(L"fn test(var: u32)=>u32{"
+                      L"    match(var) {"
+                      L"        1 => return 0;"
+                      L"        if (var > 2) => return 0;"
+                      L"        else => {}"
+                      L"    }"
+                      L"}");
     }
 }
 
