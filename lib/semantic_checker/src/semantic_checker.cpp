@@ -312,10 +312,10 @@ const std::unordered_multimap<TypeEnum, TypeEnum>
         {TypeEnum::U32, TypeEnum::U32},   {TypeEnum::U32, TypeEnum::I32},
         {TypeEnum::U32, TypeEnum::F64},   {TypeEnum::U32, TypeEnum::CHAR},
         {TypeEnum::I32, TypeEnum::U32},   {TypeEnum::I32, TypeEnum::I32},
-        {TypeEnum::I32, TypeEnum::F64},   {TypeEnum::I32, TypeEnum::CHAR},
-        {TypeEnum::F64, TypeEnum::U32},   {TypeEnum::F64, TypeEnum::I32},
-        {TypeEnum::F64, TypeEnum::F64},   {TypeEnum::CHAR, TypeEnum::U32},
-        {TypeEnum::CHAR, TypeEnum::I32},  {TypeEnum::CHAR, TypeEnum::CHAR},
+        {TypeEnum::I32, TypeEnum::F64},   {TypeEnum::F64, TypeEnum::U32},
+        {TypeEnum::F64, TypeEnum::I32},   {TypeEnum::F64, TypeEnum::F64},
+        {TypeEnum::CHAR, TypeEnum::U32},  {TypeEnum::CHAR, TypeEnum::I32},
+        {TypeEnum::CHAR, TypeEnum::CHAR},
 };
 
 SemanticChecker::Visitor::Visitor() noexcept : value(true)

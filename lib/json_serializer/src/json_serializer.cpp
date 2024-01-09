@@ -32,8 +32,7 @@ std::unordered_map<BinOpEnum, std::wstring>
 
 std::unordered_map<UnaryOpEnum, std::wstring>
     JsonSerializer::Visitor::unop_map = {
-        {UnaryOpEnum::BIT_NEG, L"BIT_NEG"}, {UnaryOpEnum::DEC, L"DEC"},
-        {UnaryOpEnum::INC, L"INC"},         {UnaryOpEnum::NEG, L"NEG"},
+        {UnaryOpEnum::BIT_NEG, L"BIT_NEG"}, {UnaryOpEnum::NEG, L"NEG"},
         {UnaryOpEnum::REF, L"REF"},         {UnaryOpEnum::MINUS, L"MINUS"},
         {UnaryOpEnum::MUT_REF, L"MUT_REF"}, {UnaryOpEnum::DEREF, L"DEREF"},
 };

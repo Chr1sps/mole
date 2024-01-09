@@ -623,8 +623,8 @@ TEST_CASE("Casting.")
                             L"var as i32;"));
         CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
                             L"var as f64;"));
-        CHECK_VALID(FN_WRAP(L"let var: i32 = -1;"
-                            L"var as char;"));
+        CHECK_INVALID(FN_WRAP(L"let var: i32 = -1;"
+                              L"var as char;"));
     }
     SECTION("From f64")
     {
