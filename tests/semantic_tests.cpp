@@ -1161,5 +1161,19 @@ TEST_CASE("While, break, continue statements.")
                             L"while(a){"
                             L"break;"
                             L"}"));
+        CHECK_VALID(FN_WRAP(L"let a = true;"
+                            L"while(a){"
+                            L"while(a){"
+                            L"continue;"
+                            L"}"
+                            L"continue;"
+                            L"}"));
+        CHECK_VALID(FN_WRAP(L"let a = true;"
+                            L"while(a){"
+                            L"while(a){"
+                            L"break;"
+                            L"}"
+                            L"break;"
+                            L"}"));
     }
 }

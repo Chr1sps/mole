@@ -24,27 +24,13 @@ class SemanticChecker
         RefSpecifier ref_spec;
 
         template <typename... Args>
-        void report_error(const Position &pos, Args &&...data)
-        {
-            this->report(LogLevel::ERROR, "Semantic error at [", pos.line, ",",
-                         pos.column, "]: ", data..., ".");
-            this->value = false;
-        }
+        void report_error(const Position &pos, Args &&...data);
 
         template <typename... Args>
-        void report_warning(const Position &pos, Args &&...data)
-        {
-            this->report(LogLevel::WARNING, "Semantic warning at [", pos.line,
-                         ",", pos.column, "]: ", data..., ".");
-        }
+        void report_warning(const Position &pos, Args &&...data);
 
         template <typename... Args>
-        void report_expr_error(const Position &pos, Args &&...data)
-        {
-            this->report_error(pos, data...);
-            this->last_type = nullptr;
-            this->ref_spec = RefSpecifier::NON_REF;
-        }
+        void report_expr_error(const Position &pos, Args &&...data);
 
         struct VarData
         {
@@ -143,4 +129,30 @@ class SemanticChecker
     void remove_logger(Logger *logger);
     bool verify(const Program &program);
 };
+
+template <typename... Args>
+void SemanticChecker::Visitor::report_error(const Position &pos,
+                                            Args &&...data)
+{
+    this->report(LogLevel::ERROR, "Semantic error at [", pos.line, ",",
+                 pos.column, "]: ", data..., ".");
+    this->value = false;
+}
+
+template <typename... Args>
+void SemanticChecker::Visitor::report_warning(const Position &pos,
+                                              Args &&...data)
+{
+    this->report(LogLevel::WARNING, "Semantic warning at [", pos.line, ",",
+                 pos.column, "]: ", data..., ".");
+}
+
+template <typename... Args>
+void SemanticChecker::Visitor::report_expr_error(const Position &pos,
+                                                 Args &&...data)
+{
+    this->report_error(pos, data...);
+    this->last_type = nullptr;
+    this->ref_spec = RefSpecifier::NON_REF;
+}
 #endif

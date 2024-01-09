@@ -21,16 +21,17 @@ class IRGenerator
         llvm::Function *current_function;
         llvm::BasicBlock *loop_entry, *loop_exit, *match_condition,
             *match_exit;
+        llvm::Type *last_type;
 
-        // std::unordered_map<> variable_map;
-        // std::unordered_map<std::wstring,
-        // std::unordered_map<
         std::vector<std::unordered_map<std::wstring, llvm::Value *>> variables;
+        std::unordered_map<std::wstring, llvm::Function *> functions;
         std::unordered_map<std::wstring, llvm::Value *> globals;
 
         void enter_scope();
         void leave_scope();
 
+        llvm::FunctionType *get_fn_type(const FunctionType &type);
+        llvm::Type *get_var_type(const Type &type);
         llvm::Value *find_variable(const std::wstring &name) const;
 
         void create_unsigned_binop(llvm::Value *lhs, llvm::Value *rhs,
@@ -43,6 +44,7 @@ class IRGenerator
                                  const BinOpEnum &op);
         void visit(const BinaryExpr &node);
         void visit(const UnaryExpr &node);
+        void visit(const CallExpr &node);
         void visit(const IndexExpr &node);
         void visit(const CastExpr &node);
 
@@ -56,6 +58,9 @@ class IRGenerator
         void visit(const WhileStmt &node);
         void visit(const ReturnStmt &node);
         void visit(const MatchStmt &node);
+        void visit(const AssignStmt &node);
+        void visit(const VarDeclStmt &node);
+        void visit(const FuncDefStmt &node);
         void visit(const ExternStmt &node);
 
         llvm::Value *create_literal_condition_value(const Expression &expr);

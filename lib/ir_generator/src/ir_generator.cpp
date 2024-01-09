@@ -1,4 +1,5 @@
 #include "ir_generator.hpp"
+#include <ranges>
 
 IRGenerator::Visitor::Visitor() noexcept
     : context(std::make_unique<llvm::LLVMContext>())
@@ -15,6 +16,74 @@ void IRGenerator::Visitor::enter_scope()
 void IRGenerator::Visitor::leave_scope()
 {
     this->variables.pop_back();
+}
+
+llvm::FunctionType *IRGenerator::Visitor::get_fn_type(const FunctionType &type)
+{
+    std::vector<llvm::Type *> param_types;
+    for (const auto &param : type.arg_types)
+    {
+        param_types.push_back(this->get_var_type(*param));
+    }
+    auto return_type = (type.return_type)
+                           ? (this->get_var_type(*type.return_type))
+                           : (llvm::Type::getVoidTy(*this->context));
+    return llvm::FunctionType::get(return_type, param_types, false);
+}
+
+llvm::Type *IRGenerator::Visitor::get_var_type(const Type &type)
+{
+    return std::visit(
+        overloaded{
+            [this](const SimpleType &type) -> llvm::Type * {
+                if (type.ref_spec == RefSpecifier::NON_REF)
+                {
+                    switch (type.type)
+                    {
+                    case TypeEnum::U32:
+                    case TypeEnum::I32:
+                    case TypeEnum::CHAR:
+                        return llvm::Type::getInt32Ty(*this->context);
+                        break;
+
+                    case TypeEnum::BOOL:
+                        return llvm::Type::getInt1Ty(*this->context);
+                        break;
+
+                    case TypeEnum::F64:
+                        return llvm::Type::getDoubleTy(*this->context);
+
+                    default:
+                        [[unlikely]] throw std::runtime_error("unreachable");
+                        return nullptr;
+                    }
+                }
+                else
+                {
+                    switch (type.type)
+                    {
+                    case TypeEnum::U32:
+                    case TypeEnum::I32:
+                    case TypeEnum::CHAR:
+                    case TypeEnum::STR:
+                        return llvm::Type::getInt32PtrTy(*this->context);
+                        break;
+
+                    case TypeEnum::BOOL:
+                        return llvm::Type::getInt1PtrTy(*this->context);
+                        break;
+
+                    case TypeEnum::F64:
+                        return llvm::Type::getDoublePtrTy(*this->context);
+                    }
+                }
+            },
+            [this](const FunctionType &type) -> llvm::Type * {
+                auto fn_type = this->get_fn_type(type);
+                return llvm::PointerType::getUnqual(fn_type);
+            },
+        },
+        type);
 }
 
 llvm::Value *IRGenerator::Visitor::find_variable(
@@ -266,6 +335,20 @@ void IRGenerator::Visitor::visit(const UnaryExpr &node)
 {
 }
 
+void IRGenerator::Visitor::visit(const CallExpr &node)
+{
+    this->visit(*node.callable);
+    auto callable = this->last_value;
+    std::vector<llvm::Value *> args;
+    for (const auto &arg : node.args)
+    {
+        this->visit(*arg);
+        args.push_back(this->last_value);
+    }
+    this->last_value =
+        this->builder->CreateCall(llvm::cast<llvm::Function>(callable), args);
+}
+
 void IRGenerator::Visitor::visit(const IndexExpr &node)
 {
     this->visit(*node.expr);
@@ -384,7 +467,7 @@ void IRGenerator::Visitor::visit(const Expression &node)
             },
             [this](const BinaryExpr &node) { this->visit(node); },
             // [this](const UnaryExpr &node) { this->visit(node); },
-            //    [this](const CallExpr &node) { this->visit(node); },
+            [this](const CallExpr &node) { this->visit(node); },
             //    [this](const LambdaCallExpr &node) { this->visit(node); },
             [this](const IndexExpr &node) { this->visit(node); },
             [this](const CastExpr &node) { this->visit(node); },
@@ -514,31 +597,81 @@ void IRGenerator::Visitor::visit(const MatchStmt &node)
     this->is_exhaustive = previous_is_exhaustive;
 }
 
+void IRGenerator::Visitor::visit(const AssignStmt &node)
+{
+    this->visit(*node.lhs);
+    auto ptr = this->last_value;
+    this->visit(*node.rhs);
+    auto value = this->last_value;
+    this->builder->CreateStore(value, ptr);
+}
+
+void IRGenerator::Visitor::visit(const VarDeclStmt &node)
+{
+    this->visit(*node.initial_value);
+    auto value = this->last_value;
+    auto type =
+        (node.type) ? (this->get_var_type(*node.type)) : (this->last_type);
+
+    auto ptr = this->builder->CreateAlloca(type);
+    this->builder->CreateStore(value, ptr);
+    this->variables.back().insert({node.name, value});
+}
+
+void IRGenerator::Visitor::visit(const FuncDefStmt &node)
+{
+    auto type = this->get_fn_type(*node.get_type());
+    auto func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
+                                       "", *this->module);
+    func->setCallingConv(llvm::CallingConv::C);
+    func->arg_begin();
+
+    auto entry = llvm::BasicBlock::Create(*this->context, "fn_entry", func);
+    this->builder->SetInsertPoint(entry);
+    this->enter_scope();
+    for (const auto &[param, arg] : std::views::zip(node.params, func->args()))
+    {
+        auto param_ptr = this->builder->CreateAlloca(arg.getType());
+        this->variables.back().insert({param->name, param_ptr});
+        this->builder->CreateStore(&arg, param_ptr);
+    }
+    this->current_function = func;
+    this->visit_block(*node.block);
+    this->leave_scope();
+
+    this->functions.insert({node.name, func});
+}
+
 void IRGenerator::Visitor::visit(const ExternStmt &node)
 {
+    auto type = this->get_fn_type(*node.get_type());
+    auto func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
+                                       "", *this->module);
+    func->setCallingConv(llvm::CallingConv::C);
+    auto name = std::string(node.name.cbegin(), node.name.cend());
+    func->setName(name);
+    this->functions.insert({node.name, func});
 }
 
 void IRGenerator::Visitor::visit(const Statement &node)
 {
     std::visit(
-        overloaded{
-            [this](const Block &node) { this->visit_block(node); },
-            [this](const WhileStmt &node) { this->visit(node); },
-            [this](const ReturnStmt &node) { this->visit(node); },
-            [this](const BreakStmt &node) {
-                this->builder->CreateBr(this->loop_exit);
-            },
-            [this](const ContinueStmt &node) {
-                this->builder->CreateBr(this->loop_entry);
-            },
-            [this](const IfStmt &node) { this->visit(node); },
-            [this](const MatchStmt &node) { this->visit(node); },
-            //    [this](const AssignStmt &node) { this->visit(node); },
-            [this](const ExprStmt &node) { this->visit(*node.expr); },
-            //    [this](const VarDeclStmt &node) { this->visit(node); },
-            //    [this](const FuncDefStmt &node) { this->visit(node); },
-            [this](const ExternStmt &node) { this->visit(node); },
-            [](const auto &) {}},
+        overloaded{[this](const Block &node) { this->visit_block(node); },
+                   [this](const WhileStmt &node) { this->visit(node); },
+                   [this](const ReturnStmt &node) { this->visit(node); },
+                   [this](const BreakStmt &node) {
+                       this->builder->CreateBr(this->loop_exit);
+                   },
+                   [this](const ContinueStmt &node) {
+                       this->builder->CreateBr(this->loop_entry);
+                   },
+                   [this](const IfStmt &node) { this->visit(node); },
+                   [this](const MatchStmt &node) { this->visit(node); },
+                   [this](const AssignStmt &node) { this->visit(node); },
+                   [this](const ExprStmt &node) { this->visit(*node.expr); },
+                   [this](const VarDeclStmt &node) { this->visit(node); },
+                   [this](const FuncDefStmt &node) { this->visit(node); },
+                   [this](const ExternStmt &node) { this->visit(node); }},
         node);
 }
 
