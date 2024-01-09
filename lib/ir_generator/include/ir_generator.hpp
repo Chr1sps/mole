@@ -18,12 +18,17 @@ class IRGenerator
         std::unique_ptr<llvm::IRBuilder<>> builder;
         bool is_signed;
         llvm::Value *last_value;
+        llvm::Function *current_function;
+        llvm::BasicBlock *loop_entry, *loop_exit;
 
         // std::unordered_map<> variable_map;
         // std::unordered_map<std::wstring,
         // std::unordered_map<
         std::vector<std::unordered_map<std::wstring, llvm::Value *>> variables;
         std::unordered_map<std::wstring, llvm::Value *> globals;
+
+        void enter_scope();
+        void leave_scope();
 
         llvm::Value *find_variable(const std::wstring &name) const;
 
@@ -46,6 +51,11 @@ class IRGenerator
         Visitor(const Visitor &) = delete;
         Visitor(Visitor &&) = default;
 
+        void visit(const Block &node);
+        void visit(const IfStmt &node);
+        void visit(const WhileStmt &node);
+        void visit(const ReturnStmt &node);
+        void visit(const MatchStmt &node);
         void visit(const ExternStmt &node);
 
         void visit(const Expression &node) override;

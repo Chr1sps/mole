@@ -7,6 +7,16 @@ IRGenerator::Visitor::Visitor() noexcept
     this->builder = std::make_unique<llvm::IRBuilder<>>(*this->context);
 }
 
+void IRGenerator::Visitor::enter_scope()
+{
+    this->variables.push_back({});
+}
+
+void IRGenerator::Visitor::leave_scope()
+{
+    this->variables.pop_back();
+}
+
 llvm::Value *IRGenerator::Visitor::find_variable(
     const std::wstring &name) const
 {
@@ -380,6 +390,95 @@ void IRGenerator::Visitor::visit(const Expression &node)
         node);
 }
 
+void IRGenerator::Visitor::visit(const Block &node)
+{
+    this->enter_scope();
+    for (const auto &stmt : node.statements)
+    {
+        this->visit(*stmt);
+    }
+    this->leave_scope();
+}
+
+void IRGenerator::Visitor::visit(const IfStmt &node)
+{
+    auto condition = llvm::BasicBlock::Create(
+        *this->context, "if_condition_expr", this->current_function);
+    auto then_entry = llvm::BasicBlock::Create(*this->context, "if_then_entry",
+                                               this->current_function);
+    llvm::BasicBlock *else_entry;
+    if (node.else_block)
+    {
+        else_entry = llvm::BasicBlock::Create(*this->context, "if_else_entry",
+                                              this->current_function);
+    }
+    auto exit = llvm::BasicBlock::Create(*this->context, "if_exit",
+                                         this->current_function);
+
+    this->visit(*node.condition_expr);
+    auto condition_value = this->last_value;
+
+    this->builder->CreateBr(condition);
+    this->builder->SetInsertPoint(condition);
+    this->builder->CreateCondBr(condition_value, then_entry,
+                                (node.else_block) ? (else_entry) : (exit));
+
+    this->builder->SetInsertPoint(then_entry);
+    this->visit(*node.then_block);
+    this->builder->CreateBr(exit);
+
+    if (node.else_block)
+    {
+        this->builder->SetInsertPoint(else_entry);
+        this->visit(*node.else_block);
+        this->builder->CreateBr(exit);
+    }
+    this->builder->SetInsertPoint(exit);
+}
+
+void IRGenerator::Visitor::visit(const WhileStmt &node)
+{
+    auto condition = llvm::BasicBlock::Create(
+        *this->context, "while_condition_expr", this->current_function);
+    auto entry = llvm::BasicBlock::Create(*this->context, "while_body",
+                                          this->current_function);
+    auto exit = llvm::BasicBlock::Create(*this->context, "while_exit",
+                                         this->current_function);
+    auto previous_entry = this->loop_entry;
+    auto previous_exit = this->loop_exit;
+    this->loop_entry = entry;
+    this->loop_exit = exit;
+
+    this->visit(*node.condition_expr);
+    auto condition_value = this->last_value;
+
+    this->builder->CreateBr(condition);
+    this->builder->SetInsertPoint(condition);
+    this->builder->CreateCondBr(condition_value, entry, exit);
+    this->builder->SetInsertPoint(entry);
+    this->visit(*node.statement);
+    this->builder->CreateBr(condition);
+    this->builder->SetInsertPoint(exit);
+
+    this->loop_entry = previous_entry;
+    this->loop_exit = previous_exit;
+}
+
+void IRGenerator::Visitor::visit(const ReturnStmt &node)
+{
+    if (node.expr)
+    {
+        this->visit(*node.expr);
+        this->builder->CreateRet(this->last_value);
+    }
+    else
+        this->builder->CreateRetVoid();
+}
+
+void IRGenerator::Visitor::visit(const MatchStmt &node)
+{
+}
+
 void IRGenerator::Visitor::visit(const ExternStmt &node)
 {
 }
@@ -388,15 +487,19 @@ void IRGenerator::Visitor::visit(const Statement &node)
 {
     std::visit(
         overloaded{
-            //    [this](const Block &node) { this->visit(node); },
-            //    [this](const IfStmt &node) { this->visit(node); },
-            //    [this](const WhileStmt &node) { this->visit(node); },
+            [this](const Block &node) { this->visit(node); },
+            [this](const WhileStmt &node) { this->visit(node); },
+            [this](const ReturnStmt &node) { this->visit(node); },
+            [this](const BreakStmt &node) {
+                this->builder->CreateBr(this->loop_exit);
+            },
+            [this](const ContinueStmt &node) {
+                this->builder->CreateBr(this->loop_entry);
+            },
+            [this](const IfStmt &node) { this->visit(node); },
             //    [this](const MatchStmt &node) { this->visit(node); },
-            //    [this](const ReturnStmt &node) { this->visit(node); },
-            //    [this](const BreakStmt &node) { this->visit(node); },
-            //    [this](const ContinueStmt &node) { this->visit(node); },
             //    [this](const AssignStmt &node) { this->visit(node); },
-            //    [this](const ExprStmt &node) { this->visit(node); },
+            [this](const ExprStmt &node) { this->visit(*node.expr); },
             //    [this](const VarDeclStmt &node) { this->visit(node); },
             //    [this](const FuncDefStmt &node) { this->visit(node); },
             [this](const ExternStmt &node) { this->visit(node); },

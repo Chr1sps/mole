@@ -568,7 +568,20 @@ TEST_CASE("Indexing.")
     SECTION("Correct indexing.")
     {
         CHECK_VALID(FN_WRAP(L"let var: &str = \"some text\";"
-                            L"var[2];"));
+                            L"let chr: char = var[2];"));
+    }
+    SECTION("Wrong indexed expr type.")
+    {
+        CHECK_INVALID(FN_WRAP(L"let var = true;"
+                              L"var[2];"));
+        CHECK_INVALID(FN_WRAP(L"let var = 2;"
+                              L"var[2];"));
+        CHECK_INVALID(FN_WRAP(L"let var = -2;"
+                              L"var[2];"));
+        CHECK_INVALID(FN_WRAP(L"let var = 2.0;"
+                              L"var[2];"));
+        CHECK_INVALID(FN_WRAP(L"let var = 'a';"
+                              L"var[2];"));
     }
     SECTION("Wrong index type.")
     {
