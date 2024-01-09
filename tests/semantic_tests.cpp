@@ -1,22 +1,48 @@
 #include "lexer.hpp"
 #include "locale.hpp"
+#include "logger.hpp"
 #include "parser.hpp"
 #include "semantic_checker.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
 #include <string>
 
-bool check_source(const std::wstring &source)
+enum class Result
+{
+    NONE,
+    WARNING,
+    ERROR,
+    WARNING_AND_ERROR
+};
+
+bool check_errors(const std::wstring &source)
 {
     auto locale = Locale("C.utf8");
     auto parser = Parser(Lexer::from_wstring(source));
     auto program = parser.parse();
     auto checker = SemanticChecker();
-    return checker.verify(*program);
+    auto logger = DebugLogger();
+    checker.add_logger(&logger);
+    checker.verify(*program);
+    return !logger.contains_errors();
 }
 
-#define CHECK_VALID(source) REQUIRE(check_source(source))
-#define CHECK_INVALID(source) REQUIRE_FALSE(check_source(source))
+bool check_errors_and_warnings(const std::wstring &source)
+{
+    auto locale = Locale("C.utf8");
+    auto parser = Parser(Lexer::from_wstring(source));
+    auto program = parser.parse();
+    auto checker = SemanticChecker();
+    auto logger = DebugLogger();
+    checker.add_logger(&logger);
+    checker.verify(*program);
+    return !logger.contains_errors() && logger.contains_warnings();
+}
+
+#define CHECK_VALID(source) REQUIRE(check_errors(source))
+#define CHECK_VALID_WITH_WARNINGS(source)                                     \
+    REQUIRE(check_errors_and_warnings(source))
+#define CHECK_INVALID(source) REQUIRE_FALSE(check_errors(source))
 #define FN_WRAP(source) L"fn wrap(){" + std::wstring(source) + L"}"
 
 TEST_CASE("Variable has no value or type assigned.")
@@ -827,17 +853,17 @@ TEST_CASE("Match statements.")
     {
         CHECK_VALID(FN_WRAP(L"let var = 1;"
                             L"match(var) {else => {}}"));
-        CHECK_INVALID(FN_WRAP(L"let var = 1;"
-                              L"match(var) {1 => {}}"));
+        CHECK_VALID_WITH_WARNINGS(FN_WRAP(L"let var = 1;"
+                                          L"match(var) {1 => {}}"));
         CHECK_VALID(FN_WRAP(L"let var = 1;"
                             L"match(var) {"
                             L"1 => {}"
                             L"else => {}"
                             L"}"));
-        CHECK_INVALID(FN_WRAP(L"let var = 1;"
-                              L"match(var) {"
-                              L"if (true) => {}"
-                              L"}"));
+        CHECK_VALID_WITH_WARNINGS(FN_WRAP(L"let var = 1;"
+                                          L"match(var) {"
+                                          L"if (true) => {}"
+                                          L"}"));
         CHECK_VALID(FN_WRAP(L"let var = 1;"
                             L"match(var) {"
                             L"if (true) => {}"
@@ -863,34 +889,49 @@ TEST_CASE("Match statements.")
     }
     SECTION("Literal arms.")
     {
-        // SECTION("Compile time check.")
-        // {
-        //     CHECK_VALID(FN_WRAP(L"let var = 1;"
-        //                         L"match(var) {"
-        //                         L"(1+2) => {}"
-        //                         L"else => {}"
-        //                         L"}"));
-        //     CHECK_VALID(FN_WRAP(L"let var = 1;"
-        //                         L"let constant = 2;"
-        //                         L"match(var) {"
-        //                         L"constant => {}"
-        //                         L"else => {}"
-        //                         L"}"));
-        //     CHECK_VALID(FN_WRAP(L"let var = 1;"
-        //                         L"let constant = 2;"
-        //                         L"let const_ref = &constant;"
-        //                         L"match(var) {"
-        //                         L"*const_ref => {}"
-        //                         L"else => {}"
-        //                         L"}"));
-        //     CHECK_INVALID(FN_WRAP(L"let var = 1;"
-        //                           L"let mut mutable = 2;"
-        //                           L"let const_ref = &mutable;"
-        //                           L"match(var) {"
-        //                           L"*const_ref => {}"
-        //                           L"else => {}"
-        //                           L"}"));
-        // }
+        SECTION("Literals have the same type as a matched var.")
+        {
+            CHECK_VALID(FN_WRAP(L"let var = true;"
+                                L"match(var) {"
+                                L"  true => {}"
+                                L"  else => {}"
+                                L"}"));
+            CHECK_VALID(FN_WRAP(L"let var = 1;"
+                                L"match(var) {"
+                                L"  1 => {}"
+                                L"  else => {}"
+                                L"}"));
+            CHECK_VALID(FN_WRAP(L"let var = -1;"
+                                L"match(var) {"
+                                L"  -1 => {}"
+                                L"  else => {}"
+                                L"}"));
+            CHECK_VALID(FN_WRAP(L"let var = 1.0;"
+                                L"match(var) {"
+                                L"  1.0 => {}"
+                                L"  else => {}"
+                                L"}"));
+            CHECK_VALID(FN_WRAP(L"let var = 'a';"
+                                L"match(var) {"
+                                L"  'a' => {}"
+                                L"  else => {}"
+                                L"}"));
+            CHECK_VALID(FN_WRAP(L"let var = \"a\";"
+                                L"match(var) {"
+                                L"  \"a\" => {}"
+                                L"  else => {}"
+                                L"}"));
+            CHECK_INVALID(FN_WRAP(L"let var = 1;"
+                                  L"match(var) {"
+                                  L"  true => {}"
+                                  L"  else => {}"
+                                  L"}"));
+            CHECK_INVALID(FN_WRAP(L"let var = 1;"
+                                  L"match(var) {"
+                                  L"  1.0 => {}"
+                                  L"  else => {}"
+                                  L"}"));
+        }
     }
     SECTION("Guard arms.")
     {

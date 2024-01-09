@@ -30,9 +30,9 @@ llvm::Value *IRGenerator::Visitor::find_variable(
     return this->globals.find(name)->second;
 }
 
-llvm::Value *IRGenerator::Visitor::create_unsigned_binop(llvm::Value *lhs,
-                                                         llvm::Value *rhs,
-                                                         const BinOpEnum &op)
+void IRGenerator::Visitor::create_unsigned_binop(llvm::Value *lhs,
+                                                 llvm::Value *rhs,
+                                                 const BinOpEnum &op)
 {
     switch (op)
     {
@@ -102,9 +102,9 @@ llvm::Value *IRGenerator::Visitor::create_unsigned_binop(llvm::Value *lhs,
     }
 }
 
-llvm::Value *IRGenerator::Visitor::create_signed_binop(llvm::Value *lhs,
-                                                       llvm::Value *rhs,
-                                                       const BinOpEnum &op)
+void IRGenerator::Visitor::create_signed_binop(llvm::Value *lhs,
+                                               llvm::Value *rhs,
+                                               const BinOpEnum &op)
 {
     switch (op)
     {
@@ -168,9 +168,9 @@ llvm::Value *IRGenerator::Visitor::create_signed_binop(llvm::Value *lhs,
     }
 }
 
-llvm::Value *IRGenerator::Visitor::create_double_binop(llvm::Value *lhs,
-                                                       llvm::Value *rhs,
-                                                       const BinOpEnum &op)
+void IRGenerator::Visitor::create_double_binop(llvm::Value *lhs,
+                                               llvm::Value *rhs,
+                                               const BinOpEnum &op)
 {
     switch (op)
     {
@@ -219,9 +219,9 @@ llvm::Value *IRGenerator::Visitor::create_double_binop(llvm::Value *lhs,
     }
 }
 
-llvm::Value *IRGenerator::Visitor::create_string_binop(llvm::Value *lhs,
-                                                       llvm::Value *rhs,
-                                                       const BinOpEnum &op)
+void IRGenerator::Visitor::create_string_binop(llvm::Value *lhs,
+                                               llvm::Value *rhs,
+                                               const BinOpEnum &op)
 {
     // TODO
     switch (op)
@@ -250,15 +250,16 @@ void IRGenerator::Visitor::visit(const BinaryExpr &node)
     auto rhs = this->last_value;
 
     if (lhs->getType()->isPointerTy())
-        this->last_value = this->create_string_binop(lhs, rhs, node.op);
+        this->create_string_binop(lhs, rhs, node.op);
     else if (lhs->getType()->isIntegerTy())
-        // this also handles bools
-        this->last_value =
-            (this->is_signed)
-                ? (this->create_signed_binop(lhs, rhs, node.op))
-                : (this->create_unsigned_binop(lhs, rhs, node.op));
+    {
+        if (this->is_signed)
+            this->create_signed_binop(lhs, rhs, node.op);
+        else
+            this->create_unsigned_binop(lhs, rhs, node.op);
+    }
     else if (lhs->getType()->isDoubleTy())
-        this->last_value = this->create_double_binop(lhs, rhs, node.op);
+        this->create_double_binop(lhs, rhs, node.op);
 }
 
 void IRGenerator::Visitor::visit(const UnaryExpr &node)
@@ -329,6 +330,7 @@ void IRGenerator::Visitor::visit(const CastExpr &node)
                 "bool_to_f64");
 
         else if (from_type->isIntegerTy(32))
+        {
             if (this->is_signed)
                 this->last_value = this->builder->CreateSIToFP(
                     this->last_value, llvm::Type::getDoubleTy(*this->context),
@@ -337,6 +339,7 @@ void IRGenerator::Visitor::visit(const CastExpr &node)
                 this->last_value = this->builder->CreateUIToFP(
                     this->last_value, llvm::Type::getDoubleTy(*this->context),
                     "u32_to_f64");
+        }
         break;
 
     default:
@@ -380,7 +383,7 @@ void IRGenerator::Visitor::visit(const Expression &node)
                     this->builder->getInt1Ty(), node.value);
             },
             [this](const BinaryExpr &node) { this->visit(node); },
-            [this](const UnaryExpr &node) { this->visit(node); },
+            // [this](const UnaryExpr &node) { this->visit(node); },
             //    [this](const CallExpr &node) { this->visit(node); },
             //    [this](const LambdaCallExpr &node) { this->visit(node); },
             [this](const IndexExpr &node) { this->visit(node); },
@@ -390,7 +393,7 @@ void IRGenerator::Visitor::visit(const Expression &node)
         node);
 }
 
-void IRGenerator::Visitor::visit(const Block &node)
+void IRGenerator::Visitor::visit_block(const Block &node)
 {
     this->enter_scope();
     for (const auto &stmt : node.statements)
@@ -444,10 +447,9 @@ void IRGenerator::Visitor::visit(const WhileStmt &node)
                                           this->current_function);
     auto exit = llvm::BasicBlock::Create(*this->context, "while_exit",
                                          this->current_function);
-    auto previous_entry = this->loop_entry;
-    auto previous_exit = this->loop_exit;
-    this->loop_entry = entry;
-    this->loop_exit = exit;
+
+    auto previous_entry = std::exchange(this->loop_entry, entry);
+    auto previous_exit = std::exchange(this->loop_exit, exit);
 
     this->visit(*node.condition_expr);
     auto condition_value = this->last_value;
@@ -477,6 +479,39 @@ void IRGenerator::Visitor::visit(const ReturnStmt &node)
 
 void IRGenerator::Visitor::visit(const MatchStmt &node)
 {
+    auto exit = llvm::BasicBlock::Create(*this->context, "match_exit",
+                                         this->current_function);
+    auto condition = llvm::BasicBlock::Create(
+        *this->context, "match_condition", this->current_function);
+
+    this->visit(*node.matched_expr);
+    auto matched_value = this->last_value;
+
+    auto previous_condition = std::exchange(this->match_condition, condition);
+    auto previous_exit = std::exchange(this->match_exit, exit);
+    auto previous_matched = std::exchange(this->matched_value, matched_value);
+    auto previous_is_exhaustive = std::exchange(this->is_exhaustive, false);
+
+    this->builder->CreateBr(condition);
+    this->builder->SetInsertPoint(condition);
+
+    for (const auto &arm : node.match_arms)
+    {
+        this->visit(*arm);
+        if (this->is_exhaustive)
+            break;
+    }
+
+    if (!this->is_exhaustive)
+    {
+        this->builder->CreateBr(exit);
+    }
+    this->builder->SetInsertPoint(exit);
+
+    this->match_condition = previous_condition;
+    this->match_exit = previous_exit;
+    this->matched_value = previous_matched;
+    this->is_exhaustive = previous_is_exhaustive;
 }
 
 void IRGenerator::Visitor::visit(const ExternStmt &node)
@@ -487,7 +522,7 @@ void IRGenerator::Visitor::visit(const Statement &node)
 {
     std::visit(
         overloaded{
-            [this](const Block &node) { this->visit(node); },
+            [this](const Block &node) { this->visit_block(node); },
             [this](const WhileStmt &node) { this->visit(node); },
             [this](const ReturnStmt &node) { this->visit(node); },
             [this](const BreakStmt &node) {
@@ -497,7 +532,7 @@ void IRGenerator::Visitor::visit(const Statement &node)
                 this->builder->CreateBr(this->loop_entry);
             },
             [this](const IfStmt &node) { this->visit(node); },
-            //    [this](const MatchStmt &node) { this->visit(node); },
+            [this](const MatchStmt &node) { this->visit(node); },
             //    [this](const AssignStmt &node) { this->visit(node); },
             [this](const ExprStmt &node) { this->visit(*node.expr); },
             //    [this](const VarDeclStmt &node) { this->visit(node); },
@@ -507,6 +542,73 @@ void IRGenerator::Visitor::visit(const Statement &node)
         node);
 }
 
+llvm::Value *IRGenerator::Visitor::create_literal_condition_value(
+    const Expression &expr)
+{
+    this->visit(expr);
+    auto value = this->last_value;
+    if (value->getType()->isPointerTy())
+        // TODO: handle strings
+        return nullptr;
+    else if (value->getType()->isIntegerTy())
+        // this also handles bools
+        return this->builder->CreateICmpEQ(this->matched_value, value);
+    else
+        return this->builder->CreateFCmpOEQ(this->matched_value, value);
+}
+
+void IRGenerator::Visitor::visit(const LiteralArm &node)
+{
+    auto stmt = llvm::BasicBlock::Create(*this->context, "match_stmt",
+                                         this->current_function);
+
+    this->builder->SetInsertPoint(stmt);
+    this->visit(*node.block);
+    this->builder->CreateBr(this->match_exit);
+    llvm::BasicBlock *new_condition;
+    for (const auto &literal : node.literals)
+    {
+        new_condition = llvm::BasicBlock::Create(
+            *this->context, "match_condition", this->current_function);
+        auto condition_value = this->create_literal_condition_value(*literal);
+        this->builder->CreateCondBr(condition_value, stmt, new_condition);
+        this->builder->SetInsertPoint(new_condition);
+    }
+    this->match_condition = new_condition;
+}
+
+void IRGenerator::Visitor::visit(const GuardArm &node)
+{
+    auto stmt = llvm::BasicBlock::Create(*this->context, "match_stmt",
+                                         this->current_function);
+    auto new_condition = llvm::BasicBlock::Create(
+        *this->context, "match_condition", this->current_function);
+    this->visit(*node.condition_expr);
+    auto condition_value = this->last_value;
+    this->builder->CreateCondBr(condition_value, stmt, new_condition);
+    this->builder->SetInsertPoint(stmt);
+    this->visit(*node.block);
+    this->builder->CreateBr(this->match_exit);
+    this->builder->SetInsertPoint(new_condition);
+    this->match_condition = new_condition;
+}
+
+void IRGenerator::Visitor::visit(const ElseArm &node)
+{
+    auto stmt = llvm::BasicBlock::Create(*this->context, "match_stmt",
+                                         this->current_function);
+    this->builder->CreateBr(stmt);
+    this->builder->SetInsertPoint(stmt);
+    this->visit(*node.block);
+    this->builder->CreateBr(this->match_exit);
+    this->is_exhaustive = true;
+}
+
 void IRGenerator::Visitor::visit(const MatchArm &node)
 {
+    std::visit(
+        overloaded{[this](const LiteralArm &node) { this->visit(node); },
+                   [this](const GuardArm &node) { this->visit(node); },
+                   [this](const ElseArm &node) { this->visit(node); }},
+        node);
 }

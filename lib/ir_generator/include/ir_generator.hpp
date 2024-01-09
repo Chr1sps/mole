@@ -16,10 +16,11 @@ class IRGenerator
         std::unique_ptr<llvm::LLVMContext> context;
         std::unique_ptr<llvm::Module> module;
         std::unique_ptr<llvm::IRBuilder<>> builder;
-        bool is_signed;
-        llvm::Value *last_value;
+        bool is_signed, is_exhaustive;
+        llvm::Value *last_value, *matched_value;
         llvm::Function *current_function;
-        llvm::BasicBlock *loop_entry, *loop_exit;
+        llvm::BasicBlock *loop_entry, *loop_exit, *match_condition,
+            *match_exit;
 
         // std::unordered_map<> variable_map;
         // std::unordered_map<std::wstring,
@@ -32,15 +33,14 @@ class IRGenerator
 
         llvm::Value *find_variable(const std::wstring &name) const;
 
-        llvm::Value *create_unsigned_binop(llvm::Value *lhs, llvm::Value *rhs,
-                                           const BinOpEnum &op);
-        llvm::Value *create_signed_binop(llvm::Value *lhs, llvm::Value *rhs,
-                                         const BinOpEnum &op);
-        llvm::Value *create_double_binop(llvm::Value *lhs, llvm::Value *rhs,
-                                         const BinOpEnum &op);
-        llvm::Value *Visitor::create_string_binop(llvm::Value *lhs,
-                                                  llvm::Value *rhs,
-                                                  const BinOpEnum &op);
+        void create_unsigned_binop(llvm::Value *lhs, llvm::Value *rhs,
+                                   const BinOpEnum &op);
+        void create_signed_binop(llvm::Value *lhs, llvm::Value *rhs,
+                                 const BinOpEnum &op);
+        void create_double_binop(llvm::Value *lhs, llvm::Value *rhs,
+                                 const BinOpEnum &op);
+        void create_string_binop(llvm::Value *lhs, llvm::Value *rhs,
+                                 const BinOpEnum &op);
         void visit(const BinaryExpr &node);
         void visit(const UnaryExpr &node);
         void visit(const IndexExpr &node);
@@ -51,12 +51,17 @@ class IRGenerator
         Visitor(const Visitor &) = delete;
         Visitor(Visitor &&) = default;
 
-        void visit(const Block &node);
+        void visit_block(const Block &node);
         void visit(const IfStmt &node);
         void visit(const WhileStmt &node);
         void visit(const ReturnStmt &node);
         void visit(const MatchStmt &node);
         void visit(const ExternStmt &node);
+
+        llvm::Value *create_literal_condition_value(const Expression &expr);
+        void visit(const LiteralArm &node);
+        void visit(const GuardArm &node);
+        void visit(const ElseArm &node);
 
         void visit(const Expression &node) override;
         void visit(const Statement &node) override;

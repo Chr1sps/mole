@@ -484,13 +484,11 @@ void JsonSerializer::Visitor::visit(const Program &node)
         this->visit(*ext);
         output["externs"].push_back(this->last_object);
     }
-    // output["globals"] = nlohmann::json::array();
     for (auto &var : node.globals)
     {
         this->visit(*var);
         output["globals"].push_back(this->last_object);
     }
-    // output["functions"] = nlohmann::json::array();
     for (auto &function : node.functions)
     {
         this->visit(*function);

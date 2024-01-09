@@ -7,6 +7,7 @@
 #include <ranges>
 #include <span>
 #include <string_view>
+#include <utility>
 
 namespace
 {
@@ -988,8 +989,8 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
     }
     if (!this->is_exhaustive)
     {
-        this->report_error(node.position,
-                           L"match statement is not exhaustive");
+        this->report_warning(node.position,
+                             L"match statement is not exhaustive");
     }
 }
 
@@ -1036,9 +1037,7 @@ bool SemanticChecker::Visitor::is_in_const_scope() const
 
 TypePtr SemanticChecker::Visitor::set_expected_return_type(TypePtr type)
 {
-    auto previous_return_type = std::move(this->expected_return_type);
-    this->expected_return_type = clone_type_ptr(type);
-    return previous_return_type;
+    return std::exchange(this->expected_return_type, clone_type_ptr(type));
 }
 
 void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
@@ -1121,10 +1120,6 @@ void SemanticChecker::Visitor::visit(const ExternStmt &node)
     this->check_function_params(node);
 
     this->register_local_function(node);
-}
-
-void SemanticChecker::Visitor::visit(const Type &node)
-{
 }
 
 void SemanticChecker::Visitor::visit(const Expression &node)

@@ -11,7 +11,12 @@
 
 class SemanticChecker
 {
-    class Visitor : public AstVisitor, public Reporter
+    class Visitor : public ExprVisitor,
+                    public StmtVisitor,
+                    public MatchArmVisitor,
+                    public ParamVisitor,
+                    public ProgramVisitor,
+                    public Reporter
     {
         static const std::unordered_multimap<TypeEnum, TypeEnum> cast_map;
         TypePtr last_type, expected_return_type;
@@ -128,7 +133,6 @@ class SemanticChecker
         Visitor() noexcept;
         void visit(const Statement &node) override;
         void visit(const Expression &node) override;
-        void visit(const Type &node) override;
         void visit(const MatchArm &node) override;
         void visit(const Parameter &node) override;
         void visit(const Program &node) override;

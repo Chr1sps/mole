@@ -72,30 +72,17 @@ class ExecutionLogger : public Logger
     }
 };
 
-class FileLogger : public Logger
-
-{
-    std::filesystem::path file_path;
-    std::wofstream output;
-
-  public:
-    FileLogger(const FileLogger &) = delete;
-
-    FileLogger(const std::filesystem::path &path) : file_path(path)
-    {
-    }
-
-    void log(const LogMessage &msg) noexcept override;
-};
-
 class DebugLogger : public Logger
 {
     std::vector<LogMessage> messages;
+    bool warning_flag, error_flag;
 
   public:
     constexpr DebugLogger() = default;
     void log(const LogMessage &msg) noexcept override;
     const std::vector<LogMessage> &get_messages() const;
+    bool contains_errors() const noexcept;
+    bool contains_warnings() const noexcept;
 };
 
 class Reporter
