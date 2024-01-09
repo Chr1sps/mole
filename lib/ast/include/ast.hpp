@@ -276,14 +276,12 @@ struct MatchStmt;
 struct BreakStmt;
 struct ContinueStmt;
 struct ReturnStmt;
-struct FuncDefStmt;
 struct AssignStmt;
 struct ExprStmt;
 struct VarDeclStmt;
-struct ExternStmt;
-using Statement = std::variant<Block, ReturnStmt, ContinueStmt, BreakStmt,
-                               VarDeclStmt, AssignStmt, ExprStmt, WhileStmt,
-                               IfStmt, MatchStmt, FuncDefStmt, ExternStmt>;
+using Statement =
+    std::variant<Block, ReturnStmt, ContinueStmt, BreakStmt, VarDeclStmt,
+                 AssignStmt, ExprStmt, WhileStmt, IfStmt, MatchStmt>;
 using StmtPtr = std::unique_ptr<Statement>;
 using BlockPtr = std::unique_ptr<Block>;
 
@@ -401,7 +399,7 @@ struct Parameter;
 
 using ParamPtr = std::unique_ptr<Parameter>;
 
-struct FuncDefStmt : public AstNode
+struct FuncDef : public AstNode
 {
     std::wstring name;
     std::vector<ParamPtr> params;
@@ -409,23 +407,22 @@ struct FuncDefStmt : public AstNode
     BlockPtr block;
     bool is_const;
 
-    constexpr FuncDefStmt(const std::wstring &name,
-                          std::vector<ParamPtr> params, TypePtr return_type,
-                          BlockPtr block, const bool &is_const,
-                          const Position &position) noexcept;
+    constexpr FuncDef(const std::wstring &name, std::vector<ParamPtr> params,
+                      TypePtr return_type, BlockPtr block,
+                      const bool &is_const, const Position &position) noexcept;
 
     constexpr std::unique_ptr<FunctionType> get_type() const noexcept;
 };
 
-struct ExternStmt : public AstNode
+struct ExternDef : public AstNode
 {
     std::wstring name;
     std::vector<ParamPtr> params;
     TypePtr return_type;
 
-    constexpr ExternStmt(const std::wstring &name,
-                         std::vector<ParamPtr> params, TypePtr return_type,
-                         const Position &position) noexcept;
+    constexpr ExternDef(const std::wstring &name, std::vector<ParamPtr> params,
+                        TypePtr return_type,
+                        const Position &position) noexcept;
 
     constexpr std::unique_ptr<FunctionType> get_type() const noexcept;
 };
@@ -473,13 +470,13 @@ struct LiteralArm : public MatchArmBase
 struct Program : public AstNode
 {
     std::vector<std::unique_ptr<VarDeclStmt>> globals;
-    std::vector<std::unique_ptr<FuncDefStmt>> functions;
-    std::vector<std::unique_ptr<ExternStmt>> externs;
+    std::vector<std::unique_ptr<FuncDef>> functions;
+    std::vector<std::unique_ptr<ExternDef>> externs;
 
     constexpr Program(
         std::vector<std::unique_ptr<VarDeclStmt>> globals,
-        std::vector<std::unique_ptr<FuncDefStmt>> functions,
-        std::vector<std::unique_ptr<ExternStmt>> externs) noexcept;
+        std::vector<std::unique_ptr<FuncDef>> functions,
+        std::vector<std::unique_ptr<ExternDef>> externs) noexcept;
 };
 
 using ProgramPtr = std::unique_ptr<Program>;
@@ -501,8 +498,8 @@ constexpr bool operator==(const Type &, const Type &) noexcept;
 constexpr bool operator==(const Expression &, const Expression &) noexcept;
 constexpr bool operator==(const Block &, const Block &) noexcept;
 constexpr bool operator==(const VarDeclStmt &, const VarDeclStmt &) noexcept;
-constexpr bool operator==(const FuncDefStmt &, const FuncDefStmt &) noexcept;
-constexpr bool operator==(const ExternStmt &, const ExternStmt &) noexcept;
+constexpr bool operator==(const FuncDef &, const FuncDef &) noexcept;
+constexpr bool operator==(const ExternDef &, const ExternDef &) noexcept;
 constexpr bool operator==(const Statement &, const Statement &) noexcept;
 constexpr bool operator==(const MatchArm &, const MatchArm &) noexcept;
 constexpr bool operator==(const Parameter &, const Parameter &) noexcept;
@@ -726,18 +723,17 @@ constexpr VarDeclStmt::VarDeclStmt(const std::wstring &name, TypePtr type,
 {
 }
 
-constexpr FuncDefStmt::FuncDefStmt(const std::wstring &name,
-                                   std::vector<ParamPtr> params,
-                                   TypePtr return_type, BlockPtr block,
-                                   const bool &is_const,
-                                   const Position &position) noexcept
+constexpr FuncDef::FuncDef(const std::wstring &name,
+                           std::vector<ParamPtr> params, TypePtr return_type,
+                           BlockPtr block, const bool &is_const,
+                           const Position &position) noexcept
     : AstNode(position), name(name), params(std::move(params)),
       return_type(std::move(return_type)), block(std::move(block)),
       is_const(is_const)
 {
 }
 
-constexpr std::unique_ptr<FunctionType> FuncDefStmt::get_type() const noexcept
+constexpr std::unique_ptr<FunctionType> FuncDef::get_type() const noexcept
 {
     std::vector<TypePtr> param_types;
     for (auto &param_ptr : this->params)
@@ -747,16 +743,16 @@ constexpr std::unique_ptr<FunctionType> FuncDefStmt::get_type() const noexcept
         std::move(param_types), std::move(cloned_type), this->is_const);
 }
 
-constexpr ExternStmt::ExternStmt(const std::wstring &name,
-                                 std::vector<ParamPtr> params,
-                                 TypePtr return_type,
-                                 const Position &position) noexcept
+constexpr ExternDef::ExternDef(const std::wstring &name,
+                               std::vector<ParamPtr> params,
+                               TypePtr return_type,
+                               const Position &position) noexcept
     : AstNode(position), name(name), params(std::move(params)),
       return_type(std::move(return_type))
 {
 }
 
-constexpr std::unique_ptr<FunctionType> ExternStmt::get_type() const noexcept
+constexpr std::unique_ptr<FunctionType> ExternDef::get_type() const noexcept
 {
     std::vector<TypePtr> param_types;
     for (auto &param_ptr : this->params)
@@ -823,8 +819,8 @@ constexpr Parameter::Parameter(const std::wstring &name, TypePtr type,
 
 constexpr Program::Program(
     std::vector<std::unique_ptr<VarDeclStmt>> globals,
-    std::vector<std::unique_ptr<FuncDefStmt>> functions,
-    std::vector<std::unique_ptr<ExternStmt>> externs) noexcept
+    std::vector<std::unique_ptr<FuncDef>> functions,
+    std::vector<std::unique_ptr<ExternDef>> externs) noexcept
     : AstNode(Position(1, 1)), globals(std::move(globals)),
       functions(std::move(functions)), externs(std::move(externs))
 {
@@ -956,8 +952,7 @@ constexpr bool operator==(const VarDeclStmt &first,
            first.is_mut == other.is_mut && first.position == other.position;
 }
 
-constexpr bool operator==(const FuncDefStmt &first,
-                          const FuncDefStmt &other) noexcept
+constexpr bool operator==(const FuncDef &first, const FuncDef &other) noexcept
 {
     // auto equal_blocks = *first.block == *other.block;
     auto equal_blocks = compare_ptr_vectors(first.block->statements,
@@ -970,8 +965,8 @@ constexpr bool operator==(const FuncDefStmt &first,
            first.position == other.position;
 }
 
-constexpr bool operator==(const ExternStmt &first,
-                          const ExternStmt &other) noexcept
+constexpr bool operator==(const ExternDef &first,
+                          const ExternDef &other) noexcept
 {
     return first.name == other.name &&
            compare_ptr_vectors(first.params, other.params) &&
@@ -1026,13 +1021,7 @@ constexpr bool operator==(const Statement &first,
                                            other.statements) &&
                        first.position == other.position;
             },
-            [](const FuncDefStmt &first, const FuncDefStmt &other) -> bool {
-                return first == other;
-            },
             [](const VarDeclStmt &first, const VarDeclStmt &other) -> bool {
-                return first == other;
-            },
-            [](const ExternStmt &first, const ExternStmt &other) -> bool {
                 return first == other;
             },
             [](const auto &, const auto &) -> bool { return false; }},

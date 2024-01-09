@@ -70,8 +70,8 @@ class Parser : public Reporter
     std::unique_ptr<Block> parse_block();
 
     std::unique_ptr<VarDeclStmt> parse_var_decl_stmt();
-    std::unique_ptr<FuncDefStmt> parse_func_def_stmt();
-    std::unique_ptr<ExternStmt> parse_extern_stmt();
+    std::unique_ptr<FuncDef> parse_func_def_stmt();
+    std::unique_ptr<ExternDef> parse_extern_stmt();
 
     // helper methods
 

@@ -316,10 +316,10 @@ void JsonSerializer::Visitor::visit(const ContinueStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::Visitor::visit(const FuncDefStmt &node)
+void JsonSerializer::Visitor::visit(const FuncDef &node)
 {
     nlohmann::json output;
-    output["type"] = "FuncDefStmt";
+    output["type"] = "FuncDef";
     output["name"] = node.name;
     output["const"] = node.is_const;
     output["params"] = nlohmann::json::array();
@@ -390,10 +390,10 @@ void JsonSerializer::Visitor::visit(const VarDeclStmt &node)
     this->last_object = output;
 }
 
-void JsonSerializer::Visitor::visit(const ExternStmt &node)
+void JsonSerializer::Visitor::visit(const ExternDef &node)
 {
     nlohmann::json output;
-    output["type"] = "ExternStmt";
+    output["type"] = "ExternDef";
     output["name"] = node.name;
     for (const auto &param : node.params)
     {
@@ -418,11 +418,9 @@ void JsonSerializer::Visitor::visit(const Statement &node)
                    [this](const ReturnStmt &node) { this->visit(node); },
                    [this](const BreakStmt &node) { this->visit(node); },
                    [this](const ContinueStmt &node) { this->visit(node); },
-                   [this](const FuncDefStmt &node) { this->visit(node); },
                    [this](const AssignStmt &node) { this->visit(node); },
                    [this](const ExprStmt &node) { this->visit(node); },
-                   [this](const VarDeclStmt &node) { this->visit(node); },
-                   [this](const ExternStmt &node) { this->visit(node); }},
+                   [this](const VarDeclStmt &node) { this->visit(node); }},
         node);
 }
 

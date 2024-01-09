@@ -6,15 +6,15 @@
 #include "llvm/IR/Module.h"
 #include <filesystem>
 
-class IRGenerator
+class CompiledProgram
 {
 
     class Visitor : public ExprVisitor,
                     public StmtVisitor,
+                    public ProgramVisitor,
                     public MatchArmVisitor
     {
         std::unique_ptr<llvm::LLVMContext> context;
-        std::unique_ptr<llvm::Module> module;
         std::unique_ptr<llvm::IRBuilder<>> builder;
         bool is_signed, is_exhaustive;
         llvm::Value *last_value, *matched_value;
@@ -49,7 +49,8 @@ class IRGenerator
         void visit(const CastExpr &node);
 
       public:
-        Visitor() noexcept;
+        std::unique_ptr<llvm::Module> module;
+        Visitor(const Program &);
         Visitor(const Visitor &) = delete;
         Visitor(Visitor &&) = default;
 
@@ -60,8 +61,10 @@ class IRGenerator
         void visit(const MatchStmt &node);
         void visit(const AssignStmt &node);
         void visit(const VarDeclStmt &node);
-        void visit(const FuncDefStmt &node);
-        void visit(const ExternStmt &node);
+        void visit(const ExternDef &node);
+
+        void declare_func(const FuncDef &node);
+        void visit(const FuncDef &node);
 
         llvm::Value *create_literal_condition_value(const Expression &expr);
         void visit(const LiteralArm &node);
@@ -71,14 +74,27 @@ class IRGenerator
         void visit(const Expression &node) override;
         void visit(const Statement &node) override;
         void visit(const MatchArm &node) override;
+
+        void create_entrypoint(llvm::Function *main_func);
+
+        void visit(const Program &node) override;
     } visitor;
 
   public:
-    IRGenerator() noexcept = default;
-    IRGenerator(const IRGenerator &) = delete;
-    IRGenerator(IRGenerator &&) = default;
+    CompiledProgram(const Program &);
+    CompiledProgram(const CompiledProgram &) = delete;
+    CompiledProgram(CompiledProgram &&) = default;
 
-    void save_ir(const std::filesystem::path &output_path);
-    void save_bytecode(const std::filesystem::path &output_path);
+    void output_ir(llvm::raw_ostream &output);
+    void output_bytecode(llvm::raw_ostream &output);
+    // int execute();
+};
+
+class CompilationException : std::runtime_error
+{
+  public:
+    CompilationException() : std::runtime_error("IR Generator error.")
+    {
+    }
 };
 #endif

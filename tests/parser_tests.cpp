@@ -111,10 +111,10 @@ std::vector<std::optional<ExprPtr>> make_lambda_vector(Types &&...args)
     std::make_unique<Statement>(WhileStmt(condition, statement, position))
 
 #define FUNC(name, params, return_type, block, is_const, position)            \
-    std::make_unique<FuncDefStmt>(name, params, return_type, block, is_const, \
+    std::make_unique<FuncDef>(name, params, return_type, block, is_const, \
                                   position)
 #define EXTERN(name, params, return_type, position)                           \
-    std::make_unique<ExternStmt>(name, params, return_type, position)
+    std::make_unique<ExternDef>(name, params, return_type, position)
 #define GLOBAL(name, type, initial_value, is_mut, position)                   \
     std::make_unique<VarDeclStmt>(name, type, initial_value, is_mut, position)
 #define VAR(name, type, initial_value, is_mut, position)                      \

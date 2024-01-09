@@ -1,24 +1,35 @@
 #include "ir_generator.hpp"
+#include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/Verifier.h"
+#include <fstream>
 #include <ranges>
 
-IRGenerator::Visitor::Visitor() noexcept
+CompiledProgram::Visitor::Visitor(const Program &program)
     : context(std::make_unique<llvm::LLVMContext>())
 {
     this->module = std::make_unique<llvm::Module>("mole", *this->context);
     this->builder = std::make_unique<llvm::IRBuilder<>>(*this->context);
+    this->visit(program);
+    if (!llvm::verifyModule(*this->module))
+        throw CompilationException();
 }
 
-void IRGenerator::Visitor::enter_scope()
+CompiledProgram::CompiledProgram(const Program &program) : visitor(program)
+{
+}
+
+void CompiledProgram::Visitor::enter_scope()
 {
     this->variables.push_back({});
 }
 
-void IRGenerator::Visitor::leave_scope()
+void CompiledProgram::Visitor::leave_scope()
 {
     this->variables.pop_back();
 }
 
-llvm::FunctionType *IRGenerator::Visitor::get_fn_type(const FunctionType &type)
+llvm::FunctionType *CompiledProgram::Visitor::get_fn_type(
+    const FunctionType &type)
 {
     std::vector<llvm::Type *> param_types;
     for (const auto &param : type.arg_types)
@@ -31,7 +42,7 @@ llvm::FunctionType *IRGenerator::Visitor::get_fn_type(const FunctionType &type)
     return llvm::FunctionType::get(return_type, param_types, false);
 }
 
-llvm::Type *IRGenerator::Visitor::get_var_type(const Type &type)
+llvm::Type *CompiledProgram::Visitor::get_var_type(const Type &type)
 {
     return std::visit(
         overloaded{
@@ -86,7 +97,7 @@ llvm::Type *IRGenerator::Visitor::get_var_type(const Type &type)
         type);
 }
 
-llvm::Value *IRGenerator::Visitor::find_variable(
+llvm::Value *CompiledProgram::Visitor::find_variable(
     const std::wstring &name) const
 {
     for (const auto &scope : variables)
@@ -99,9 +110,9 @@ llvm::Value *IRGenerator::Visitor::find_variable(
     return this->globals.find(name)->second;
 }
 
-void IRGenerator::Visitor::create_unsigned_binop(llvm::Value *lhs,
-                                                 llvm::Value *rhs,
-                                                 const BinOpEnum &op)
+void CompiledProgram::Visitor::create_unsigned_binop(llvm::Value *lhs,
+                                                     llvm::Value *rhs,
+                                                     const BinOpEnum &op)
 {
     switch (op)
     {
@@ -171,9 +182,9 @@ void IRGenerator::Visitor::create_unsigned_binop(llvm::Value *lhs,
     }
 }
 
-void IRGenerator::Visitor::create_signed_binop(llvm::Value *lhs,
-                                               llvm::Value *rhs,
-                                               const BinOpEnum &op)
+void CompiledProgram::Visitor::create_signed_binop(llvm::Value *lhs,
+                                                   llvm::Value *rhs,
+                                                   const BinOpEnum &op)
 {
     switch (op)
     {
@@ -237,9 +248,9 @@ void IRGenerator::Visitor::create_signed_binop(llvm::Value *lhs,
     }
 }
 
-void IRGenerator::Visitor::create_double_binop(llvm::Value *lhs,
-                                               llvm::Value *rhs,
-                                               const BinOpEnum &op)
+void CompiledProgram::Visitor::create_double_binop(llvm::Value *lhs,
+                                                   llvm::Value *rhs,
+                                                   const BinOpEnum &op)
 {
     switch (op)
     {
@@ -288,9 +299,9 @@ void IRGenerator::Visitor::create_double_binop(llvm::Value *lhs,
     }
 }
 
-void IRGenerator::Visitor::create_string_binop(llvm::Value *lhs,
-                                               llvm::Value *rhs,
-                                               const BinOpEnum &op)
+void CompiledProgram::Visitor::create_string_binop(llvm::Value *lhs,
+                                                   llvm::Value *rhs,
+                                                   const BinOpEnum &op)
 {
     // TODO
     switch (op)
@@ -310,7 +321,7 @@ void IRGenerator::Visitor::create_string_binop(llvm::Value *lhs,
     }
 }
 
-void IRGenerator::Visitor::visit(const BinaryExpr &node)
+void CompiledProgram::Visitor::visit(const BinaryExpr &node)
 {
     this->visit(*node.lhs);
     auto lhs = this->last_value;
@@ -331,11 +342,11 @@ void IRGenerator::Visitor::visit(const BinaryExpr &node)
         this->create_double_binop(lhs, rhs, node.op);
 }
 
-void IRGenerator::Visitor::visit(const UnaryExpr &node)
+void CompiledProgram::Visitor::visit(const UnaryExpr &node)
 {
 }
 
-void IRGenerator::Visitor::visit(const CallExpr &node)
+void CompiledProgram::Visitor::visit(const CallExpr &node)
 {
     this->visit(*node.callable);
     auto callable = this->last_value;
@@ -349,7 +360,7 @@ void IRGenerator::Visitor::visit(const CallExpr &node)
         this->builder->CreateCall(llvm::cast<llvm::Function>(callable), args);
 }
 
-void IRGenerator::Visitor::visit(const IndexExpr &node)
+void CompiledProgram::Visitor::visit(const IndexExpr &node)
 {
     this->visit(*node.expr);
     auto expr = this->last_value;
@@ -362,7 +373,7 @@ void IRGenerator::Visitor::visit(const IndexExpr &node)
         this->builder->getInt32Ty());
 }
 
-void IRGenerator::Visitor::visit(const CastExpr &node)
+void CompiledProgram::Visitor::visit(const CastExpr &node)
 {
     this->visit(*node.expr);
     auto value = this->last_value;
@@ -432,7 +443,7 @@ void IRGenerator::Visitor::visit(const CastExpr &node)
     }
 }
 
-void IRGenerator::Visitor::visit(const Expression &node)
+void CompiledProgram::Visitor::visit(const Expression &node)
 {
     std::visit(
         overloaded{
@@ -476,7 +487,7 @@ void IRGenerator::Visitor::visit(const Expression &node)
         node);
 }
 
-void IRGenerator::Visitor::visit_block(const Block &node)
+void CompiledProgram::Visitor::visit_block(const Block &node)
 {
     this->enter_scope();
     for (const auto &stmt : node.statements)
@@ -486,7 +497,7 @@ void IRGenerator::Visitor::visit_block(const Block &node)
     this->leave_scope();
 }
 
-void IRGenerator::Visitor::visit(const IfStmt &node)
+void CompiledProgram::Visitor::visit(const IfStmt &node)
 {
     auto condition = llvm::BasicBlock::Create(
         *this->context, "if_condition_expr", this->current_function);
@@ -522,7 +533,7 @@ void IRGenerator::Visitor::visit(const IfStmt &node)
     this->builder->SetInsertPoint(exit);
 }
 
-void IRGenerator::Visitor::visit(const WhileStmt &node)
+void CompiledProgram::Visitor::visit(const WhileStmt &node)
 {
     auto condition = llvm::BasicBlock::Create(
         *this->context, "while_condition_expr", this->current_function);
@@ -549,7 +560,7 @@ void IRGenerator::Visitor::visit(const WhileStmt &node)
     this->loop_exit = previous_exit;
 }
 
-void IRGenerator::Visitor::visit(const ReturnStmt &node)
+void CompiledProgram::Visitor::visit(const ReturnStmt &node)
 {
     if (node.expr)
     {
@@ -560,7 +571,7 @@ void IRGenerator::Visitor::visit(const ReturnStmt &node)
         this->builder->CreateRetVoid();
 }
 
-void IRGenerator::Visitor::visit(const MatchStmt &node)
+void CompiledProgram::Visitor::visit(const MatchStmt &node)
 {
     auto exit = llvm::BasicBlock::Create(*this->context, "match_exit",
                                          this->current_function);
@@ -597,7 +608,7 @@ void IRGenerator::Visitor::visit(const MatchStmt &node)
     this->is_exhaustive = previous_is_exhaustive;
 }
 
-void IRGenerator::Visitor::visit(const AssignStmt &node)
+void CompiledProgram::Visitor::visit(const AssignStmt &node)
 {
     this->visit(*node.lhs);
     auto ptr = this->last_value;
@@ -606,7 +617,7 @@ void IRGenerator::Visitor::visit(const AssignStmt &node)
     this->builder->CreateStore(value, ptr);
 }
 
-void IRGenerator::Visitor::visit(const VarDeclStmt &node)
+void CompiledProgram::Visitor::visit(const VarDeclStmt &node)
 {
     this->visit(*node.initial_value);
     auto value = this->last_value;
@@ -618,13 +629,20 @@ void IRGenerator::Visitor::visit(const VarDeclStmt &node)
     this->variables.back().insert({node.name, value});
 }
 
-void IRGenerator::Visitor::visit(const FuncDefStmt &node)
+void CompiledProgram::Visitor::declare_func(const FuncDef &node)
 {
     auto type = this->get_fn_type(*node.get_type());
     auto func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
                                        "", *this->module);
     func->setCallingConv(llvm::CallingConv::C);
     func->arg_begin();
+
+    this->functions.insert({node.name, func});
+}
+
+void CompiledProgram::Visitor::visit(const FuncDef &node)
+{
+    auto func = this->functions.at(node.name);
 
     auto entry = llvm::BasicBlock::Create(*this->context, "fn_entry", func);
     this->builder->SetInsertPoint(entry);
@@ -637,12 +655,11 @@ void IRGenerator::Visitor::visit(const FuncDefStmt &node)
     }
     this->current_function = func;
     this->visit_block(*node.block);
-    this->leave_scope();
 
-    this->functions.insert({node.name, func});
+    this->leave_scope();
 }
 
-void IRGenerator::Visitor::visit(const ExternStmt &node)
+void CompiledProgram::Visitor::visit(const ExternDef &node)
 {
     auto type = this->get_fn_type(*node.get_type());
     auto func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
@@ -653,7 +670,7 @@ void IRGenerator::Visitor::visit(const ExternStmt &node)
     this->functions.insert({node.name, func});
 }
 
-void IRGenerator::Visitor::visit(const Statement &node)
+void CompiledProgram::Visitor::visit(const Statement &node)
 {
     std::visit(
         overloaded{[this](const Block &node) { this->visit_block(node); },
@@ -669,13 +686,11 @@ void IRGenerator::Visitor::visit(const Statement &node)
                    [this](const MatchStmt &node) { this->visit(node); },
                    [this](const AssignStmt &node) { this->visit(node); },
                    [this](const ExprStmt &node) { this->visit(*node.expr); },
-                   [this](const VarDeclStmt &node) { this->visit(node); },
-                   [this](const FuncDefStmt &node) { this->visit(node); },
-                   [this](const ExternStmt &node) { this->visit(node); }},
+                   [this](const VarDeclStmt &node) { this->visit(node); }},
         node);
 }
 
-llvm::Value *IRGenerator::Visitor::create_literal_condition_value(
+llvm::Value *CompiledProgram::Visitor::create_literal_condition_value(
     const Expression &expr)
 {
     this->visit(expr);
@@ -690,7 +705,7 @@ llvm::Value *IRGenerator::Visitor::create_literal_condition_value(
         return this->builder->CreateFCmpOEQ(this->matched_value, value);
 }
 
-void IRGenerator::Visitor::visit(const LiteralArm &node)
+void CompiledProgram::Visitor::visit(const LiteralArm &node)
 {
     auto stmt = llvm::BasicBlock::Create(*this->context, "match_stmt",
                                          this->current_function);
@@ -710,7 +725,7 @@ void IRGenerator::Visitor::visit(const LiteralArm &node)
     this->match_condition = new_condition;
 }
 
-void IRGenerator::Visitor::visit(const GuardArm &node)
+void CompiledProgram::Visitor::visit(const GuardArm &node)
 {
     auto stmt = llvm::BasicBlock::Create(*this->context, "match_stmt",
                                          this->current_function);
@@ -726,7 +741,7 @@ void IRGenerator::Visitor::visit(const GuardArm &node)
     this->match_condition = new_condition;
 }
 
-void IRGenerator::Visitor::visit(const ElseArm &node)
+void CompiledProgram::Visitor::visit(const ElseArm &node)
 {
     auto stmt = llvm::BasicBlock::Create(*this->context, "match_stmt",
                                          this->current_function);
@@ -737,11 +752,50 @@ void IRGenerator::Visitor::visit(const ElseArm &node)
     this->is_exhaustive = true;
 }
 
-void IRGenerator::Visitor::visit(const MatchArm &node)
+void CompiledProgram::Visitor::visit(const MatchArm &node)
 {
     std::visit(
         overloaded{[this](const LiteralArm &node) { this->visit(node); },
                    [this](const GuardArm &node) { this->visit(node); },
                    [this](const ElseArm &node) { this->visit(node); }},
         node);
+}
+
+void CompiledProgram::Visitor::create_entrypoint(llvm::Function *main_func)
+{
+    // auto type = llvm::FunctionType::get(this->builder->getInt32Ty(), false);
+    auto type = main_func->getFunctionType();
+    auto func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
+                                       "main", *this->module);
+    // this->entrypoint_function = func;
+    auto entrypoint =
+        llvm::BasicBlock::Create(*this->context, "__main__", func);
+    this->builder->SetInsertPoint(entrypoint);
+    this->builder->CreateRet(this->builder->CreateCall(main_func));
+}
+
+void CompiledProgram::Visitor::visit(const Program &node)
+{
+    for (const auto &func : node.functions)
+        this->declare_func(*func);
+    for (const auto &ext : node.externs)
+        this->visit(*ext);
+    for (const auto &var : node.globals)
+        this->visit(*var);
+    for (const auto &func : node.functions)
+        this->visit(*func);
+
+    auto iter = this->functions.find(L"main");
+    if (iter != this->functions.end())
+        this->create_entrypoint(iter->second);
+}
+
+void CompiledProgram::output_bytecode(llvm::raw_ostream &output)
+{
+    llvm::WriteBitcodeToFile(*this->visitor.module, output);
+}
+
+void CompiledProgram::output_ir(llvm::raw_ostream &output)
+{
+    output << *this->visitor.module;
 }

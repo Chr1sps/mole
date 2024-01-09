@@ -114,8 +114,8 @@ bool Parser::assert_current_and_eat(TokenType type,
 ProgramPtr Parser::parse()
 {
     std::vector<std::unique_ptr<VarDeclStmt>> globals;
-    std::vector<std::unique_ptr<FuncDefStmt>> functions;
-    std::vector<std::unique_ptr<ExternStmt>> externs;
+    std::vector<std::unique_ptr<FuncDef>> functions;
+    std::vector<std::unique_ptr<ExternDef>> externs;
     try
     {
 
@@ -148,7 +148,7 @@ ProgramPtr Parser::parse()
 }
 
 // EXTERN_STMT = KW_EXTERN, FUNC_NAME_AND_PARAMS, SEMICOLON;
-std::unique_ptr<ExternStmt> Parser::parse_extern_stmt()
+std::unique_ptr<ExternDef> Parser::parse_extern_stmt()
 {
     if (this->current_token != TokenType::KW_EXTERN)
         return nullptr;
@@ -168,7 +168,7 @@ std::unique_ptr<ExternStmt> Parser::parse_extern_stmt()
             TokenType::SEMICOLON, L"not a semicolon in an extern declaration"))
         return nullptr;
 
-    return std::make_unique<ExternStmt>(name, std::move(params),
+    return std::make_unique<ExternDef>(name, std::move(params),
                                         std::move(return_type), position);
 }
 
@@ -244,7 +244,7 @@ ExprPtr Parser::parse_initial_value()
 }
 
 // FUNC_DEF_STMT = KW_FN, [KW_CONST], FUNC_NAME_AND_PARAMS, Block;
-std::unique_ptr<FuncDefStmt> Parser::parse_func_def_stmt()
+std::unique_ptr<FuncDef> Parser::parse_func_def_stmt()
 {
     if (this->current_token != TokenType::KW_FN)
         return nullptr;
@@ -273,7 +273,7 @@ std::unique_ptr<FuncDefStmt> Parser::parse_func_def_stmt()
         this->report_error(L"expected a block in a function definition");
         return nullptr;
     }
-    return std::make_unique<FuncDefStmt>(name, std::move(params),
+    return std::make_unique<FuncDef>(name, std::move(params),
                                          std::move(return_type),
                                          std::move(block), is_const, position);
 }

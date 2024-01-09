@@ -39,11 +39,11 @@ class JsonSerializer
         void visit(const ReturnStmt &node);
         void visit(const BreakStmt &node);
         void visit(const ContinueStmt &node);
-        void visit(const FuncDefStmt &node);
+        void visit(const FuncDef &node);
         void visit(const AssignStmt &node);
         void visit(const ExprStmt &node);
         void visit(const VarDeclStmt &node);
-        void visit(const ExternStmt &node);
+        void visit(const ExternDef &node);
 
         void visit(const LiteralArm &node);
         void visit(const GuardArm &node);

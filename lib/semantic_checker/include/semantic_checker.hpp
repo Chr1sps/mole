@@ -61,9 +61,9 @@ class SemanticChecker
         void enter_scope();
         void leave_scope();
 
-        void check_function_params(const FuncDefStmt &node);
-        void check_function_params(const ExternStmt &node);
-        void check_main_function(const FuncDefStmt &node);
+        void check_function_params(const FuncDef &node);
+        void check_function_params(const ExternDef &node);
+        void check_main_function(const FuncDef &node);
 
         bool check_var_value_and_type(const VarDeclStmt &node);
 
@@ -71,10 +71,10 @@ class SemanticChecker
         std::optional<FunctionType> find_function(
             const std::wstring &name) const;
 
-        void register_local_function(const FuncDefStmt &node);
-        void register_local_function(const ExternStmt &node);
+        void register_local_function(const FuncDef &node);
+        void register_local_function(const ExternDef &node);
 
-        void register_function_params(const FuncDefStmt &node);
+        void register_function_params(const FuncDef &node);
 
         void check_condition_expr(const Expression &condition);
 
@@ -97,8 +97,8 @@ class SemanticChecker
         void leave_function_scope();
         bool is_in_const_scope() const;
 
-        void visit(const FuncDefStmt &node);
-        void visit(const ExternStmt &node);
+        void visit(const FuncDef &node);
+        void visit(const ExternDef &node);
 
         void check_name_shadowing(const std::wstring &name,
                                   const Position &pos);
@@ -107,8 +107,8 @@ class SemanticChecker
 
         void visit(const VarDeclStmt &node);
 
-        void visit_top_level(const FuncDefStmt &node);
-        void register_top_level(const FuncDefStmt &node);
+        void visit_top_level(const FuncDef &node);
+        void register_top_level(const FuncDef &node);
 
         void visit(const LiteralArm &node);
         void visit(const GuardArm &node);

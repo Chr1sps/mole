@@ -335,7 +335,7 @@ void SemanticChecker::Visitor::leave_scope()
     this->variable_map.pop_back();
 }
 
-void SemanticChecker::Visitor::check_function_params(const FuncDefStmt &node)
+void SemanticChecker::Visitor::check_function_params(const FuncDef &node)
 {
     for (auto &param : node.params)
     {
@@ -350,7 +350,7 @@ void SemanticChecker::Visitor::check_function_params(const FuncDefStmt &node)
     }
 }
 
-void SemanticChecker::Visitor::check_function_params(const ExternStmt &node)
+void SemanticChecker::Visitor::check_function_params(const ExternDef &node)
 {
     for (auto &param : node.params)
     {
@@ -384,7 +384,7 @@ void SemanticChecker::Visitor::check_name_shadowing(const std::wstring &name,
     }
 }
 
-void SemanticChecker::Visitor::check_main_function(const FuncDefStmt &node)
+void SemanticChecker::Visitor::check_main_function(const FuncDef &node)
 {
     if (!(!node.return_type ||
           *node.return_type ==
@@ -477,14 +477,14 @@ void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt &node)
     this->variable_map.back().emplace(std::make_pair(node.name, new_data));
 }
 
-void SemanticChecker::Visitor::register_local_function(const FuncDefStmt &node)
+void SemanticChecker::Visitor::register_local_function(const FuncDef &node)
 {
     auto fn_type = node.get_type();
     this->function_map.back().emplace(
         std::make_pair(node.name, std::move(*fn_type)));
 }
 
-void SemanticChecker::Visitor::register_local_function(const ExternStmt &node)
+void SemanticChecker::Visitor::register_local_function(const ExternDef &node)
 {
     auto fn_type = node.get_type();
     this->function_map.back().emplace(
@@ -492,7 +492,7 @@ void SemanticChecker::Visitor::register_local_function(const ExternStmt &node)
 }
 
 void SemanticChecker::Visitor::register_function_params(
-    const FuncDefStmt &node)
+    const FuncDef &node)
 {
     for (auto &param : node.params)
     {
@@ -1039,43 +1039,6 @@ bool SemanticChecker::Visitor::is_in_const_scope() const
     return iter != this->const_scopes.cend();
 }
 
-void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
-{
-    this->check_name_shadowing(node.name, node.position);
-    if (node.name == L"main")
-    {
-        this->check_main_function(node);
-    }
-
-    this->check_function_params(node);
-
-    this->enter_function_scope(node.is_const);
-    this->register_function_params(node);
-
-    auto previous_return_type = std::exchange(
-        this->expected_return_type, clone_type_ptr(node.return_type));
-
-    for (const auto &stmt : node.block->statements)
-    {
-        this->visit(*stmt);
-    }
-
-    if (!this->expected_return_type)
-        this->is_return_covered = true;
-
-    this->leave_function_scope();
-    if (!this->is_return_covered)
-    {
-        this->report_error(
-            node.position,
-            L"function doesn't return in each control flow path");
-    }
-
-    this->expected_return_type = std::move(previous_return_type);
-
-    this->register_local_function(node);
-}
-
 void SemanticChecker::Visitor::visit(const ExprStmt &node)
 {
     this->visit(*node.expr);
@@ -1108,7 +1071,7 @@ void SemanticChecker::Visitor::visit(const VarDeclStmt &node)
         this->register_local_variable(node);
 }
 
-void SemanticChecker::Visitor::visit(const ExternStmt &node)
+void SemanticChecker::Visitor::visit(const ExternDef &node)
 {
     this->check_name_shadowing(node.name, node.position);
     if (node.name == L"main")
@@ -1229,12 +1192,9 @@ void SemanticChecker::Visitor::visit(const Statement &node)
                         L"continue statement can only be used in a loop");
                 }
             },
-            [this](const FuncDefStmt &node) { this->visit(node); },
             [this](const AssignStmt &node) { this->visit(node); },
             [this](const ExprStmt &node) { this->visit(node); },
-            [this](const VarDeclStmt &node) { this->visit(node); },
-            [this](const ExternStmt &node) { this->visit(node); },
-            [](const auto &) {}},
+            [this](const VarDeclStmt &node) { this->visit(node); }},
         node);
 }
 
@@ -1283,7 +1243,7 @@ void SemanticChecker::Visitor::visit(const Parameter &node)
     this->last_type = clone_type_ptr(node.type);
 }
 
-void SemanticChecker::Visitor::register_top_level(const FuncDefStmt &node)
+void SemanticChecker::Visitor::register_top_level(const FuncDef &node)
 {
     this->check_name_shadowing(node.name, node.position);
     if (node.name == L"main")
@@ -1296,7 +1256,7 @@ void SemanticChecker::Visitor::register_top_level(const FuncDefStmt &node)
     this->register_local_function(node);
 }
 
-void SemanticChecker::Visitor::visit_top_level(const FuncDefStmt &node)
+void SemanticChecker::Visitor::visit_top_level(const FuncDef &node)
 {
     this->enter_function_scope(node.is_const);
     this->register_function_params(node);
