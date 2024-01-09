@@ -19,7 +19,7 @@ class SemanticChecker
                     public Reporter
     {
         static const std::unordered_multimap<TypeEnum, TypeEnum> cast_map;
-        TypePtr last_type, expected_return_type;
+        TypePtr last_type, expected_return_type, matched_type;
         bool is_in_loop, is_exhaustive, is_return_covered, is_local;
         RefSpecifier ref_spec;
 
@@ -107,7 +107,6 @@ class SemanticChecker
         void visit(const AssignStmt &node);
         void visit(const ExprStmt &node);
 
-        TypePtr set_expected_return_type(TypePtr type);
         void enter_function_scope(const bool &is_const);
         void leave_function_scope();
         bool is_in_const_scope() const;

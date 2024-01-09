@@ -960,9 +960,9 @@ void SemanticChecker::Visitor::visit(const IfStmt &node)
 void SemanticChecker::Visitor::visit(const WhileStmt &node)
 {
     this->check_condition_expr(*node.condition_expr);
-    this->is_in_loop = true;
+    auto previous_is_in_loop = std::exchange(this->is_in_loop, true);
     this->visit(*node.statement);
-    this->is_in_loop = false;
+    this->is_in_loop = previous_is_in_loop;
     this->is_return_covered = false;
 }
 
@@ -977,7 +977,9 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
                            L"cannot match a value of type `",
                            get_type_string(this->last_type), "`");
     }
-    this->is_exhaustive = false;
+    auto previous_matched_type =
+        std::exchange(this->matched_type, clone_type_ptr(this->last_type));
+    auto previous_is_exhaustive = std::exchange(this->is_exhaustive, false);
     for (const auto &arm : node.match_arms)
     {
         if (this->is_exhaustive)
@@ -992,6 +994,8 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
         this->report_warning(node.position,
                              L"match statement is not exhaustive");
     }
+    this->matched_type = std::move(previous_matched_type);
+    this->is_exhaustive = previous_is_exhaustive;
 }
 
 void SemanticChecker::Visitor::visit(const ReturnStmt &node)
@@ -1035,11 +1039,6 @@ bool SemanticChecker::Visitor::is_in_const_scope() const
     return iter != this->const_scopes.cend();
 }
 
-TypePtr SemanticChecker::Visitor::set_expected_return_type(TypePtr type)
-{
-    return std::exchange(this->expected_return_type, clone_type_ptr(type));
-}
-
 void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
 {
     this->check_name_shadowing(node.name, node.position);
@@ -1053,8 +1052,8 @@ void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
     this->enter_function_scope(node.is_const);
     this->register_function_params(node);
 
-    auto previous_return_type =
-        this->set_expected_return_type(clone_type_ptr(node.return_type));
+    auto previous_return_type = std::exchange(
+        this->expected_return_type, clone_type_ptr(node.return_type));
 
     for (const auto &stmt : node.block->statements)
     {
@@ -1072,7 +1071,7 @@ void SemanticChecker::Visitor::visit(const FuncDefStmt &node)
             L"function doesn't return in each control flow path");
     }
 
-    this->set_expected_return_type(std::move(previous_return_type));
+    this->expected_return_type = std::move(previous_return_type);
 
     this->register_local_function(node);
 }
@@ -1246,13 +1245,14 @@ void SemanticChecker::Visitor::visit(const LiteralArm &node)
         this->visit(*literal);
         if (!this->last_type)
             continue;
-        // if (!this->is_const)
-        // {
-        //     this->report_error(
-        //         get_position(*literal),
-        //         L"only values that can evaluate at compile time are allowed
-        //         " L"in literal match arm expressions");
-        // }
+        if (*this->last_type != *this->matched_type)
+        {
+            this->report_error(
+                get_position(*literal), L"literal of type `",
+                get_type_string(*this->last_type),
+                L"` cannot be matched against an expression of type `",
+                get_type_string(*this->matched_type), L"`");
+        }
     }
     this->visit(*node.block);
 }
@@ -1301,7 +1301,7 @@ void SemanticChecker::Visitor::visit_top_level(const FuncDefStmt &node)
     this->enter_function_scope(node.is_const);
     this->register_function_params(node);
 
-    this->set_expected_return_type(clone_type_ptr(node.return_type));
+    this->expected_return_type = clone_type_ptr(node.return_type);
 
     for (const auto &stmt : node.block->statements)
     {
