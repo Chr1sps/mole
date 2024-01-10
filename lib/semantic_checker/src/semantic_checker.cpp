@@ -49,9 +49,6 @@ const std::unordered_map<
              {TypeEnum::U32, {{TypeEnum::U32, TypeEnum::U32}}},
              {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::I32}}},
              {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::F64}}},
-             {TypeEnum::STR,
-              {{TypeEnum::STR, TypeEnum::STR},
-               {TypeEnum::CHAR, TypeEnum::STR}}},
          }},
         {BinOpEnum::SUB,
          {
@@ -89,7 +86,6 @@ const std::unordered_map<
              {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::BOOL}}},
              {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::BOOL}}},
              {TypeEnum::CHAR, {{TypeEnum::CHAR, TypeEnum::BOOL}}},
-             {TypeEnum::STR, {{TypeEnum::STR, TypeEnum::BOOL}}},
          }},
         {BinOpEnum::NEQ,
          {
@@ -98,7 +94,6 @@ const std::unordered_map<
              {TypeEnum::I32, {{TypeEnum::I32, TypeEnum::BOOL}}},
              {TypeEnum::F64, {{TypeEnum::F64, TypeEnum::BOOL}}},
              {TypeEnum::CHAR, {{TypeEnum::CHAR, TypeEnum::BOOL}}},
-             {TypeEnum::STR, {{TypeEnum::STR, TypeEnum::BOOL}}},
          }},
         {BinOpEnum::GT,
          {
@@ -180,8 +175,6 @@ const std::unordered_map<AssignType,
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::I32},
              {TypeEnum::F64, TypeEnum::F64},
-             {TypeEnum::STR, TypeEnum::CHAR},
-             {TypeEnum::STR, TypeEnum::STR},
          }},
         {AssignType::MINUS,
          {

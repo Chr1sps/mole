@@ -226,8 +226,7 @@ TEST_CASE("Binary expressions.")
         CHECK_VALID(FN_WRAP(L"let var: u32 = 1+1;"));
         CHECK_VALID(FN_WRAP(L"let var: i32 = (-1)+(-1);"));
         CHECK_VALID(FN_WRAP(L"let var: f64 = 1.0+1.0;"));
-        CHECK_VALID(FN_WRAP(L"let var: &str = \"a\"+\"b\";"));
-        CHECK_VALID(FN_WRAP(L"let var: &str = \"a\"+\'b\';"));
+        CHECK_INVALID(FN_WRAP(L"\"a\"+\"b\";"));
         CHECK_INVALID(FN_WRAP(L"true+false;"));
         CHECK_INVALID(FN_WRAP(L"1+(-1);"));
         CHECK_INVALID(FN_WRAP(L"1+1.0;"));
@@ -356,8 +355,8 @@ TEST_CASE("Binary expressions.")
         }
         SECTION("Strings.")
         {
-            CHECK_VALID(FN_WRAP(L"let var: bool = \"a\"==\"a\";"));
-            CHECK_VALID(FN_WRAP(L"let var: bool = \"a\"!=\"a\";"));
+            CHECK_INVALID(FN_WRAP(L"let var: bool = \"a\"==\"a\";"));
+            CHECK_INVALID(FN_WRAP(L"let var: bool = \"a\"!=\"a\";"));
             CHECK_INVALID(FN_WRAP(L"\"a\">=\"a\";"));
             CHECK_INVALID(FN_WRAP(L"\"a\"<=\"a\";"));
             CHECK_INVALID(FN_WRAP(L"\"a\">\"a\";"));
@@ -625,8 +624,7 @@ TEST_CASE("Assignments.")
             CHECK_VALID(FN_WRAP(L"let mut var = 1; var += 1;"));
             CHECK_VALID(FN_WRAP(L"let mut var = (-1); var += (-1);"));
             CHECK_VALID(FN_WRAP(L"let mut var = 1.0; var += 1.0;"));
-            CHECK_VALID(FN_WRAP(L"let mut var = \"a\"; var += \"a\";"));
-            CHECK_VALID(FN_WRAP(L"let mut var = \"a\"; var += 'a';"));
+            CHECK_INVALID(FN_WRAP(L"let mut var = \"a\"; var += \"a\";"));
         }
         SECTION("Minus.")
         {
