@@ -6,7 +6,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
-#include <fstream>
+#include <iostream>
 #include <ranges>
 
 CompiledProgram::Visitor::Visitor(const Program &program)
@@ -20,8 +20,9 @@ CompiledProgram::Visitor::Visitor(const Program &program)
     if (!target)
         throw CompilationException(logs.c_str());
     llvm::TargetOptions target_options;
-    auto target_machine = target->createTargetMachine(
-        target_triple, "generic", "", target_options, llvm::Reloc::PIC_);
+    std::unique_ptr<llvm::TargetMachine> target_machine(
+        target->createTargetMachine(target_triple, "generic", "",
+                                    target_options, llvm::Reloc::PIC_));
     auto data_layout = target_machine->createDataLayout();
 
     this->module = std::make_unique<llvm::Module>("mole", *this->context);
@@ -34,7 +35,13 @@ CompiledProgram::Visitor::Visitor(const Program &program)
     auto out = llvm::raw_string_ostream(logs);
 
     if (llvm::verifyModule(*this->module, &out))
-        throw CompilationException(logs.c_str());
+    {
+        std::string ir;
+        auto ir_stream = llvm::raw_string_ostream(ir);
+        ir_stream << *this->module;
+
+        throw CompilationException(ir + "\n" + logs);
+    }
 }
 
 CompiledProgram::CompiledProgram(const Program &program) : visitor(program)
@@ -127,10 +134,24 @@ llvm::Value *CompiledProgram::Visitor::find_variable(
     {
         auto found = scope.find(name);
         if (found != scope.cend())
-            return found->second;
+        {
+            auto ptr = found->second;
+
+            auto alloca = llvm::cast<llvm::AllocaInst>(ptr);
+            return this->builder->CreateLoad(alloca->getAllocatedType(), ptr);
+        }
     }
 
-    return this->globals.find(name)->second;
+    auto found = this->globals.find(name);
+    if (found != this->globals.cend())
+    {
+        auto ptr = found->second;
+        return this->builder->CreateLoad(ptr->getType(), ptr);
+
+        auto alloca = llvm::cast<llvm::AllocaInst>(ptr);
+        return this->builder->CreateLoad(alloca->getAllocatedType(), ptr);
+    }
+    return this->functions.find(name)->second;
 }
 
 void CompiledProgram::Visitor::create_unsigned_binop(llvm::Value *lhs,
@@ -483,6 +504,9 @@ void CompiledProgram::Visitor::visit(const Expression &node)
         overloaded{
             [this](const VariableExpr &node) {
                 this->last_value = this->find_variable(node.name);
+                // auto ptr = this->find_variable(node.name);
+                // this->last_value = llvm::cast<llvm::Value>(
+                //     this->builder->CreateLoad(ptr->getType(), ptr));
             },
             [this](const U32Expr &node) {
                 this->last_value = llvm::ConstantInt::get(
@@ -528,12 +552,15 @@ void CompiledProgram::Visitor::visit(const Expression &node)
 
 void CompiledProgram::Visitor::visit_block(const Block &node)
 {
+    auto is_return_covered = false;
     this->enter_scope();
     for (const auto &stmt : node.statements)
     {
         this->visit(*stmt);
+        is_return_covered |= this->is_return_covered;
     }
     this->leave_scope();
+    this->is_return_covered = is_return_covered;
 }
 
 void CompiledProgram::Visitor::visit(const IfStmt &node)
@@ -561,6 +588,7 @@ void CompiledProgram::Visitor::visit(const IfStmt &node)
 
     this->builder->SetInsertPoint(then_entry);
     this->visit(*node.then_block);
+    auto is_then_covered = this->is_return_covered;
     this->builder->CreateBr(exit);
 
     if (node.else_block)
@@ -568,6 +596,11 @@ void CompiledProgram::Visitor::visit(const IfStmt &node)
         this->builder->SetInsertPoint(else_entry);
         this->visit(*node.else_block);
         this->builder->CreateBr(exit);
+        this->is_return_covered &= is_then_covered;
+    }
+    else
+    {
+        this->is_return_covered = false;
     }
     this->builder->SetInsertPoint(exit);
 }
@@ -597,6 +630,7 @@ void CompiledProgram::Visitor::visit(const WhileStmt &node)
 
     this->loop_entry = previous_entry;
     this->loop_exit = previous_exit;
+    this->is_return_covered = false;
 }
 
 void CompiledProgram::Visitor::visit(const ReturnStmt &node)
@@ -608,6 +642,7 @@ void CompiledProgram::Visitor::visit(const ReturnStmt &node)
     }
     else
         this->builder->CreateRetVoid();
+    this->is_return_covered = true;
 }
 
 void CompiledProgram::Visitor::visit(const MatchStmt &node)
@@ -628,12 +663,15 @@ void CompiledProgram::Visitor::visit(const MatchStmt &node)
     this->builder->CreateBr(condition);
     this->builder->SetInsertPoint(condition);
 
+    auto is_return_covered = true;
     for (const auto &arm : node.match_arms)
     {
         this->visit(*arm);
+        is_return_covered &= this->is_return_covered;
         if (this->is_exhaustive)
             break;
     }
+    this->is_return_covered = is_return_covered;
 
     if (!this->is_exhaustive)
     {
@@ -654,6 +692,20 @@ void CompiledProgram::Visitor::visit(const AssignStmt &node)
     this->visit(*node.rhs);
     auto value = this->last_value;
     this->builder->CreateStore(value, ptr);
+    this->is_return_covered = false;
+}
+
+void CompiledProgram::Visitor::declare_global(const VarDeclStmt &node)
+{
+    this->visit(*node.initial_value);
+    auto value = this->last_value;
+    auto type =
+        (node.type) ? (this->get_var_type(*node.type)) : (this->last_type);
+
+    auto ptr = new llvm::GlobalVariable(*this->module, type, !node.is_mut,
+                                        llvm::GlobalValue::CommonLinkage,
+                                        llvm::cast<llvm::Constant>(value));
+    this->globals.insert({node.name, ptr});
 }
 
 void CompiledProgram::Visitor::visit(const VarDeclStmt &node)
@@ -665,14 +717,16 @@ void CompiledProgram::Visitor::visit(const VarDeclStmt &node)
 
     auto ptr = this->builder->CreateAlloca(type);
     this->builder->CreateStore(value, ptr);
-    this->variables.back().insert({node.name, value});
+    this->variables.back().insert({node.name, ptr});
+    this->is_return_covered = false;
 }
 
 void CompiledProgram::Visitor::declare_func(const FuncDef &node)
 {
     auto type = this->get_fn_type(*node.get_type());
+    auto name = std::string(node.name.cbegin(), node.name.cend());
     auto func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
-                                       "", *this->module);
+                                       name, *this->module);
     func->setCallingConv(llvm::CallingConv::C);
     func->arg_begin();
 
@@ -694,6 +748,8 @@ void CompiledProgram::Visitor::visit(const FuncDef &node)
     }
     this->current_function = func;
     this->visit_block(*node.block);
+    if (!this->is_return_covered && !node.return_type)
+        this->builder->CreateRetVoid();
 
     this->leave_scope();
 }
@@ -701,10 +757,10 @@ void CompiledProgram::Visitor::visit(const FuncDef &node)
 void CompiledProgram::Visitor::visit(const ExternDef &node)
 {
     auto type = this->get_fn_type(*node.get_type());
-    auto func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
-                                       "", *this->module);
-    func->setCallingConv(llvm::CallingConv::C);
     auto name = std::string(node.name.cbegin(), node.name.cend());
+    auto func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
+                                       name, *this->module);
+    func->setCallingConv(llvm::CallingConv::C);
     func->setName(name);
     this->functions.insert({node.name, func});
 }
@@ -717,9 +773,11 @@ void CompiledProgram::Visitor::visit(const Statement &node)
                    [this](const ReturnStmt &node) { this->visit(node); },
                    [this](const BreakStmt &node) {
                        this->builder->CreateBr(this->loop_exit);
+                       this->is_return_covered = false;
                    },
                    [this](const ContinueStmt &node) {
                        this->builder->CreateBr(this->loop_entry);
+                       this->is_return_covered = false;
                    },
                    [this](const IfStmt &node) { this->visit(node); },
                    [this](const MatchStmt &node) { this->visit(node); },
@@ -751,7 +809,8 @@ void CompiledProgram::Visitor::visit(const LiteralArm &node)
 
     this->builder->SetInsertPoint(stmt);
     this->visit(*node.block);
-    this->builder->CreateBr(this->match_exit);
+    if (!this->is_return_covered)
+        this->builder->CreateBr(this->match_exit);
     llvm::BasicBlock *new_condition;
     for (const auto &literal : node.literals)
     {
@@ -775,7 +834,8 @@ void CompiledProgram::Visitor::visit(const GuardArm &node)
     this->builder->CreateCondBr(condition_value, stmt, new_condition);
     this->builder->SetInsertPoint(stmt);
     this->visit(*node.block);
-    this->builder->CreateBr(this->match_exit);
+    if (!this->is_return_covered)
+        this->builder->CreateBr(this->match_exit);
     this->builder->SetInsertPoint(new_condition);
     this->match_condition = new_condition;
 }
@@ -787,7 +847,8 @@ void CompiledProgram::Visitor::visit(const ElseArm &node)
     this->builder->CreateBr(stmt);
     this->builder->SetInsertPoint(stmt);
     this->visit(*node.block);
-    this->builder->CreateBr(this->match_exit);
+    if (!this->is_return_covered)
+        this->builder->CreateBr(this->match_exit);
     this->is_exhaustive = true;
 }
 
@@ -800,19 +861,6 @@ void CompiledProgram::Visitor::visit(const MatchArm &node)
         node);
 }
 
-void CompiledProgram::Visitor::create_entrypoint(llvm::Function *main_func)
-{
-    // auto type = llvm::FunctionType::get(this->builder->getInt32Ty(), false);
-    auto type = main_func->getFunctionType();
-    auto func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
-                                       "main", *this->module);
-    // this->entrypoint_function = func;
-    auto entrypoint =
-        llvm::BasicBlock::Create(*this->context, "__main__", func);
-    this->builder->SetInsertPoint(entrypoint);
-    this->builder->CreateRet(this->builder->CreateCall(main_func));
-}
-
 void CompiledProgram::Visitor::visit(const Program &node)
 {
     for (const auto &func : node.functions)
@@ -820,13 +868,13 @@ void CompiledProgram::Visitor::visit(const Program &node)
     for (const auto &ext : node.externs)
         this->visit(*ext);
     for (const auto &var : node.globals)
-        this->visit(*var);
+        this->declare_global(*var);
     for (const auto &func : node.functions)
         this->visit(*func);
 
-    auto iter = this->functions.find(L"main");
-    if (iter != this->functions.end())
-        this->create_entrypoint(iter->second);
+    // auto iter = this->functions.find(L"main");
+    // if (iter != this->functions.end())
+    //     this->create_entrypoint(iter->second);
 }
 
 void CompiledProgram::output_bytecode(llvm::raw_fd_ostream &output)

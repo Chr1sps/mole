@@ -10,6 +10,11 @@
 #include <llvm/Support/TargetSelect.h>
 #include <system_error>
 
+extern "C" uint32_t print(const wchar_t *data)
+{
+    return wprintf(L"%s", data);
+}
+
 int main(int argc, char **argv)
 {
     llvm::cl::OptionCategory mole_opts("Mole options");
@@ -48,20 +53,35 @@ int main(int argc, char **argv)
     auto locale = Locale("C.utf8");
     auto logger = ConsoleLogger();
     auto error_checker = ExecutionLogger();
-    auto lexer = Lexer::from_file(path);
+
+    LexerPtr lexer;
+    try
+    {
+        lexer = Lexer::from_file(path);
+    }
+    catch (const std::ios_base::failure &e)
+    {
+        std::cerr << e.what() << '\n';
+        return std::make_error_condition(std::errc::io_error).value();
+    }
+
     lexer->add_logger(&logger);
     lexer->add_logger(&error_checker);
+
     auto parser = Parser(std::move(lexer));
     parser.add_logger(&logger);
     parser.add_logger(&error_checker);
+
     auto semantic_checker = SemanticChecker();
     semantic_checker.add_logger(&logger);
     semantic_checker.add_logger(&error_checker);
+
     auto program = parser.parse();
     if (!error_checker)
     {
         return std::make_error_condition(std::errc::invalid_argument).value();
     }
+
     semantic_checker.check(*program);
     if (!error_checker)
     {
@@ -78,7 +98,7 @@ int main(int argc, char **argv)
             output.open(output_file.getValue());
             if (!output.good())
             {
-                std::cout << "Error while opening the output file."
+                std::cerr << "Error while opening the output file."
                           << std::endl;
                 return std::make_error_condition(std::errc::io_error).value();
             }
@@ -87,6 +107,7 @@ int main(int argc, char **argv)
         }
         else
             std::cout << result.dump(4) << std::endl;
+        std::cout.flush();
         return 0;
     }
     else
@@ -96,13 +117,39 @@ int main(int argc, char **argv)
             auto compiled = CompiledProgram(*program);
             if (dump_ir.getValue())
             {
-                compiled.output_ir(llvm::outs());
+                if (output_file.getValue() != "")
+                {
+                    std::error_code ec;
+                    auto output =
+                        llvm::raw_fd_ostream(output_file.getValue(), ec);
+                    if (ec)
+                    {
+
+                        std::cerr << "Error while opening the output file."
+                                  << std::endl;
+                        return std::make_error_condition(std::errc::io_error)
+                            .value();
+                    }
+                    compiled.output_ir(output);
+                }
+                else
+                    compiled.output_ir(llvm::outs());
             }
             else
             {
-                std::error_code code;
-                llvm::raw_fd_ostream output("./out.o", code);
-                compiled.output_bytecode(output);
+                std::error_code ec;
+                auto path = output_file.getValue();
+                if (path.empty())
+                    path = "./out.o";
+                auto output = llvm::raw_fd_ostream(output_file.getValue(), ec);
+                if (ec)
+                {
+                    std::cerr << "Error while opening the output file."
+                              << std::endl;
+                    return std::make_error_condition(std::errc::io_error)
+                        .value();
+                }
+                compiled.output_ir(output);
             }
         }
         catch (const CompilationException &e)

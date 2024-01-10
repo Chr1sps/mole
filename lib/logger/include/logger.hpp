@@ -42,7 +42,7 @@ class ConsoleLogger : public Logger
     std::wostream &out;
 
   public:
-    constexpr ConsoleLogger() : out(std::wcout)
+    constexpr ConsoleLogger() : out(std::wcerr)
     {
     }
 

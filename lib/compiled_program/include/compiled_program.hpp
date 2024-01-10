@@ -16,7 +16,7 @@ class CompiledProgram
     {
         std::unique_ptr<llvm::LLVMContext> context;
         std::unique_ptr<llvm::IRBuilder<>> builder;
-        bool is_signed, is_exhaustive;
+        bool is_signed, is_exhaustive, is_return_covered;
         llvm::Value *last_value, *matched_value;
         llvm::Function *current_function;
         llvm::BasicBlock *loop_entry, *loop_exit, *match_condition,
@@ -60,11 +60,12 @@ class CompiledProgram
         void visit(const ReturnStmt &node);
         void visit(const MatchStmt &node);
         void visit(const AssignStmt &node);
-        void visit(const VarDeclStmt &node);
-        void visit(const ExternDef &node);
 
+        void declare_global(const VarDeclStmt &node);
+        void visit(const VarDeclStmt &node);
         void declare_func(const FuncDef &node);
         void visit(const FuncDef &node);
+        void visit(const ExternDef &node);
 
         llvm::Value *create_literal_condition_value(const Expression &expr);
         void visit(const LiteralArm &node);
@@ -92,17 +93,17 @@ class CompiledProgram
 
 class CompilationException : std::runtime_error
 {
-    const char *what_str;
+    const std::string what_str;
 
   public:
-    CompilationException(const char *what_str)
+    CompilationException(const std::string &what_str)
         : std::runtime_error(what_str), what_str(what_str)
     {
     }
 
     const char *what() const noexcept override
     {
-        return this->what_str;
+        return this->what_str.c_str();
     }
 };
 #endif
