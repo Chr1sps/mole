@@ -19,7 +19,7 @@ class SemanticChecker
                     public Reporter
     {
         static const std::unordered_multimap<TypeEnum, TypeEnum> cast_map;
-        TypePtr last_type, expected_return_type, matched_type;
+        std::optional<Type> last_type, expected_return_type, matched_type;
         bool is_in_loop, is_exhaustive, is_return_covered, is_local;
         RefSpecifier ref_spec;
 
@@ -53,9 +53,14 @@ class SemanticChecker
             }
         };
 
+        struct Function
+        {
+            std::vector<Type> param_types;
+            std::optional<Type> return_type;
+        };
+
         std::vector<std::unordered_map<std::wstring, VarData>> variable_map;
-        std::vector<std::unordered_map<std::wstring, FunctionType>>
-            function_map;
+        std::vector<std::unordered_map<std::wstring, Function>> function_map;
         std::deque<bool> const_scopes;
 
         void enter_scope();
@@ -68,8 +73,7 @@ class SemanticChecker
         bool check_var_value_and_type(const VarDeclStmt &node);
 
         std::optional<VarData> find_variable(const std::wstring &name);
-        std::optional<FunctionType> find_function(
-            const std::wstring &name) const;
+        std::optional<Function> find_function(const std::wstring &name) const;
 
         void register_local_function(const FuncDef &node);
         void register_local_function(const ExternDef &node);
@@ -80,8 +84,7 @@ class SemanticChecker
 
         void visit(const BinaryExpr &node);
         void visit(const UnaryExpr &node);
-        void visit(const CallExpr &node);
-        void visit(const LambdaCallExpr &node);
+        void visit_call(const CallExpr &node);
         void visit(const IndexExpr &node);
         void visit(const CastExpr &node);
 
@@ -151,7 +154,7 @@ void SemanticChecker::Visitor::report_expr_error(const Position &pos,
                                                  Args &&...data)
 {
     this->report_error(pos, data...);
-    this->last_type = nullptr;
+    this->last_type = std::nullopt;
     this->ref_spec = RefSpecifier::NON_REF;
 }
 #endif

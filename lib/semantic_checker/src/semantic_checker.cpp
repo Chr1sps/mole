@@ -250,51 +250,20 @@ const std::unordered_map<UnaryOpEnum, std::wstring> unary_str_map = {
 
 constexpr std::wstring get_type_string(const Type &type)
 {
-    return std::visit(
-        overloaded{[](const SimpleType &type) {
-                       return ref_spec_map.at(type.ref_spec) +
-                              type_map.at(type.type);
-                   },
-                   [](const FunctionType &type) {
-                       std::wstring result = L"fn";
-                       if (type.is_const)
-                           result += L" const";
-                       auto args_string =
-                           type.arg_types |
-                           std::views::transform(
-                               [](const TypePtr &type_ptr) -> std::wstring {
-                                   return get_type_string(*type_ptr);
-                               }) |
-                           std::views::join_with(L',');
-                       result += L'(';
-                       std::ranges::copy(std::ranges::cbegin(args_string),
-                                         std::ranges::cend(args_string),
-                                         std::back_inserter(result));
-                       result += L')';
-                       if (type.return_type)
-                       {
-                           result += L"=>";
-                           result += get_type_string(*type.return_type);
-                       }
-                       return result;
-                   }},
-        type);
+    return ref_spec_map.at(type.ref_spec) + type_map.at(type.type);
 }
 
-std::wstring get_type_string(const TypePtr &type_ptr)
+std::wstring get_type_string(const std::optional<Type> &type_ptr)
 {
     return (type_ptr) ? (get_type_string(*type_ptr)) : (L"void");
 }
 
 constexpr bool check_non_ref_or_string(const Type &type)
 {
-    if (std::holds_alternative<FunctionType>(type))
-        return false;
-    auto simple = std::get<SimpleType>(type);
-    switch (simple.ref_spec)
+    switch (type.ref_spec)
     {
     case RefSpecifier::REF:
-        if (simple.type != TypeEnum::STR)
+        if (type.type != TypeEnum::STR)
             return false;
         [[fallthrough]];
     case RefSpecifier::NON_REF:
@@ -387,8 +356,7 @@ void SemanticChecker::Visitor::check_name_shadowing(const std::wstring &name,
 void SemanticChecker::Visitor::check_main_function(const FuncDef &node)
 {
     if (!(!node.return_type ||
-          *node.return_type ==
-              SimpleType(TypeEnum::U32, RefSpecifier::NON_REF)))
+          *node.return_type == Type(TypeEnum::U32, RefSpecifier::NON_REF)))
     {
         this->report_error(node.position,
                            L"wrong main function return type declaration - "
@@ -458,8 +426,8 @@ auto SemanticChecker::Visitor::find_variable(const std::wstring &name)
     return std::nullopt;
 }
 
-std::optional<FunctionType> SemanticChecker::Visitor::find_function(
-    const std::wstring &name) const
+std::optional<SemanticChecker::Visitor::Function> SemanticChecker::Visitor::
+    find_function(const std::wstring &name) const
 {
     for (const auto &scope : this->function_map)
     {
@@ -479,16 +447,22 @@ void SemanticChecker::Visitor::register_local_variable(const VarDeclStmt &node)
 
 void SemanticChecker::Visitor::register_local_function(const FuncDef &node)
 {
-    auto fn_type = node.get_type();
-    this->function_map.back().emplace(
-        std::make_pair(node.name, std::move(*fn_type)));
+    std::vector<Type> args{};
+    std::transform(node.params.cbegin(), node.params.cend(),
+                   std::back_inserter(args),
+                   [](const ParamPtr &param) -> Type { return param->type; });
+    Function result{args, node.return_type};
+    this->function_map.back().emplace(std::make_pair(node.name, result));
 }
 
 void SemanticChecker::Visitor::register_local_function(const ExternDef &node)
 {
-    auto fn_type = node.get_type();
-    this->function_map.back().emplace(
-        std::make_pair(node.name, std::move(*fn_type)));
+    std::vector<Type> args;
+    std::transform(node.params.cbegin(), node.params.cend(),
+                   std::back_inserter(args),
+                   [](const ParamPtr &param) -> Type { return param->type; });
+    Function result{args, node.return_type};
+    this->function_map.back().emplace(std::make_pair(node.name, result));
 }
 
 void SemanticChecker::Visitor::register_function_params(const FuncDef &node)
@@ -508,50 +482,46 @@ void SemanticChecker::Visitor::visit(const BinaryExpr &node)
     this->visit(*node.lhs);
     if (!this->last_type)
         return;
-    auto left_type_var = *this->last_type;
+    auto left_type = *this->last_type;
     // auto is_left_const = this->is_const;
 
     this->visit(*node.rhs);
     if (!this->last_type)
         return;
-    auto right_type_var = *this->last_type;
+    auto right_type = *this->last_type;
     // auto is_right_const = this->is_const;
 
     // this->is_const = is_left_const && is_right_const;
-    if (!check_non_ref_or_string(left_type_var))
+    if (!check_non_ref_or_string(left_type))
     {
         this->report_expr_error(
             get_position(*node.lhs),
             L"left hand side type cannot be used in a binary expression");
         return;
     }
-    if (!check_non_ref_or_string(right_type_var))
+    if (!check_non_ref_or_string(right_type))
     {
         this->report_expr_error(
             get_position(*node.rhs),
             L"right hand side type cannot be used in a binary expression");
         return;
     }
-    auto left_type = std::get<SimpleType>(left_type_var);
-    auto right_type = std::get<SimpleType>(right_type_var);
 
     try
     {
         auto result_type =
             binary_map.at(node.op).at(left_type.type).at(right_type.type);
         if (result_type == TypeEnum::STR)
-            this->last_type = std::make_unique<Type>(
-                SimpleType(TypeEnum::STR, RefSpecifier::REF));
+            this->last_type = Type(TypeEnum::STR, RefSpecifier::REF);
         else
-            this->last_type = std::make_unique<Type>(
-                SimpleType(result_type, RefSpecifier::NON_REF));
+            this->last_type = Type(result_type, RefSpecifier::NON_REF);
     }
     catch (const std::out_of_range &)
     {
         this->report_expr_error(node.position,
                                 L"binary operation doesn't support types `",
-                                get_type_string(left_type_var), L"` and `",
-                                get_type_string(right_type_var), L"`");
+                                get_type_string(left_type), L"` and `",
+                                get_type_string(right_type), L"`");
     }
 }
 
@@ -572,15 +542,12 @@ RefSpecifier get_ref_specifier(const UnaryOpEnum &op)
 void SemanticChecker::Visitor::visit(const UnaryExpr &node)
 {
     this->visit(*node.expr);
-    if (std::holds_alternative<FunctionType>(*this->last_type))
+
+    if (!this->last_type)
     {
-        this->report_expr_error(
-            get_position(*node.expr),
-            L"function reference cannot be used in a unary expression");
         return;
     }
-
-    auto type = std::get<SimpleType>(*this->last_type);
+    auto type = *this->last_type;
     switch (node.op)
     {
     case UnaryOpEnum::MINUS:
@@ -596,8 +563,7 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
         try
         {
             auto result_type = unary_map.at(node.op).at(type.type);
-            this->last_type = std::make_unique<Type>(
-                SimpleType(result_type, RefSpecifier::NON_REF));
+            this->last_type = Type(result_type, RefSpecifier::NON_REF);
         }
         catch (const std::out_of_range &)
         {
@@ -623,8 +589,7 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
                                     L"referenced values must be variables");
             break;
         }
-        this->last_type = std::make_unique<Type>(
-            SimpleType(type.type, get_ref_specifier(node.op)));
+        this->last_type = Type(type.type, get_ref_specifier(node.op));
         this->ref_spec = RefSpecifier::NON_REF;
         break;
     case UnaryOpEnum::DEREF:
@@ -642,8 +607,7 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
             break;
         case RefSpecifier::REF:
         case RefSpecifier::MUT_REF:
-            this->last_type = std::make_unique<Type>(
-                SimpleType(type.type, RefSpecifier::NON_REF));
+            this->last_type = Type(type.type, RefSpecifier::NON_REF);
             this->ref_spec = type.ref_spec;
             break;
         }
@@ -651,152 +615,63 @@ void SemanticChecker::Visitor::visit(const UnaryExpr &node)
     }
 }
 
-void SemanticChecker::Visitor::visit(const CallExpr &node)
+void SemanticChecker::Visitor::visit_call(const CallExpr &node)
 {
-    this->visit(*node.callable);
-    if (!this->last_type)
-        return;
-
-    if (std::holds_alternative<SimpleType>(*this->last_type))
+    if (auto func = this->find_function(node.callable))
     {
-        this->report_expr_error(
-            get_position(*node.callable), L"value of primitive type `",
-            get_type_string(*this->last_type), L"` cannot be called");
-        return;
-    }
-
-    auto type = std::get<FunctionType>(*this->last_type);
-    // auto is_const = type.is_const;
-    auto expected_arg_count = type.arg_types.size();
-    auto arg_count = node.args.size();
-    if (arg_count != expected_arg_count)
-    {
-        this->report_expr_error(node.position,
-                                L"function argument count incorrect in a call "
-                                L"expression: expected ",
-                                expected_arg_count, L" arguments, found ",
-                                arg_count);
-    }
-    auto is_valid = true;
-    for (const auto &[expected_type, arg] :
-         std::views::zip(type.arg_types, node.args))
-    {
-        this->visit(*arg);
-        // is_const &= this->is_const;
-        if (!this->last_type)
-        {
-            is_valid = false;
-            continue;
-        }
-        auto actual_type = *this->last_type;
-        if (*expected_type != actual_type)
+        auto expected_arg_count = func->param_types.size();
+        auto arg_count = node.args.size();
+        if (arg_count != expected_arg_count)
         {
             this->report_expr_error(
-                get_position(*arg),
-                L"function call argument type mismatched - expected type: `",
-                get_type_string(expected_type), "`, found: `",
-                get_type_string(actual_type), "`");
-            is_valid = false;
+                node.position,
+                L"function argument count incorrect in a call "
+                L"expression: expected ",
+                expected_arg_count, L" arguments, found ", arg_count);
         }
-    }
-    if (is_valid)
-    {
-        this->last_type = clone_type_ptr(type.return_type);
-        // this->is_const = is_const;
-    }
-}
-
-void SemanticChecker::Visitor::visit(const LambdaCallExpr &node)
-{
-    this->visit(*node.callable);
-    if (!this->last_type)
-        return;
-
-    if (std::holds_alternative<SimpleType>(*this->last_type))
-    {
-        this->report_expr_error(
-            get_position(*node.callable), L"value of primitive type `",
-            get_type_string(*this->last_type), L"` cannot be called");
-        return;
-    }
-    auto type = std::get<FunctionType>(*this->last_type);
-    auto expected_arg_count = type.arg_types.size();
-    auto arg_count = node.args.size();
-    if (arg_count != expected_arg_count)
-    {
-        this->report_expr_error(
-            node.position,
-            L"function argument count incorrect in a lambda call "
-            L"expression: expected ",
-            expected_arg_count, L" arguments, found ", arg_count);
-    }
-    auto is_valid = true;
-    auto is_const = type.is_const;
-    // auto is_compile_time = type.is_const;
-    std::vector<TypePtr> remaining_args;
-    for (const auto &[expected_type, arg] :
-         std::views::zip(type.arg_types, node.args))
-    {
-        if (arg)
+        auto is_valid = true;
+        for (const auto &[expected_type, arg] :
+             std::views::zip(func->param_types, node.args))
         {
             this->visit(*arg);
-            // is_compile_time &= this->is_const;
             if (!this->last_type)
             {
                 is_valid = false;
                 continue;
             }
             auto actual_type = *this->last_type;
-            if (*expected_type != actual_type)
+            if (expected_type != actual_type)
             {
-                this->report_expr_error(
-                    ((arg) ? (get_position(*arg)) : (node.position)),
-                    L"function call argument type "
-                    L"mismatched - expected type: `",
-                    get_type_string(expected_type), L"`, found: `",
-                    get_type_string(actual_type), L"`");
+                this->report_expr_error(get_position(*arg),
+                                        L"function call argument type "
+                                        L"mismatched - expected type: `",
+                                        get_type_string(expected_type),
+                                        "`, found: `",
+                                        get_type_string(actual_type), "`");
                 is_valid = false;
             }
-            if (std::holds_alternative<SimpleType>(actual_type))
-            {
-                auto simple = std::get<SimpleType>(actual_type);
-                if (simple.ref_spec != RefSpecifier::NON_REF)
-                {
-                    is_const = false;
-                }
-            }
         }
-        else
+        if (is_valid)
         {
-            remaining_args.emplace_back(clone_type_ptr(expected_type));
+            this->last_type = func->return_type;
         }
     }
-    if (is_valid)
+    else
     {
-        auto fn_type =
-            FunctionType(std::move(remaining_args),
-                         clone_type_ptr(type.return_type), is_const);
-        this->last_type = std::make_unique<Type>(std::move(fn_type));
-        // this->is_const = is_compile_time;
+        this->report_expr_error(node.position, L"function called `",
+                                node.callable, L"` could not be found");
     }
 }
 
 void SemanticChecker::Visitor::visit(const IndexExpr &node)
 {
     this->visit(*node.expr);
-    // auto is_const = this->is_const;
     if (!this->last_type)
     {
         return;
     }
-    if (std::holds_alternative<FunctionType>(*this->last_type))
-    {
-        this->report_expr_error(get_position(*node.expr),
-                                L"function references cannot be indexed");
-        return;
-    }
-    auto type = std::get<SimpleType>(*this->last_type);
-    if (type != SimpleType(TypeEnum::STR, RefSpecifier::REF))
+    auto type = *this->last_type;
+    if (type != Type(TypeEnum::STR, RefSpecifier::REF))
     {
         this->report_expr_error(
             get_position(*node.expr), L"value of type `",
@@ -805,68 +680,51 @@ void SemanticChecker::Visitor::visit(const IndexExpr &node)
         return;
     }
     this->visit(*node.index_value);
-    // is_const &= this->is_const;
-    if (std::holds_alternative<FunctionType>(*this->last_type))
+    if (!this->last_type)
     {
-        this->report_expr_error(get_position(*node.index_value),
-                                L"function references cannot be indices");
         return;
     }
-    type = std::get<SimpleType>(*this->last_type);
-    if (type != SimpleType(TypeEnum::U32, RefSpecifier::NON_REF))
+    type = *this->last_type;
+    if (type != Type(TypeEnum::U32, RefSpecifier::NON_REF))
     {
         this->report_expr_error(get_position(*node.index_value),
                                 L"only `u32` values can be used as an index");
         return;
     }
-    this->last_type = std::make_unique<Type>(
-        SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
+    this->last_type = Type(TypeEnum::CHAR, RefSpecifier::NON_REF);
     // this->is_const = is_const;
 }
 
 void SemanticChecker::Visitor::visit(const CastExpr &node)
 {
     this->visit(*node.expr);
-    auto to_type = std::get<SimpleType>((*node.type));
-    std::visit(
-        overloaded{
-            [this, &node, &to_type](const SimpleType &from_type) {
-                if (from_type.ref_spec != RefSpecifier::NON_REF)
-                {
-                    this->report_error(node.position,
-                                       L"cannot cast from a reference value");
-                }
-                if (to_type.ref_spec != RefSpecifier::NON_REF)
-                {
-                    this->report_error(node.position,
-                                       L"cannot cast to a reference type");
-                    this->last_type = nullptr;
-                    return;
-                }
-                auto iter = std::find_if(
-                    this->cast_map.cbegin(), this->cast_map.cend(),
-                    [&from_type, &to_type](const auto &entry) {
-                        return entry.first == from_type.type &&
-                               entry.second == to_type.type;
-                    });
-                if (iter == this->cast_map.cend())
-                {
-                    this->report_error(
-                        node.position,
-                        L"cast between two types not supported");
-                    this->last_type = nullptr;
-                }
-                else
-                {
-                    this->last_type = std::make_unique<Type>(to_type);
-                }
-            },
-            [this, &node](const FunctionType &) {
-                this->report_error(node.position,
-                                   L"function references cannot be cast");
-                this->last_type = nullptr;
-            }},
-        *this->last_type);
+    if (!this->last_type)
+    {
+        return;
+    }
+    auto from_type = *this->last_type;
+    auto to_type = node.type;
+    if (from_type.ref_spec != RefSpecifier::NON_REF)
+
+        this->report_error(node.position,
+                           L"cannot cast from a reference value");
+
+    if (to_type.ref_spec != RefSpecifier::NON_REF)
+    {
+        this->report_expr_error(node.position,
+                                L"cannot cast to a reference type");
+        return;
+    }
+    auto iter = std::find_if(this->cast_map.cbegin(), this->cast_map.cend(),
+                             [&from_type, &to_type](const auto &entry) {
+                                 return entry.first == from_type.type &&
+                                        entry.second == to_type.type;
+                             });
+    if (iter == this->cast_map.cend())
+        this->report_expr_error(node.position,
+                                L"cast between two types not supported");
+    else
+        this->last_type = to_type;
 }
 
 void SemanticChecker::Visitor::visit_block(const Block &node)
@@ -894,29 +752,27 @@ void SemanticChecker::Visitor::visit(const AssignStmt &node)
             L"left side of the assignment statement is non-assignable");
         return;
     }
-    auto left_type_var = *this->last_type;
+    auto left_type = *this->last_type;
 
     this->visit(*node.rhs);
     if (!this->last_type)
         return;
-    auto right_type_var = *this->last_type;
+    auto right_type = *this->last_type;
 
-    if (!check_non_ref_or_string(left_type_var))
+    if (!check_non_ref_or_string(left_type))
     {
         this->report_expr_error(
             get_position(*node.lhs),
             L"left hand side type cannot be used in an assignment");
         return;
     }
-    if (!check_non_ref_or_string(right_type_var))
+    if (!check_non_ref_or_string(right_type))
     {
         this->report_expr_error(
             get_position(*node.rhs),
             L"right hand side type cannot be used in an assignment");
         return;
     }
-    auto left_type = std::get<SimpleType>(left_type_var);
-    auto right_type = std::get<SimpleType>(right_type_var);
     auto op_map = assign_map.at(node.type);
     decltype(op_map)::value_type type_pair =
         std::make_pair(left_type.type, right_type.type);
@@ -937,7 +793,7 @@ void SemanticChecker::Visitor::check_condition_expr(
     this->visit(condition);
     if (!this->last_type)
         return;
-    if (*this->last_type != SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF))
+    if (*this->last_type != Type(TypeEnum::BOOL, RefSpecifier::NON_REF))
     {
         this->report_error(
             get_position(condition),
@@ -981,7 +837,7 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
                            get_type_string(this->last_type), "`");
     }
     auto previous_matched_type =
-        std::exchange(this->matched_type, clone_type_ptr(this->last_type));
+        std::exchange(this->matched_type, this->last_type);
     auto previous_is_exhaustive = std::exchange(this->is_exhaustive, false);
     auto is_return_covered = true;
     for (const auto &arm : node.match_arms)
@@ -1006,11 +862,11 @@ void SemanticChecker::Visitor::visit(const MatchStmt &node)
 
 void SemanticChecker::Visitor::visit(const ReturnStmt &node)
 {
-    TypePtr return_type = nullptr;
+    std::optional<Type> return_type = std::nullopt;
     if (node.expr)
     {
         this->visit(*node.expr);
-        return_type = clone_type_ptr(this->last_type);
+        return_type = this->last_type;
     }
     if (!((!return_type && !this->expected_return_type) ||
           (return_type && this->expected_return_type &&
@@ -1090,42 +946,31 @@ void SemanticChecker::Visitor::visit(const Expression &node)
     std::visit(
         overloaded{
             [this](const U32Expr &node) {
-                this->last_type = std::make_unique<Type>(
-                    SimpleType(TypeEnum::U32, RefSpecifier::NON_REF));
+                this->last_type = Type(TypeEnum::U32, RefSpecifier::NON_REF);
                 this->ref_spec = RefSpecifier::NON_REF;
-                // this->is_const = true;
             },
             [this](const F64Expr &node) {
-                this->last_type = std::make_unique<Type>(
-                    SimpleType(TypeEnum::F64, RefSpecifier::NON_REF));
+                this->last_type = Type(TypeEnum::F64, RefSpecifier::NON_REF);
                 this->ref_spec = RefSpecifier::NON_REF;
-                // this->is_const = true;
             },
             [this](const CharExpr &node) {
-                this->last_type = std::make_unique<Type>(
-                    SimpleType(TypeEnum::CHAR, RefSpecifier::NON_REF));
+                this->last_type = Type(TypeEnum::CHAR, RefSpecifier::NON_REF);
                 this->ref_spec = RefSpecifier::NON_REF;
-                // this->is_const = true;
             },
             [this](const BoolExpr &node) {
-                this->last_type = std::make_unique<Type>(
-                    SimpleType(TypeEnum::BOOL, RefSpecifier::NON_REF));
+                this->last_type = Type(TypeEnum::BOOL, RefSpecifier::NON_REF);
                 this->ref_spec = RefSpecifier::NON_REF;
-                // this->is_const = true;
             },
             [this](const StringExpr &node) {
-                this->last_type = std::make_unique<Type>(
-                    SimpleType(TypeEnum::STR, RefSpecifier::REF));
+                this->last_type = Type(TypeEnum::STR, RefSpecifier::REF);
                 this->ref_spec = RefSpecifier::NON_REF;
-                // this->is_const = true;
             },
             [this](const VariableExpr &node) {
                 if (auto var = this->find_variable(node.name))
                 {
-                    this->last_type = std::make_unique<Type>(var->type);
+                    this->last_type = var->type;
                     this->ref_spec = (var->mut) ? (RefSpecifier::MUT_REF)
                                                 : (RefSpecifier::REF);
-                    // this->is_const = !var->mut;
                     if (this->is_in_const_scope() && !this->is_local)
                     {
                         this->report_error(
@@ -1134,23 +979,15 @@ void SemanticChecker::Visitor::visit(const Expression &node)
                             L"constant function body");
                     }
                 }
-                else if (auto func = this->find_function(node.name))
-                {
-                    this->last_type = std::make_unique<Type>(*func);
-                    this->ref_spec = RefSpecifier::REF;
-                    // this->is_const = true;
-                }
                 else
                     this->report_expr_error(
                         node.position, L"referenced variable doesn't exist");
             },
             [this](const BinaryExpr &node) { this->visit(node); },
             [this](const UnaryExpr &node) { this->visit(node); },
-            [this](const CallExpr &node) { this->visit(node); },
-            [this](const LambdaCallExpr &node) { this->visit(node); },
+            [this](const CallExpr &node) { this->visit_call(node); },
             [this](const IndexExpr &node) { this->visit(node); },
-            [this](const CastExpr &node) { this->visit(node); },
-            [](const auto &) {}},
+            [this](const CastExpr &node) { this->visit(node); }},
         node);
 }
 
@@ -1237,7 +1074,7 @@ void SemanticChecker::Visitor::visit(const MatchArm &node)
 
 void SemanticChecker::Visitor::visit(const Parameter &node)
 {
-    this->last_type = clone_type_ptr(node.type);
+    this->last_type = node.type;
 }
 
 void SemanticChecker::Visitor::register_top_level(const FuncDef &node)
@@ -1258,7 +1095,7 @@ void SemanticChecker::Visitor::visit_top_level(const FuncDef &node)
     this->enter_function_scope(node.is_const);
     this->register_function_params(node);
 
-    this->expected_return_type = clone_type_ptr(node.return_type);
+    this->expected_return_type = node.return_type;
 
     this->is_return_covered = false;
     this->visit_block(*node.block);

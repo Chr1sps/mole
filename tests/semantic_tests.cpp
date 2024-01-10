@@ -443,11 +443,6 @@ TEST_CASE("Function calls.")
                     L"fn main(){"
                     L"  test();"
                     L"}");
-        CHECK_VALID(L"fn test(){}"
-                    L"fn main(){"
-                    L"  let ptr = test;"
-                    L"  ptr();"
-                    L"}");
     }
     SECTION("Mismatched argument count.")
     {
@@ -465,126 +460,6 @@ TEST_CASE("Function calls.")
         CHECK_INVALID(L"fn test(a: i32){}"
                       L"fn main(){"
                       L"  test(1.0);"
-                      L"}");
-    }
-}
-
-TEST_CASE("Lambda calls.")
-{
-    SECTION("Valid calls.")
-    {
-        SECTION("Direct.")
-        {
-            CHECK_VALID(L"fn test(){}"
-                        L"fn main(){"
-                        L"  test@();"
-                        L"}");
-            CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                        L"fn main(){"
-                        L"  test@(_, _);"
-                        L"}");
-            CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                        L"fn main(){"
-                        L"  test@(1, _);"
-                        L"}");
-            CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                        L"fn main(){"
-                        L"  test@(_, 2);"
-                        L"}");
-            CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                        L"fn main(){"
-                        L"  test@(1, 2);"
-                        L"}");
-        }
-        SECTION("Through a reference.")
-        {
-            CHECK_VALID(L"fn test(){}"
-                        L"fn main(){"
-                        L"  let ptr = test;"
-                        L"  ptr@();"
-                        L"}");
-            CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                        L"fn main(){"
-                        L"  let ptr = test;"
-                        L"  ptr@(_, _);"
-                        L"}");
-            CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                        L"fn main(){"
-                        L"  let ptr = test;"
-                        L"  ptr@(1, _);"
-                        L"}");
-            CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                        L"fn main(){"
-                        L"  let ptr = test;"
-                        L"  ptr@(_, 2);"
-                        L"}");
-            CHECK_VALID(L"fn test(a: u32, b: u32){}"
-                        L"fn main(){"
-                        L"  let ptr = test;"
-                        L"  ptr@(1, 2);"
-                        L"}");
-        }
-    }
-    SECTION("Value is not callable.")
-    {
-        CHECK_INVALID(FN_WRAP(L"let test = 1;"
-                              L"test@(1, 2);"));
-    }
-    SECTION("Mismatched argument count.")
-    {
-        CHECK_INVALID(L"fn test(){}"
-                      L"fn main(){"
-                      L"  test@(1);"
-                      L"}");
-        CHECK_INVALID(L"fn test(){}"
-                      L"fn main(){"
-                      L"  test@(1, _);"
-                      L"}");
-        CHECK_INVALID(L"fn test(a: u32, b: u32){}"
-                      L"fn main(){"
-                      L"  test@(1);"
-                      L"}");
-        CHECK_INVALID(L"fn test(a: u32, b: u32){}"
-                      L"fn main(){"
-                      L"  test@(1, 2, _);"
-                      L"}");
-        CHECK_INVALID(L"fn test(a: u32, b: u32){}"
-                      L"fn main(){"
-                      L"  test@(_, 2, 3);"
-                      L"}");
-    }
-    SECTION("Mismatched argument type.")
-    {
-        CHECK_INVALID(L"fn test(a: u32, b: u32){}"
-                      L"fn main(){"
-                      L"  test@(1, 2.0);"
-                      L"}");
-        CHECK_INVALID(L"fn test(a: u32, b: u32){}"
-                      L"fn main(){"
-                      L"  test@(1.0, _);"
-                      L"}");
-    }
-    SECTION("Const check.")
-    {
-        CHECK_VALID(L"fn const test(a: &u32, b: u32){}"
-                    L"fn main(){"
-                    L"  let var: u32 = 1;"
-                    L"  let foo: fn(u32) = test@(&var, _);"
-                    L"}");
-        CHECK_INVALID(L"fn const test(a: &u32, b: u32){}"
-                      L"fn main(){"
-                      L"  let var: u32 = 1;"
-                      L"  let foo: fn const(u32) = test@(&var, _);"
-                      L"}");
-        CHECK_VALID(L"fn const test(a: &mut u32, b: u32){}"
-                    L"fn main(){"
-                    L"  let mut var: u32 = 1;"
-                    L"  let foo: fn(u32) = test@(&mut var, _);"
-                    L"}");
-        CHECK_INVALID(L"fn const test(a: &mut u32, b: u32){}"
-                      L"fn main(){"
-                      L"  let mut var: u32 = 1;"
-                      L"  let foo: fn const(u32) = test@(&mut var, _);"
                       L"}");
     }
 }
@@ -1045,8 +920,6 @@ TEST_CASE("Const function cannot reference outside variables that are not "
 TEST_CASE("Variable cannot be called 'main'.")
 {
     CHECK_INVALID(L"let mut main: u32;");
-    CHECK_INVALID(L"let mut main: fn();");
-    CHECK_INVALID(L"let mut main: fn()=>u32;");
 }
 
 TEST_CASE("Variables and functions cannot be redefined.")
