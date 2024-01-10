@@ -57,41 +57,17 @@ enum class RefSpecifier
     MUT_REF
 };
 
-struct SimpleType;
-struct FunctionType;
-using Type = std::variant<SimpleType, FunctionType>;
-using TypePtr = std::unique_ptr<Type>;
-
-// This function is (unfortunatelly) needed to transfer around TypePtrs, since
-// certain std::variants cannot be used in std::optionals.
-constexpr TypePtr clone_type_ptr(const TypePtr &type) noexcept;
-
-struct SimpleType
+struct Type
 {
     TypeEnum type;
     RefSpecifier ref_spec;
 
-    constexpr SimpleType(const TypeEnum &type,
-                         const RefSpecifier &ref_spec) noexcept;
+    constexpr Type(const TypeEnum &type,
+                   const RefSpecifier &ref_spec) noexcept;
 
-    constexpr SimpleType(const SimpleType &) noexcept = default;
-    constexpr SimpleType(SimpleType &&) noexcept = default;
-    constexpr SimpleType &operator=(const SimpleType &) noexcept = default;
-};
-
-struct FunctionType
-{
-    std::vector<TypePtr> arg_types;
-    TypePtr return_type;
-    bool is_const;
-
-    constexpr FunctionType(std::vector<TypePtr> arg_types, TypePtr return_type,
-                           const bool &is_const) noexcept;
-
-    constexpr FunctionType(const FunctionType &other) noexcept;
-
-    constexpr FunctionType(FunctionType &&) noexcept = default;
-    constexpr FunctionType &operator=(const FunctionType &other) noexcept;
+    constexpr Type(const Type &) noexcept = default;
+    constexpr Type(Type &&) noexcept = default;
+    constexpr Type &operator=(const Type &) noexcept = default;
 };
 
 // =======================
@@ -102,7 +78,6 @@ struct VariableExpr;
 struct BinaryExpr;
 struct UnaryExpr;
 struct CallExpr;
-struct LambdaCallExpr;
 struct IndexExpr;
 struct CastExpr;
 struct U32Expr;
@@ -111,9 +86,9 @@ struct BoolExpr;
 struct StringExpr;
 struct CharExpr;
 
-using Expression = std::variant<VariableExpr, BinaryExpr, UnaryExpr, CallExpr,
-                                LambdaCallExpr, IndexExpr, CastExpr, U32Expr,
-                                F64Expr, BoolExpr, StringExpr, CharExpr>;
+using Expression =
+    std::variant<VariableExpr, BinaryExpr, UnaryExpr, CallExpr, IndexExpr,
+                 CastExpr, U32Expr, F64Expr, BoolExpr, StringExpr, CharExpr>;
 using ExprPtr = std::unique_ptr<Expression>;
 
 struct VariableExpr : public AstNode
@@ -185,20 +160,11 @@ struct UnaryExpr : public AstNode
 
 struct CallExpr : public AstNode
 {
-    ExprPtr callable;
+    std::wstring callable;
     std::vector<ExprPtr> args;
 
-    constexpr CallExpr(ExprPtr callable, std::vector<ExprPtr> args,
+    constexpr CallExpr(const std::wstring& callable, std::vector<ExprPtr> args,
                        const Position &position) noexcept;
-};
-
-struct LambdaCallExpr : public AstNode
-{
-    ExprPtr callable;
-    std::vector<ExprPtr> args;
-
-    constexpr LambdaCallExpr(ExprPtr callable, std::vector<ExprPtr> args,
-                             const Position &position) noexcept;
 };
 
 struct IndexExpr : public AstNode
@@ -212,15 +178,14 @@ struct IndexExpr : public AstNode
 struct CastExpr : public AstNode
 {
     ExprPtr expr;
-    TypePtr type;
+    Type type;
 
-    constexpr CastExpr(ExprPtr expr, TypePtr type,
+    constexpr CastExpr(ExprPtr expr, const Type &type,
                        const Position &position) noexcept;
 };
 
 struct U32Expr : public AstNode
 {
-    static const std::shared_ptr<SimpleType> type;
     unsigned long long value;
 
     constexpr U32Expr(const unsigned long long &value,
@@ -229,7 +194,6 @@ struct U32Expr : public AstNode
 
 struct F64Expr : public AstNode
 {
-    static const std::shared_ptr<SimpleType> type;
     double value;
 
     constexpr F64Expr(const double &value, const Position &position) noexcept;
@@ -237,7 +201,6 @@ struct F64Expr : public AstNode
 
 struct StringExpr : public AstNode
 {
-    // static const std::shared_ptr<SimpleType> type;
     std::wstring value;
 
     constexpr StringExpr(const std::wstring &value,
@@ -246,7 +209,6 @@ struct StringExpr : public AstNode
 
 struct CharExpr : public AstNode
 {
-    // static const std::shared_ptr<SimpleType> type;
     wchar_t value;
 
     constexpr CharExpr(const wchar_t &value,
@@ -255,7 +217,6 @@ struct CharExpr : public AstNode
 
 struct BoolExpr : public AstNode
 {
-    // static const std::shared_ptr<SimpleType> type;
     bool value;
 
     constexpr BoolExpr(const bool &value, const Position &position) noexcept;
@@ -386,12 +347,13 @@ struct MatchStmt : public AstNode
 struct VarDeclStmt : public AstNode
 {
     std::wstring name;
-    TypePtr type;
+    std::optional<Type> type;
     ExprPtr initial_value;
     bool is_mut;
 
-    constexpr VarDeclStmt(const std::wstring &name, TypePtr type,
-                          ExprPtr value, const bool &is_mut,
+    constexpr VarDeclStmt(const std::wstring &name,
+                          const std::optional<Type> &type, ExprPtr value,
+                          const bool &is_mut,
                           const Position &position) noexcept;
 };
 
@@ -403,28 +365,24 @@ struct FuncDef : public AstNode
 {
     std::wstring name;
     std::vector<ParamPtr> params;
-    TypePtr return_type;
+    std::optional<Type> return_type;
     BlockPtr block;
     bool is_const;
 
     constexpr FuncDef(const std::wstring &name, std::vector<ParamPtr> params,
-                      TypePtr return_type, BlockPtr block,
+                      const std::optional<Type> &return_type, BlockPtr block,
                       const bool &is_const, const Position &position) noexcept;
-
-    constexpr std::unique_ptr<FunctionType> get_type() const noexcept;
 };
 
 struct ExternDef : public AstNode
 {
     std::wstring name;
     std::vector<ParamPtr> params;
-    TypePtr return_type;
+    std::optional<Type> return_type;
 
     constexpr ExternDef(const std::wstring &name, std::vector<ParamPtr> params,
-                        TypePtr return_type,
+                        const std::optional<Type> &return_type,
                         const Position &position) noexcept;
-
-    constexpr std::unique_ptr<FunctionType> get_type() const noexcept;
 };
 
 constexpr Position get_position(const Statement &stmt);
@@ -488,9 +446,9 @@ using ProgramPtr = std::unique_ptr<Program>;
 struct Parameter : public AstNode
 {
     std::wstring name;
-    TypePtr type;
+    Type type;
 
-    constexpr Parameter(const std::wstring &name, TypePtr type,
+    constexpr Parameter(const std::wstring &name, const Type &type,
                         const Position &position) noexcept;
 };
 
@@ -513,45 +471,10 @@ constexpr bool operator==(const Program &, const Program &) noexcept;
 // ===== TYPES =====
 // =================
 
-constexpr TypePtr clone_type_ptr(const TypePtr &type) noexcept
-{
-    if (type)
-        return std::make_unique<Type>(*type);
-    return nullptr;
-}
-
-constexpr SimpleType::SimpleType(const TypeEnum &type,
-                                 const RefSpecifier &ref_spec) noexcept
+constexpr Type::Type(const TypeEnum &type,
+                     const RefSpecifier &ref_spec) noexcept
     : type(type), ref_spec(ref_spec)
 {
-}
-
-constexpr FunctionType::FunctionType(std::vector<TypePtr> arg_types,
-                                     TypePtr return_type,
-                                     const bool &is_const) noexcept
-    : arg_types(std::move(arg_types)), return_type(std::move(return_type)),
-      is_const(is_const)
-{
-}
-
-constexpr FunctionType::FunctionType(const FunctionType &other) noexcept
-    : arg_types(), return_type(clone_type_ptr(other.return_type)),
-      is_const(other.is_const)
-{
-    std::transform(other.arg_types.cbegin(), other.arg_types.cend(),
-                   std::back_inserter(this->arg_types),
-                   [](const TypePtr &arg) { return clone_type_ptr(arg); });
-}
-
-constexpr FunctionType &FunctionType::operator=(
-    const FunctionType &other) noexcept
-{
-    std::transform(other.arg_types.cbegin(), other.arg_types.cend(),
-                   std::back_inserter(this->arg_types),
-                   [](const TypePtr &arg) { return clone_type_ptr(arg); });
-    this->return_type = clone_type_ptr(other.return_type);
-    this->is_const = other.is_const;
-    return *this;
 }
 
 // =======================
@@ -576,16 +499,9 @@ constexpr UnaryExpr::UnaryExpr(ExprPtr expr, const UnaryOpEnum &op,
 {
 }
 
-constexpr CallExpr::CallExpr(ExprPtr callable, std::vector<ExprPtr> args,
+constexpr CallExpr::CallExpr(const std::wstring& callable, std::vector<ExprPtr> args,
                              const Position &position) noexcept
-    : AstNode(position), callable(std::move(callable)), args(std::move(args))
-{
-}
-
-constexpr LambdaCallExpr::LambdaCallExpr(ExprPtr callable,
-                                         std::vector<ExprPtr> args,
-                                         const Position &position) noexcept
-    : AstNode(position), callable(std::move(callable)), args(std::move(args))
+    : AstNode(position), callable(callable), args(std::move(args))
 {
 }
 
@@ -596,23 +512,17 @@ constexpr IndexExpr::IndexExpr(ExprPtr expr, ExprPtr index_value,
 {
 }
 
-constexpr CastExpr::CastExpr(ExprPtr expr, TypePtr type,
+constexpr CastExpr::CastExpr(ExprPtr expr, const Type &type,
                              const Position &position) noexcept
-    : AstNode(position), expr(std::move(expr)), type(std::move(type))
+    : AstNode(position), expr(std::move(expr)), type(type)
 {
 }
-
-inline const std::shared_ptr<SimpleType> U32Expr::type =
-    std::make_shared<SimpleType>(TypeEnum::U32, RefSpecifier::NON_REF);
 
 constexpr U32Expr::U32Expr(const unsigned long long &value,
                            const Position &position) noexcept
     : AstNode(position), value(value)
 {
 }
-
-inline const std::shared_ptr<SimpleType> F64Expr::type =
-    std::make_shared<SimpleType>(TypeEnum::F64, RefSpecifier::NON_REF);
 
 constexpr F64Expr::F64Expr(const double &value,
                            const Position &position) noexcept
@@ -715,51 +625,32 @@ constexpr Block::Block(std::vector<StmtPtr> statements,
 {
 }
 
-constexpr VarDeclStmt::VarDeclStmt(const std::wstring &name, TypePtr type,
+constexpr VarDeclStmt::VarDeclStmt(const std::wstring &name,
+                                   const std::optional<Type> &type,
                                    ExprPtr value, const bool &is_mut,
                                    const Position &position) noexcept
-    : AstNode(position), name(name), type(std::move(type)),
+    : AstNode(position), name(name), type(type),
       initial_value(std::move(value)), is_mut(is_mut)
 {
 }
 
 constexpr FuncDef::FuncDef(const std::wstring &name,
-                           std::vector<ParamPtr> params, TypePtr return_type,
+                           std::vector<ParamPtr> params,
+                           const std::optional<Type> &return_type,
                            BlockPtr block, const bool &is_const,
                            const Position &position) noexcept
     : AstNode(position), name(name), params(std::move(params)),
-      return_type(std::move(return_type)), block(std::move(block)),
-      is_const(is_const)
+      return_type(return_type), block(std::move(block)), is_const(is_const)
 {
-}
-
-constexpr std::unique_ptr<FunctionType> FuncDef::get_type() const noexcept
-{
-    std::vector<TypePtr> param_types;
-    for (auto &param_ptr : this->params)
-        param_types.push_back(clone_type_ptr(param_ptr->type));
-    auto cloned_type = clone_type_ptr(this->return_type);
-    return std::make_unique<FunctionType>(
-        std::move(param_types), std::move(cloned_type), this->is_const);
 }
 
 constexpr ExternDef::ExternDef(const std::wstring &name,
                                std::vector<ParamPtr> params,
-                               TypePtr return_type,
+                               const std::optional<Type> &return_type,
                                const Position &position) noexcept
     : AstNode(position), name(name), params(std::move(params)),
-      return_type(std::move(return_type))
+      return_type(return_type)
 {
-}
-
-constexpr std::unique_ptr<FunctionType> ExternDef::get_type() const noexcept
-{
-    std::vector<TypePtr> param_types;
-    for (auto &param_ptr : this->params)
-        param_types.push_back(clone_type_ptr(param_ptr->type));
-    auto cloned_type = clone_type_ptr(this->return_type);
-    return std::make_unique<FunctionType>(std::move(param_types),
-                                          std::move(cloned_type), false);
 }
 
 constexpr Position get_position(const Statement &stmt)
@@ -807,9 +698,9 @@ constexpr Position get_position(const MatchArm &arm)
 // ===== PARAMETER =====
 // =====================
 
-constexpr Parameter::Parameter(const std::wstring &name, TypePtr type,
+constexpr Parameter::Parameter(const std::wstring &name, const Type &type,
                                const Position &position) noexcept
-    : AstNode(position), name(name), type(std::move(type))
+    : AstNode(position), name(name), type(type)
 {
 }
 
@@ -856,19 +747,7 @@ constexpr bool compare_ptr_vectors(
 
 constexpr bool operator==(const Type &first, const Type &other) noexcept
 {
-    return std::visit(
-        overloaded{
-            [](const SimpleType &first, const SimpleType &other) -> bool {
-                return first.ref_spec == other.ref_spec &&
-                       first.type == other.type;
-            },
-            [](const FunctionType &first, const FunctionType &other) -> bool {
-                return compare_ptr_vectors(first.arg_types, other.arg_types) &&
-                       equal_or_null(first.return_type, other.return_type) &&
-                       first.is_const == other.is_const;
-            },
-            [](const auto &, const auto &) -> bool { return false; }},
-        first, other);
+    return first.type == other.type && first.ref_spec == other.ref_spec;
 }
 
 constexpr bool operator==(const Expression &first,
@@ -910,18 +789,8 @@ constexpr bool operator==(const Expression &first,
                        first.position == other.position;
             },
             [](const CallExpr &first, const CallExpr &other) -> bool {
-                return *first.callable == *other.callable &&
+                return first.callable == other.callable &&
                        compare_ptr_vectors(first.args, other.args) &&
-                       first.position == other.position;
-            },
-            [](const LambdaCallExpr &first,
-               const LambdaCallExpr &other) -> bool {
-                return *first.callable == *other.callable &&
-                       std::equal(first.args.begin(), first.args.end(),
-                                  other.args.begin(), other.args.end(),
-                                  [](const ExprPtr &a, const ExprPtr &b) {
-                                      return equal_or_null(a, b);
-                                  }) &&
                        first.position == other.position;
             },
             [](const IndexExpr &first, const IndexExpr &other) -> bool {
@@ -931,7 +800,7 @@ constexpr bool operator==(const Expression &first,
             },
             [](const CastExpr &first, const CastExpr &other) -> bool {
                 return *first.expr == *other.expr &&
-                       *first.type == *other.type &&
+                       first.type == other.type &&
                        first.position == other.position;
             },
             [](const auto &, const auto &) -> bool { return false; }},
@@ -947,7 +816,7 @@ constexpr bool operator==(const Block &first, const Block &other) noexcept
 constexpr bool operator==(const VarDeclStmt &first,
                           const VarDeclStmt &other) noexcept
 {
-    return first.name == other.name && equal_or_null(first.type, other.type) &&
+    return first.name == other.name && first.type == other.type &&
            equal_or_null(first.initial_value, other.initial_value) &&
            first.is_mut == other.is_mut && first.position == other.position;
 }
@@ -960,8 +829,8 @@ constexpr bool operator==(const FuncDef &first, const FuncDef &other) noexcept
                         first.block->position == other.block->position;
     return first.name == other.name &&
            compare_ptr_vectors(first.params, other.params) &&
-           equal_or_null(first.return_type, other.return_type) &&
-           equal_blocks && first.is_const == other.is_const &&
+           first.return_type == other.return_type && equal_blocks &&
+           first.is_const == other.is_const &&
            first.position == other.position;
 }
 
@@ -970,7 +839,7 @@ constexpr bool operator==(const ExternDef &first,
 {
     return first.name == other.name &&
            compare_ptr_vectors(first.params, other.params) &&
-           equal_or_null(first.return_type, other.return_type) &&
+           first.return_type == other.return_type &&
            first.position == other.position;
 }
 
@@ -1059,7 +928,7 @@ constexpr bool operator==(const Program &first, const Program &other) noexcept
 constexpr bool operator==(const Parameter &first,
                           const Parameter &other) noexcept
 {
-    return first.name == other.name && *first.type == *other.type &&
+    return first.name == other.name && first.type == other.type &&
            first.position == other.position;
 }
 #endif

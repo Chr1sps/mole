@@ -36,11 +36,8 @@ class Parser : public Reporter
 
     // type names
 
-    TypePtr parse_type();
-    TypePtr parse_simple_type();
-    std::vector<TypePtr> parse_types();
-    TypePtr parse_return_type();
-    TypePtr parse_function_type();
+    std::optional<Type> parse_type();
+    std::optional<Type> parse_return_type();
 
     // function parameters
 
@@ -51,7 +48,7 @@ class Parser : public Reporter
 
     StmtPtr parse_else_block();
 
-    TypePtr parse_type_specifier();
+    std::optional<Type> parse_type_specifier();
     ExprPtr parse_initial_value();
 
     std::optional<AssignType> parse_assign_op();
@@ -75,7 +72,8 @@ class Parser : public Reporter
 
     // helper methods
 
-    std::optional<std::tuple<std::wstring, std::vector<ParamPtr>, TypePtr>>
+    std::optional<
+        std::tuple<std::wstring, std::vector<ParamPtr>, std::optional<Type>>>
     parse_func_name_and_params();
 
     MatchArmPtr parse_match_arm();
@@ -101,17 +99,17 @@ class Parser : public Reporter
     ExprPtr parse_string_expr();
     ExprPtr parse_char_expr();
     ExprPtr parse_bool_expr();
-    ExprPtr parse_variable_expr();
+    ExprPtr parse_variable_or_call();
 
     ExprPtr parse_paren_expr();
 
     ExprPtr parse_factor();
-    ExprPtr parse_index_lambda_or_call();
+    ExprPtr parse_index_expr();
     ExprPtr parse_unary_expr();
     ExprPtr parse_cast_expr();
     ExprPtr parse_binary_expr();
 
-    ExprPtr parse_call(ExprPtr &&expr);
+    ExprPtr parse_call(const std::wstring &, const Position &);
     std::vector<ExprPtr> parse_args();
 
     ExprPtr parse_lambda_call(ExprPtr &&expr);

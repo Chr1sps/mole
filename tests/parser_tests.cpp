@@ -53,12 +53,8 @@ std::vector<std::optional<ExprPtr>> make_lambda_vector(Types &&...args)
 
 #define POS(line, col) Position(line, col)
 
-#define STYPE(type, ref_spec)                                                 \
-    std::make_unique<Type>(SimpleType(TypeEnum::type, RefSpecifier::ref_spec))
-#define FTYPE(arg_types, return_type, is_const)                               \
-    std::make_unique<Type>(FunctionType(arg_types, return_type, is_const))
-
-#define TYPES(...) make_uniques_vector<Type>(__VA_ARGS__)
+#define TYPE(type, ref_spec) Type(Type(TypeEnum::type, RefSpecifier::ref_spec))
+#define NO_TYPE std::nullopt
 
 #define VAREXPR(name, position)                                               \
     std::make_unique<Expression>(VariableExpr(name, position))
@@ -111,8 +107,8 @@ std::vector<std::optional<ExprPtr>> make_lambda_vector(Types &&...args)
     std::make_unique<Statement>(WhileStmt(condition, statement, position))
 
 #define FUNC(name, params, return_type, block, is_const, position)            \
-    std::make_unique<FuncDef>(name, params, return_type, block, is_const, \
-                                  position)
+    std::make_unique<FuncDef>(name, params, return_type, block, is_const,     \
+                              position)
 #define EXTERN(name, params, return_type, position)                           \
     std::make_unique<ExternDef>(name, params, return_type, position)
 #define GLOBAL(name, type, initial_value, is_mut, position)                   \
@@ -136,8 +132,8 @@ std::vector<std::optional<ExprPtr>> make_lambda_vector(Types &&...args)
 #define NOARG nullptr
 
 #define GLOBALS(...) make_uniques_vector<VarDeclStmt>(__VA_ARGS__)
-#define FUNCTIONS(...) make_uniques_vector<FuncDefStmt>(__VA_ARGS__)
-#define EXTERNS(...) make_uniques_vector<ExternStmt>(__VA_ARGS__)
+#define FUNCTIONS(...) make_uniques_vector<FuncDef>(__VA_ARGS__)
+#define EXTERNS(...) make_uniques_vector<ExternDef>(__VA_ARGS__)
 
 #define PROGRAM(globals, functions, externs)                                  \
     std::make_unique<Program>(globals, functions, externs)
@@ -145,7 +141,7 @@ std::vector<std::optional<ExprPtr>> make_lambda_vector(Types &&...args)
 #define AST_FN_WRAP(statements)                                               \
     PROGRAM(                                                                  \
         GLOBALS(),                                                            \
-        FUNCTIONS(FUNC(L"foo", PARAMS(), nullptr,                             \
+        FUNCTIONS(FUNC(L"foo", PARAMS(), NO_TYPE,                             \
                        FUNC_BLOCK(statements, POS(1, 9)), false, POS(1, 1))), \
         EXTERNS())
 
@@ -158,60 +154,30 @@ TEST_CASE("Variables.", "[VARS]")
 {
     SECTION("No type, no value;")
     {
-        COMPARE(L"let var;", PROGRAM(GLOBALS(GLOBAL(L"var", nullptr, nullptr,
+        COMPARE(L"let var;", PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE, nullptr,
                                                     false, POS(1, 1))),
                                      FUNCTIONS(), EXTERNS()));
     }
     SECTION("Type.")
     {
         COMPARE(L"let var:i32;",
-                PROGRAM(GLOBALS(GLOBAL(L"var", STYPE(I32, NON_REF), nullptr,
+                PROGRAM(GLOBALS(GLOBAL(L"var", TYPE(I32, NON_REF), nullptr,
                                        false, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
         COMPARE(L"let var:f64;",
-                PROGRAM(GLOBALS(GLOBAL(L"var", STYPE(F64, NON_REF), nullptr,
+                PROGRAM(GLOBALS(GLOBAL(L"var", TYPE(F64, NON_REF), nullptr,
                                        false, POS(1, 1))),
-                        FUNCTIONS(), EXTERNS()));
-        COMPARE(L"let var:fn();",
-                PROGRAM(GLOBALS(GLOBAL(L"var", FTYPE(TYPES(), nullptr, false),
-                                       nullptr, false, POS(1, 1))),
-                        FUNCTIONS(), EXTERNS()));
-        COMPARE(L"let var:fn(i32);",
-                PROGRAM(GLOBALS(GLOBAL(
-                            L"var",
-                            FTYPE(TYPES(STYPE(I32, NON_REF)), nullptr, false),
-                            nullptr, false, POS(1, 1))),
-                        FUNCTIONS(), EXTERNS()));
-        COMPARE(L"let var:fn(i32)=>i32;",
-                PROGRAM(GLOBALS(GLOBAL(L"var",
-                                       FTYPE(TYPES(STYPE(I32, NON_REF)),
-                                             STYPE(I32, NON_REF), false),
-                                       nullptr, false, POS(1, 1))),
-                        FUNCTIONS(), EXTERNS()));
-        COMPARE(L"let var:fn(i32,f64)=>i32;",
-                PROGRAM(GLOBALS(GLOBAL(L"var",
-                                       FTYPE(TYPES(STYPE(I32, NON_REF),
-                                                   STYPE(F64, NON_REF)),
-                                             STYPE(I32, NON_REF), false),
-                                       nullptr, false, POS(1, 1))),
-                        FUNCTIONS(), EXTERNS()));
-        COMPARE(L"let var:fn const(i32,f64)=>i32;",
-                PROGRAM(GLOBALS(GLOBAL(L"var",
-                                       FTYPE(TYPES(STYPE(I32, NON_REF),
-                                                   STYPE(F64, NON_REF)),
-                                             STYPE(I32, NON_REF), true),
-                                       nullptr, false, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
     }
     SECTION("Value - literals.")
     {
         COMPARE(L"let var=5;",
-                PROGRAM(GLOBALS(GLOBAL(L"var", nullptr, I32EXPR(5, POS(1, 9)),
+                PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE, I32EXPR(5, POS(1, 9)),
                                        false, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
         COMPARE(
             L"let var=5.25;",
-            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr, F64EXPR(5.25, POS(1, 9)),
+            PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE, F64EXPR(5.25, POS(1, 9)),
                                    false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
     }
@@ -219,53 +185,53 @@ TEST_CASE("Variables.", "[VARS]")
     {
         COMPARE(
             L"let var:i32 = 5;",
-            PROGRAM(GLOBALS(GLOBAL(L"var", STYPE(I32, NON_REF),
+            PROGRAM(GLOBALS(GLOBAL(L"var", TYPE(I32, NON_REF),
                                    I32EXPR(5, POS(1, 15)), false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
     }
     SECTION("Mutables.")
     {
         COMPARE(L"let mut var=5;",
-                PROGRAM(GLOBALS(GLOBAL(L"var", nullptr, I32EXPR(5, POS(1, 13)),
+                PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE, I32EXPR(5, POS(1, 13)),
                                        true, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
         COMPARE(
             L"let mut var:i32=5;",
-            PROGRAM(GLOBALS(GLOBAL(L"var", STYPE(I32, NON_REF),
+            PROGRAM(GLOBALS(GLOBAL(L"var", TYPE(I32, NON_REF),
                                    I32EXPR(5, POS(1, 17)), true, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
     }
     SECTION("UTF-8.")
     {
-        COMPARE(L"let 变量=32;", PROGRAM(GLOBALS(GLOBAL(L"变量", nullptr,
+        COMPARE(L"let 变量=32;", PROGRAM(GLOBALS(GLOBAL(L"变量", NO_TYPE,
                                                         I32EXPR(32, POS(1, 8)),
                                                         false, POS(1, 1))),
                                          FUNCTIONS(), EXTERNS()));
         COMPARE(
             L"let μεταβλητή=32;",
-            PROGRAM(GLOBALS(GLOBAL(L"μεταβλητή", nullptr,
+            PROGRAM(GLOBALS(GLOBAL(L"μεταβλητή", NO_TYPE,
                                    I32EXPR(32, POS(1, 15)), false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
-        COMPARE(L"let 変数=32;", PROGRAM(GLOBALS(GLOBAL(L"変数", nullptr,
+        COMPARE(L"let 変数=32;", PROGRAM(GLOBALS(GLOBAL(L"変数", NO_TYPE,
                                                         I32EXPR(32, POS(1, 8)),
                                                         false, POS(1, 1))),
                                          FUNCTIONS(), EXTERNS()));
-        COMPARE(L"let 변수=32;", PROGRAM(GLOBALS(GLOBAL(L"변수", nullptr,
+        COMPARE(L"let 변수=32;", PROGRAM(GLOBALS(GLOBAL(L"변수", NO_TYPE,
                                                         I32EXPR(32, POS(1, 8)),
                                                         false, POS(1, 1))),
                                          FUNCTIONS(), EXTERNS()));
         COMPARE(
             L"let переменная=32;",
-            PROGRAM(GLOBALS(GLOBAL(L"переменная", nullptr,
+            PROGRAM(GLOBALS(GLOBAL(L"переменная", NO_TYPE,
                                    I32EXPR(32, POS(1, 16)), false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
         COMPARE(L"let चर=32;",
-                PROGRAM(GLOBALS(GLOBAL(L"चर", nullptr, I32EXPR(32, POS(1, 8)),
+                PROGRAM(GLOBALS(GLOBAL(L"चर", NO_TYPE, I32EXPR(32, POS(1, 8)),
                                        false, POS(1, 1))),
                         FUNCTIONS(), EXTERNS()));
         COMPARE(
             L"let អថេរ=32;",
-            PROGRAM(GLOBALS(GLOBAL(L"អថេរ", nullptr, I32EXPR(32, POS(1, 10)),
+            PROGRAM(GLOBALS(GLOBAL(L"អថេរ", NO_TYPE, I32EXPR(32, POS(1, 10)),
                                    false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
     }
@@ -281,13 +247,13 @@ TEST_CASE("Variables.", "[VARS]")
 TEST_CASE("Binary operators.", "[VARS], [BINOP]")
 {
     COMPARE(L"let var=5+5;",
-            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+            PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE,
                                    BINEXPR(I32EXPR(5, POS(1, 9)), ADD,
                                            I32EXPR(5, POS(1, 11)), POS(1, 9)),
                                    false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
     COMPARE(L"let var=5/5;",
-            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+            PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE,
                                    BINEXPR(I32EXPR(5, POS(1, 9)), DIV,
                                            I32EXPR(5, POS(1, 11)), POS(1, 9)),
                                    false, POS(1, 1))),
@@ -296,7 +262,7 @@ TEST_CASE("Binary operators.", "[VARS], [BINOP]")
     {
         COMPARE(L"let var=5-5-5;",
                 PROGRAM(GLOBALS(GLOBAL(
-                            L"var", nullptr,
+                            L"var", NO_TYPE,
 
                             BINEXPR(BINEXPR(I32EXPR(5, POS(1, 9)), SUB,
                                             I32EXPR(5, POS(1, 11)), POS(1, 9)),
@@ -307,7 +273,7 @@ TEST_CASE("Binary operators.", "[VARS], [BINOP]")
         COMPARE(
             L"let var=5+5*5;",
             PROGRAM(GLOBALS(GLOBAL(
-                        L"var", nullptr,
+                        L"var", NO_TYPE,
                         BINEXPR(I32EXPR(5, POS(1, 9)), ADD,
                                 BINEXPR(I32EXPR(5, POS(1, 11)), MUL,
                                         I32EXPR(5, POS(1, 13)), POS(1, 11)),
@@ -317,7 +283,7 @@ TEST_CASE("Binary operators.", "[VARS], [BINOP]")
         COMPARE(
             L"let var=5+5*5^^5;",
             PROGRAM(GLOBALS(GLOBAL(
-                        L"var", nullptr,
+                        L"var", NO_TYPE,
                         BINEXPR(I32EXPR(5, POS(1, 9)), ADD,
                                 BINEXPR(I32EXPR(5, POS(1, 11)), MUL,
                                         BINEXPR(I32EXPR(5, POS(1, 13)), EXP,
@@ -330,7 +296,7 @@ TEST_CASE("Binary operators.", "[VARS], [BINOP]")
         COMPARE(
             L"let var=5^^5^^5^^5;",
             PROGRAM(GLOBALS(GLOBAL(
-                        L"var", nullptr,
+                        L"var", NO_TYPE,
                         BINEXPR(I32EXPR(5, POS(1, 9)), EXP,
                                 BINEXPR(I32EXPR(5, POS(1, 12)), EXP,
                                         BINEXPR(I32EXPR(5, POS(1, 15)), EXP,
@@ -344,7 +310,7 @@ TEST_CASE("Binary operators.", "[VARS], [BINOP]")
             L"let var=5*5*5*5;",
             PROGRAM(
                 GLOBALS(GLOBAL(
-                    L"var", nullptr,
+                    L"var", NO_TYPE,
                     BINEXPR(BINEXPR(BINEXPR(I32EXPR(5, POS(1, 9)), MUL,
                                             I32EXPR(5, POS(1, 11)), POS(1, 9)),
                                     MUL, I32EXPR(5, POS(1, 13)), POS(1, 9)),
@@ -363,37 +329,37 @@ TEST_CASE("Unary operators.", "[VARS], [UNOP]")
 {
     COMPARE(
         L"let var=!5;",
-        PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+        PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE,
                                UNEXPR(I32EXPR(5, POS(1, 10)), NEG, POS(1, 9)),
                                false, POS(1, 1))),
                 FUNCTIONS(), EXTERNS()));
     COMPARE(L"let var=~5;",
             PROGRAM(GLOBALS(GLOBAL(
-                        L"var", nullptr,
+                        L"var", NO_TYPE,
                         UNEXPR(I32EXPR(5, POS(1, 10)), BIT_NEG, POS(1, 9)),
                         false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
     COMPARE(L"let var=-5;",
             PROGRAM(GLOBALS(GLOBAL(
-                        L"var", nullptr,
+                        L"var", NO_TYPE,
                         UNEXPR(I32EXPR(5, POS(1, 10)), MINUS, POS(1, 9)),
                         false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
     COMPARE(
         L"let var=&5;",
-        PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+        PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE,
                                UNEXPR(I32EXPR(5, POS(1, 10)), REF, POS(1, 9)),
                                false, POS(1, 1))),
                 FUNCTIONS(), EXTERNS()));
     COMPARE(L"let var=&mut 5;",
             PROGRAM(GLOBALS(GLOBAL(
-                        L"var", nullptr,
+                        L"var", NO_TYPE,
                         UNEXPR(I32EXPR(5, POS(1, 14)), MUT_REF, POS(1, 9)),
                         false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
     COMPARE(L"let var=&mut5;",
             PROGRAM(GLOBALS(GLOBAL(
-                        L"var", nullptr,
+                        L"var", NO_TYPE,
                         UNEXPR(VAREXPR(L"mut5", POS(1, 10)), REF, POS(1, 9)),
                         false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
@@ -401,7 +367,7 @@ TEST_CASE("Unary operators.", "[VARS], [UNOP]")
     {
         COMPARE(
             L"let var=-~!5;",
-            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+            PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE,
                                    UNEXPR(UNEXPR(UNEXPR(I32EXPR(5, POS(1, 12)),
                                                         NEG, POS(1, 11)),
                                                  BIT_NEG, POS(1, 10)),
@@ -410,7 +376,7 @@ TEST_CASE("Unary operators.", "[VARS], [UNOP]")
                     FUNCTIONS(), EXTERNS()));
         COMPARE(
             L"let var=&mut *&5;",
-            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+            PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE,
                                    UNEXPR(UNEXPR(UNEXPR(I32EXPR(5, POS(1, 16)),
                                                         REF, POS(1, 15)),
                                                  DEREF, POS(1, 14)),
@@ -426,7 +392,7 @@ TEST_CASE("Nested operators - mixed.")
         L"let var=-2+-2;",
         PROGRAM(
             GLOBALS(GLOBAL(
-                L"var", nullptr,
+                L"var", NO_TYPE,
                 BINEXPR(UNEXPR(I32EXPR(2, POS(1, 10)), MINUS, POS(1, 9)), ADD,
                         UNEXPR(I32EXPR(2, POS(1, 13)), MINUS, POS(1, 12)),
                         POS(1, 9)),
@@ -440,7 +406,7 @@ TEST_CASE("Function definitions.", "[FUNC]")
     {
         COMPARE(L"fn foo(){}",
                 PROGRAM(GLOBALS(),
-                        FUNCTIONS(FUNC(L"foo", PARAMS(), nullptr,
+                        FUNCTIONS(FUNC(L"foo", PARAMS(), NO_TYPE,
                                        FUNC_BLOCK(STMTS(), POS(1, 9)), false,
                                        POS(1, 1))),
                         EXTERNS()));
@@ -449,15 +415,8 @@ TEST_CASE("Function definitions.", "[FUNC]")
     {
         COMPARE(L"fn foo()=>i32{}",
                 PROGRAM(GLOBALS(),
-                        FUNCTIONS(FUNC(L"foo", PARAMS(), STYPE(I32, NON_REF),
+                        FUNCTIONS(FUNC(L"foo", PARAMS(), TYPE(I32, NON_REF),
                                        FUNC_BLOCK(STMTS(), POS(1, 14)), false,
-                                       POS(1, 1))),
-                        EXTERNS()));
-        COMPARE(L"fn foo()=>fn(){}",
-                PROGRAM(GLOBALS(),
-                        FUNCTIONS(FUNC(L"foo", PARAMS(),
-                                       FTYPE(TYPES(), nullptr, false),
-                                       FUNC_BLOCK(STMTS(), POS(1, 15)), false,
                                        POS(1, 1))),
                         EXTERNS()));
     }
@@ -468,9 +427,9 @@ TEST_CASE("Function definitions.", "[FUNC]")
             PROGRAM(GLOBALS(),
                     FUNCTIONS(FUNC(
                         L"foo",
-                        PARAMS(PARAM(L"x", STYPE(I32, NON_REF), POS(1, 8)),
-                               PARAM(L"y", STYPE(F64, NON_REF), POS(1, 14))),
-                        nullptr, FUNC_BLOCK(STMTS(), POS(1, 20)), false,
+                        PARAMS(PARAM(L"x", TYPE(I32, NON_REF), POS(1, 8)),
+                               PARAM(L"y", TYPE(F64, NON_REF), POS(1, 14))),
+                        NO_TYPE, FUNC_BLOCK(STMTS(), POS(1, 20)), false,
                         POS(1, 1))),
                     EXTERNS()));
     }
@@ -481,9 +440,9 @@ TEST_CASE("Function definitions.", "[FUNC]")
             PROGRAM(GLOBALS(),
                     FUNCTIONS(FUNC(
                         L"foo",
-                        PARAMS(PARAM(L"x", STYPE(I32, NON_REF), POS(1, 8)),
-                               PARAM(L"y", STYPE(F64, NON_REF), POS(1, 14))),
-                        STYPE(I32, NON_REF), FUNC_BLOCK(STMTS(), POS(1, 25)),
+                        PARAMS(PARAM(L"x", TYPE(I32, NON_REF), POS(1, 8)),
+                               PARAM(L"y", TYPE(F64, NON_REF), POS(1, 14))),
+                        TYPE(I32, NON_REF), FUNC_BLOCK(STMTS(), POS(1, 25)),
                         false, POS(1, 1))),
                     EXTERNS()));
     }
@@ -494,9 +453,9 @@ TEST_CASE("Function definitions.", "[FUNC]")
             PROGRAM(GLOBALS(),
                     FUNCTIONS(FUNC(
                         L"foo",
-                        PARAMS(PARAM(L"x", STYPE(I32, NON_REF), POS(1, 14)),
-                               PARAM(L"y", STYPE(F64, NON_REF), POS(1, 20))),
-                        STYPE(I32, NON_REF), FUNC_BLOCK(STMTS(), POS(1, 31)),
+                        PARAMS(PARAM(L"x", TYPE(I32, NON_REF), POS(1, 14)),
+                               PARAM(L"y", TYPE(F64, NON_REF), POS(1, 20))),
+                        TYPE(I32, NON_REF), FUNC_BLOCK(STMTS(), POS(1, 31)),
                         true, POS(1, 1))),
                     EXTERNS()));
     }
@@ -516,51 +475,13 @@ TEST_CASE("Function definitions.", "[FUNC]")
     }
 }
 
-TEST_CASE("In-place lambdas.")
-{
-    COMPARE(
-        L"let foo=boo@(1,2,3,4);",
-        PROGRAM(GLOBALS(GLOBAL(L"foo", nullptr,
-                               LAMBDAEXPR(VAREXPR(L"boo", POS(1, 9)),
-                                          LAMBDAARGS(I32EXPR(1, POS(1, 14)),
-                                                     I32EXPR(2, POS(1, 16)),
-                                                     I32EXPR(3, POS(1, 18)),
-                                                     I32EXPR(4, POS(1, 20))),
-                                          POS(1, 9)),
-                               false, POS(1, 1))),
-                FUNCTIONS(), EXTERNS()));
-    COMPARE(L"let foo=boo@(1,_,3,_);",
-            PROGRAM(GLOBALS(GLOBAL(
-                        L"foo", nullptr,
-                        LAMBDAEXPR(VAREXPR(L"boo", POS(1, 9)),
-                                   LAMBDAARGS(I32EXPR(1, POS(1, 14)), NOARG,
-                                              I32EXPR(3, POS(1, 18)), NOARG),
-                                   POS(1, 9)),
-                        false, POS(1, 1))),
-                    FUNCTIONS(), EXTERNS()));
-    COMPARE(L"let foo=boo@(_,_,_,_);",
-            PROGRAM(GLOBALS(GLOBAL(
-                        L"foo", nullptr,
-                        LAMBDAEXPR(VAREXPR(L"boo", POS(1, 9)),
-                                   LAMBDAARGS(NOARG, NOARG, NOARG, NOARG),
-                                   POS(1, 9)),
-                        false, POS(1, 1))),
-                    FUNCTIONS(), EXTERNS()));
-    COMPARE(L"let foo=boo@();",
-            PROGRAM(GLOBALS(GLOBAL(L"foo", nullptr,
-                                   LAMBDAEXPR(VAREXPR(L"boo", POS(1, 9)),
-                                              LAMBDAARGS(), POS(1, 9)),
-                                   false, POS(1, 1))),
-                    FUNCTIONS(), EXTERNS()));
-}
-
 TEST_CASE("Scopes in functions.", "[SCOPE]")
 {
     COMPARE(
         L"fn foo(){{}}",
         PROGRAM(GLOBALS(),
                 FUNCTIONS(FUNC(
-                    L"foo", PARAMS(), nullptr,
+                    L"foo", PARAMS(), NO_TYPE,
                     FUNC_BLOCK(STMTS(BLOCK(STMTS(), POS(1, 10))), POS(1, 9)),
                     false, POS(1, 1))),
                 EXTERNS()));
@@ -570,13 +491,13 @@ TEST_CASE("Externs.", "[EXT]")
 {
     COMPARE(L"extern foo();",
             PROGRAM(GLOBALS(), FUNCTIONS(),
-                    EXTERNS(EXTERN(L"foo", PARAMS(), nullptr, POS(1, 1)))));
+                    EXTERNS(EXTERN(L"foo", PARAMS(), NO_TYPE, POS(1, 1)))));
     COMPARE(L"extern foo(x:i32) => i32;",
             PROGRAM(GLOBALS(), FUNCTIONS(),
                     EXTERNS(EXTERN(
                         L"foo",
-                        PARAMS(PARAM(L"x", STYPE(I32, NON_REF), POS(1, 12))),
-                        STYPE(I32, NON_REF), POS(1, 1)))));
+                        PARAMS(PARAM(L"x", TYPE(I32, NON_REF), POS(1, 12))),
+                        TYPE(I32, NON_REF), POS(1, 1)))));
 }
 
 TEST_CASE("Assign statements.")
@@ -614,22 +535,15 @@ TEST_CASE("Return statements.")
 TEST_CASE("Function calls.")
 {
     COMPARE(L"let var=foo();",
-            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
-                                   CALLEXPR(VAREXPR(L"foo", POS(1, 9)), ARGS(),
-                                            POS(1, 9)),
-                                   false, POS(1, 1))),
+            PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE,
+                                   CALLEXPR(L"foo", ARGS(), POS(1, 9)), false,
+                                   POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
     COMPARE(L"let var=foo(1,2);",
-            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
-                                   CALLEXPR(VAREXPR(L"foo", POS(1, 9)),
+            PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE,
+                                   CALLEXPR(L"foo",
                                             ARGS(I32EXPR(1, POS(1, 13)),
                                                  I32EXPR(2, POS(1, 15))),
-                                            POS(1, 9)),
-                                   false, POS(1, 1))),
-                    FUNCTIONS(), EXTERNS()));
-    COMPARE(L"let var=(foo)();",
-            PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
-                                   CALLEXPR(VAREXPR(L"foo", POS(1, 9)), ARGS(),
                                             POS(1, 9)),
                                    false, POS(1, 1))),
                     FUNCTIONS(), EXTERNS()));
@@ -642,7 +556,7 @@ TEST_CASE("Index expressions.")
 {
     COMPARE(
         L"let var=foo[1];",
-        PROGRAM(GLOBALS(GLOBAL(L"var", nullptr,
+        PROGRAM(GLOBALS(GLOBAL(L"var", NO_TYPE,
                                INDEXEXPR(VAREXPR(L"foo", POS(1, 9)),
                                          I32EXPR(1, POS(1, 13)), POS(1, 9)),
                                false, POS(1, 1))),
@@ -653,40 +567,12 @@ TEST_CASE("Index expressions.")
 TEST_CASE("Chaining call/index/lambda call expressions.")
 {
     COMPARE(
-        L"let var=foo(1)(2);",
+        L"let var=foo(1)[2];",
         PROGRAM(GLOBALS(GLOBAL(
-                    L"var", nullptr,
-                    CALLEXPR(CALLEXPR(VAREXPR(L"foo", POS(1, 9)),
-                                      ARGS(I32EXPR(1, POS(1, 13))), POS(1, 9)),
-                             ARGS(I32EXPR(2, POS(1, 16))), POS(1, 9)),
-                    false, POS(1, 1))),
-                FUNCTIONS(), EXTERNS()));
-    COMPARE(L"let var=foo@(1)@(2);",
-            PROGRAM(GLOBALS(GLOBAL(
-                        L"var", nullptr,
-                        LAMBDAEXPR(LAMBDAEXPR(VAREXPR(L"foo", POS(1, 9)),
-                                              ARGS(I32EXPR(1, POS(1, 14))),
-                                              POS(1, 9)),
-                                   ARGS(I32EXPR(2, POS(1, 18))), POS(1, 9)),
-                        false, POS(1, 1))),
-                    FUNCTIONS(), EXTERNS()));
-    COMPARE(L"let var=foo[1][2];",
-            PROGRAM(GLOBALS(GLOBAL(
-                        L"var", nullptr,
-                        INDEXEXPR(INDEXEXPR(VAREXPR(L"foo", POS(1, 9)),
-                                            I32EXPR(1, POS(1, 13)), POS(1, 9)),
-                                  I32EXPR(2, POS(1, 16)), POS(1, 9)),
-                        false, POS(1, 1))),
-                    FUNCTIONS(), EXTERNS()));
-    COMPARE(
-        L"let var=foo(1)[2]@(3);",
-        PROGRAM(GLOBALS(GLOBAL(
-                    L"var", nullptr,
-                    LAMBDAEXPR(INDEXEXPR(CALLEXPR(VAREXPR(L"foo", POS(1, 9)),
-                                                  ARGS(I32EXPR(1, POS(1, 13))),
-                                                  POS(1, 9)),
-                                         I32EXPR(2, POS(1, 16)), POS(1, 9)),
-                               ARGS(I32EXPR(3, POS(1, 20))), POS(1, 9)),
+                    L"var", NO_TYPE,
+                    INDEXEXPR(CALLEXPR(L"foo", ARGS(I32EXPR(1, POS(1, 13))),
+                                       POS(1, 9)),
+                              I32EXPR(2, POS(1, 16)), POS(1, 9)),
                     false, POS(1, 1))),
                 FUNCTIONS(), EXTERNS()));
 }
