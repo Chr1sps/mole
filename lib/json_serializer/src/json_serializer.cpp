@@ -145,7 +145,7 @@ void JsonSerializer::Visitor::visit(const UnaryExpr &node)
     this->last_object = output;
 }
 
-void JsonSerializer::Visitor::visit(const CallExpr &node)
+void JsonSerializer::Visitor::visit_call(const CallExpr &node)
 {
     nlohmann::json output;
     output["type"] = "CallExpr";
@@ -154,25 +154,6 @@ void JsonSerializer::Visitor::visit(const CallExpr &node)
     {
         this->visit(*arg);
         output["args"].push_back(this->last_object);
-    }
-    output["position"] = this->get_position(node.position);
-    this->last_object = output;
-}
-
-void JsonSerializer::Visitor::visit(const LambdaCallExpr &node)
-{
-    nlohmann::json output;
-    output["type"] = "LambdaCallExpr";
-    output["args"] = nlohmann::json::array();
-    for (const auto &arg : node.args)
-    {
-        if (arg)
-        {
-            this->visit(*arg);
-            output["args"].push_back(this->last_object);
-        }
-        else
-            output["args"].push_back(nullptr);
     }
     output["position"] = this->get_position(node.position);
     this->last_object = output;
@@ -196,7 +177,7 @@ void JsonSerializer::Visitor::visit(const CastExpr &node)
     output["type"] = "CastExpr";
     this->visit(*node.expr);
     output["expr"] = this->last_object;
-    this->visit(*node.type);
+    this->visit(node.type);
     output["cast_type"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
@@ -215,8 +196,7 @@ void JsonSerializer::Visitor::visit(const Expression &node)
                    [this](const BoolExpr &node) { this->visit(node); },
                    [this](const BinaryExpr &node) { this->visit(node); },
                    [this](const UnaryExpr &node) { this->visit(node); },
-                   [this](const CallExpr &node) { this->visit(node); },
-                   [this](const LambdaCallExpr &node) { this->visit(node); },
+                   [this](const CallExpr &node) { this->visit_call(node); },
                    [this](const IndexExpr &node) { this->visit(node); },
                    [this](const CastExpr &node) { this->visit(node); }},
         node);
@@ -501,50 +481,19 @@ void JsonSerializer::Visitor::visit(const Parameter &node)
     nlohmann::json output;
     output["type"] = "Program";
     output["name"] = node.name;
-    this->visit(*node.type);
+    this->visit(node.type);
     output["param_type"] = this->last_object;
     output["position"] = this->get_position(node.position);
     this->last_object = output;
 }
 
-void JsonSerializer::Visitor::visit(const SimpleType &type)
-{
-    nlohmann::json output;
-    output["type"] = "SimpleType";
-    output["ref_spec"] = this->ref_spec_map.at(type.ref_spec);
-    output["value"] = this->type_map.at(type.type);
-    // output["position"] = this->get_position(node.position);
-    this->last_object = output;
-}
-
-void JsonSerializer::Visitor::visit(const FunctionType &type)
-{
-    nlohmann::json output;
-    output["type"] = "FnType";
-    output["const"] = type.is_const;
-    for (const auto &arg_type : type.arg_types)
-    {
-        this->visit(*arg_type);
-        output["args"] = this->last_object;
-    }
-    if (type.return_type)
-    {
-        this->visit(*type.return_type);
-        output["return_type"] = this->last_object;
-    }
-    else
-    {
-        output["return_type"] = nullptr;
-    }
-    this->last_object = output;
-}
-
 void JsonSerializer::Visitor::visit(const Type &type)
 {
-    std::visit(
-        overloaded{[this](const SimpleType &type) { this->visit(type); },
-                   [this](const FunctionType &type) { this->visit(type); }},
-        type);
+    nlohmann::json output;
+    output["type"] = "Type";
+    output["ref_spec"] = this->ref_spec_map.at(type.ref_spec);
+    output["value"] = this->type_map.at(type.type);
+    this->last_object = output;
 }
 
 nlohmann::json JsonSerializer::serialize(const Program &program)

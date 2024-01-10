@@ -25,8 +25,7 @@ class JsonSerializer
         void visit(const BoolExpr &node);
         void visit(const BinaryExpr &node);
         void visit(const UnaryExpr &node);
-        void visit(const CallExpr &node);
-        void visit(const LambdaCallExpr &node);
+        void visit_call(const CallExpr &node);
         void visit(const IndexExpr &node);
         void visit(const CastExpr &node);
 
@@ -48,9 +47,6 @@ class JsonSerializer
         void visit(const LiteralArm &node);
         void visit(const GuardArm &node);
         void visit(const ElseArm &node);
-
-        void visit(const SimpleType &type);
-        void visit(const FunctionType &type);
 
       public:
         nlohmann::json last_object;
