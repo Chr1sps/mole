@@ -11,7 +11,6 @@ class JsonSerializer
     {
         static std::unordered_map<BinOpEnum, std::wstring> binop_map;
         static std::unordered_map<UnaryOpEnum, std::wstring> unop_map;
-        static std::unordered_map<AssignType, std::wstring> assign_map;
         static std::unordered_map<RefSpecifier, std::wstring> ref_spec_map;
         static std::unordered_map<TypeEnum, std::wstring> type_map;
 

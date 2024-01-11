@@ -43,15 +43,6 @@ std::unordered_map<RefSpecifier, std::wstring>
         {RefSpecifier::REF, L"REF"},
         {RefSpecifier::MUT_REF, L"MUT_REF"},
 };
-std::unordered_map<AssignType, std::wstring>
-    JsonSerializer::Visitor::assign_map = {
-        {AssignType::NORMAL, L"NORMAL"}, {AssignType::PLUS, L"PLUS"},
-        {AssignType::MINUS, L"MINUS"},   {AssignType::MUL, L"MUL"},
-        {AssignType::DIV, L"DIV"},       {AssignType::MOD, L"MOD"},
-        {AssignType::EXP, L"EXP"},       {AssignType::BIT_AND, L"BIT_AND"},
-        {AssignType::BIT_OR, L"BIT_OR"}, {AssignType::BIT_XOR, L"BIT_XOR"},
-        {AssignType::SHR, L"SHR"},       {AssignType::SHL, L"SHL"},
-};
 std::unordered_map<TypeEnum, std::wstring> JsonSerializer::Visitor::type_map =
     {
         {TypeEnum::BOOL, L"BOOL"}, {TypeEnum::U32, L"U32"},
@@ -325,7 +316,10 @@ void JsonSerializer::Visitor::visit(const AssignStmt &node)
     output["type"] = "AssignStmt";
     this->visit(*node.lhs);
     output["lhs"] = this->last_object;
-    output["op"] = this->assign_map.at(node.type);
+    if (node.op)
+        output["op"] = this->binop_map.at(*node.op);
+    else
+        output["op"] = "NO_OP";
     this->visit(*node.rhs);
     output["rhs"] = this->last_object;
     output["position"] = this->get_position(node.position);

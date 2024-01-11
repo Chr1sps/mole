@@ -107,8 +107,7 @@ llvm::Type *CompiledProgram::Visitor::get_var_type(const Type &type)
             return llvm::Type::getDoubleTy(*this->context);
 
         default:
-            [[unlikely]] throw std::runtime_error("unreachable");
-            return nullptr;
+            std::unreachable();
         }
     }
     else
@@ -225,7 +224,7 @@ void CompiledProgram::Visitor::create_unsigned_binop(llvm::Value *lhs,
         break;
 
     default:
-        [[unlikely]] throw std::runtime_error("unreachable");
+        std::unreachable();
     }
     this->last_value = Value(new_value, new_type);
 }
@@ -300,7 +299,7 @@ void CompiledProgram::Visitor::create_signed_binop(llvm::Value *lhs,
         break;
 
     default:
-        [[unlikely]] throw std::runtime_error("unreachable");
+        std::unreachable();
     }
     this->last_value = Value(new_value, new_type);
 }
@@ -360,7 +359,7 @@ void CompiledProgram::Visitor::create_double_binop(llvm::Value *lhs,
         break;
 
     default:
-        [[unlikely]] throw std::runtime_error("unreachable");
+        std::unreachable();
     }
     this->last_value = Value(new_value, new_type);
 }
@@ -442,8 +441,6 @@ void CompiledProgram::Visitor::visit(const UnaryExpr &node)
         break;
     case UnaryOpEnum::DEREF:
         new_value = this->builder->CreateLoad(expr.type, expr.value);
-        // new_type =
-        // llvm::cast<llvm::PointerType>(expr.type)->getContainedType();
         new_type = new_value->getType();
         new_ptr = expr.value;
         break;
@@ -552,7 +549,7 @@ void CompiledProgram::Visitor::visit(const CastExpr &node)
         break;
 
     default:
-        throw std::runtime_error("unreachable");
+        std::unreachable();
         break;
     }
     this->last_value = Value(new_value, new_type);
@@ -751,9 +748,26 @@ void CompiledProgram::Visitor::visit(const AssignStmt &node)
 {
     this->visit(*node.lhs);
     auto ptr = this->last_value.address;
+    auto lhs = this->last_value;
     this->visit(*node.rhs);
-    auto value = this->last_value.value;
-    this->builder->CreateStore(value, ptr);
+    auto rhs = this->last_value;
+    auto stored_value = rhs.value;
+    if (node.op)
+    {
+        if (lhs.type->isIntegerTy())
+        {
+            if (this->is_signed)
+            {
+                this->create_signed_binop(lhs.value, rhs.value, *node.op);
+            }
+            else
+                this->create_unsigned_binop(lhs.value, rhs.value, *node.op);
+        }
+        else
+            this->create_double_binop(lhs.value, rhs.value, *node.op);
+        stored_value = this->last_value.value;
+    }
+    this->builder->CreateStore(stored_value, ptr);
     this->is_return_covered = false;
 }
 
