@@ -33,9 +33,7 @@ int main(int argc, char **argv)
                                 llvm::cl::cat(mole_opts));
     llvm::cl::opt<std::string> output_file(
         "o", llvm::cl::desc("Specify the output file."),
-        llvm::cl::value_desc("filename"),
-        // llvm::cl::init("out.o"),
-        llvm::cl::cat(mole_opts));
+        llvm::cl::value_desc("filename"), llvm::cl::cat(mole_opts));
 
     llvm::InitLLVM init(argc, argv);
 
@@ -140,8 +138,8 @@ int main(int argc, char **argv)
                 std::error_code ec;
                 auto path = output_file.getValue();
                 if (path.empty())
-                    path = "./out.o";
-                auto output = llvm::raw_fd_ostream(output_file.getValue(), ec);
+                    path = "./out.bc";
+                auto output = llvm::raw_fd_ostream(path, ec);
                 if (ec)
                 {
                     std::cerr << "Error while opening the output file."
@@ -149,7 +147,7 @@ int main(int argc, char **argv)
                     return std::make_error_condition(std::errc::io_error)
                         .value();
                 }
-                compiled.output_ir(output);
+                compiled.output_bytecode(output);
             }
         }
         catch (const CompilationException &e)

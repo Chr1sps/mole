@@ -14,25 +14,48 @@ class CompiledProgram
                     public ProgramVisitor,
                     public MatchArmVisitor
     {
+        struct Function
+        {
+            llvm::Function *ptr;
+            llvm::Type *type;
+        };
+
+        struct Value
+        {
+            llvm::Value *value;
+            llvm::Type *type;
+            llvm::Value *address;
+
+            Value() = default;
+
+            Value(llvm::Value *ptr, llvm::Type *type,
+                  llvm::Value *address = nullptr)
+                : value(ptr), type(type), address(address)
+            {
+            }
+        };
+
         std::unique_ptr<llvm::LLVMContext> context;
         std::unique_ptr<llvm::IRBuilder<>> builder;
         bool is_signed, is_exhaustive, is_return_covered;
-        llvm::Value *last_value, *matched_value;
+        llvm::Value *matched_value;
+        Value last_value;
         llvm::Function *current_function;
         llvm::BasicBlock *loop_entry, *loop_exit, *match_condition,
             *match_exit;
-        llvm::Type *last_type;
 
-        std::vector<std::unordered_map<std::wstring, llvm::Value *>> variables;
-        std::unordered_map<std::wstring, llvm::Function *> functions;
-        std::unordered_map<std::wstring, llvm::Value *> globals;
+        std::vector<std::unordered_map<std::wstring, Value>> variables;
+        std::unordered_map<std::wstring, Function> functions;
+        std::unordered_map<std::wstring, Value> globals;
 
         void enter_scope();
         void leave_scope();
 
-        llvm::FunctionType *get_fn_type(const FunctionType &type);
+        llvm::FunctionType *get_fn_type(const FuncDef &node);
+        llvm::FunctionType *get_fn_type(const ExternDef &node);
         llvm::Type *get_var_type(const Type &type);
-        llvm::Value *find_variable(const std::wstring &name) const;
+        Value find_variable(const std::wstring &name) const;
+        Function find_function(const std::wstring &name) const;
 
         void create_unsigned_binop(llvm::Value *lhs, llvm::Value *rhs,
                                    const BinOpEnum &op);
@@ -42,9 +65,11 @@ class CompiledProgram
                                  const BinOpEnum &op);
         void create_string_binop(llvm::Value *lhs, llvm::Value *rhs,
                                  const BinOpEnum &op);
+        llvm::Value *CompiledProgram::Visitor::get_dereferenced_value(
+            const Value &value);
         void visit(const BinaryExpr &node);
         void visit(const UnaryExpr &node);
-        void visit(const CallExpr &node);
+        void visit_call(const CallExpr &node);
         void visit(const IndexExpr &node);
         void visit(const CastExpr &node);
 
@@ -75,8 +100,6 @@ class CompiledProgram
         void visit(const Expression &node) override;
         void visit(const Statement &node) override;
         void visit(const MatchArm &node) override;
-
-        void create_entrypoint(llvm::Function *main_func);
 
         void visit(const Program &node) override;
     } visitor;

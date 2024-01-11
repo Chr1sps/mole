@@ -4,5 +4,8 @@ build/
 lang.txt
 html/
 output.info
-example.mole
 output.json
+output.txt
+example.mole
+out.bc
+a.out
