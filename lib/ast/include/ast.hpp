@@ -357,10 +357,11 @@ struct FuncDef : public AstNode
 struct ExternDef : public AstNode
 {
     std::wstring name;
-    std::vector<ParamPtr> params;
+    std::vector<Type> params;
     std::optional<Type> return_type;
 
-    constexpr ExternDef(const std::wstring &name, std::vector<ParamPtr> params,
+    constexpr ExternDef(const std::wstring &name,
+                        const std::vector<Type> &params,
                         const std::optional<Type> &return_type,
                         const Position &position) noexcept;
 };
@@ -627,11 +628,10 @@ constexpr FuncDef::FuncDef(const std::wstring &name,
 }
 
 constexpr ExternDef::ExternDef(const std::wstring &name,
-                               std::vector<ParamPtr> params,
+                               const std::vector<Type> &params,
                                const std::optional<Type> &return_type,
                                const Position &position) noexcept
-    : AstNode(position), name(name), params(std::move(params)),
-      return_type(return_type)
+    : AstNode(position), name(name), params(params), return_type(return_type)
 {
 }
 
@@ -819,8 +819,7 @@ constexpr bool operator==(const FuncDef &first, const FuncDef &other) noexcept
 constexpr bool operator==(const ExternDef &first,
                           const ExternDef &other) noexcept
 {
-    return first.name == other.name &&
-           compare_ptr_vectors(first.params, other.params) &&
+    return first.name == other.name && first.params == other.params &&
            first.return_type == other.return_type &&
            first.position == other.position;
 }

@@ -149,21 +149,33 @@ std::unique_ptr<ExternDef> Parser::parse_extern_stmt()
     auto position = this->current_token->position;
     this->next_token();
 
-    auto name_params_return_type = this->parse_func_name_and_params();
-    if (!name_params_return_type)
+    if (this->current_token != TokenType::IDENTIFIER)
     {
-        this->report_error(
-            L"function name, params or return type wasn't read properly");
+        this->report_error(L"not a function identifier");
         return nullptr;
     }
-    auto [name, params, return_type] = std::move(*name_params_return_type);
+    auto name = std::get<std::wstring>((*this->current_token).value);
+    this->next_token();
+
+    if (!this->assert_current_and_eat(
+            TokenType::L_PAREN,
+            L"left parenthesis missing in a function definition"))
+        return nullptr;
+
+    auto params = this->parse_types();
+    if (!this->assert_current_and_eat(TokenType::R_PAREN,
+                                      L"right parenthesis missing "
+                                      "in a function "
+                                      "definition"))
+        return nullptr;
+
+    auto return_type = this->parse_return_type();
 
     if (!this->assert_current_and_eat(
             TokenType::SEMICOLON, L"not a semicolon in an extern declaration"))
         return nullptr;
 
-    return std::make_unique<ExternDef>(name, std::move(params),
-                                       std::move(return_type), position);
+    return std::make_unique<ExternDef>(name, params, return_type, position);
 }
 
 // VAR_DECL_STMT = KW_LET, [KW_MUT], IDENTIFIER, [TYPE_SPECIFIER],
@@ -253,14 +265,26 @@ std::unique_ptr<FuncDef> Parser::parse_func_def_stmt()
         this->next_token();
     }
 
-    auto name_params_return_type = this->parse_func_name_and_params();
-    if (!name_params_return_type)
+    if (this->current_token != TokenType::IDENTIFIER)
     {
-        this->report_error(
-            L"function name, params or return type wasn't read properly");
+        this->report_error(L"expected a function identifier");
         return nullptr;
     }
-    auto [name, params, return_type] = std::move(*name_params_return_type);
+    auto name = std::get<std::wstring>((*this->current_token).value);
+    this->next_token();
+
+    if (!this->assert_current_and_eat(
+            TokenType::L_PAREN,
+            L"left parenthesis missing in a function definition"))
+        return nullptr;
+    auto params = this->parse_params();
+    if (!this->assert_current_and_eat(TokenType::R_PAREN,
+                                      L"right parenthesis missing "
+                                      "in a function "
+                                      "definition"))
+        return nullptr;
+
+    auto return_type = this->parse_return_type();
     auto block = this->parse_block();
     if (!block)
     {
@@ -270,37 +294,6 @@ std::unique_ptr<FuncDef> Parser::parse_func_def_stmt()
     return std::make_unique<FuncDef>(name, std::move(params),
                                      std::move(return_type), std::move(block),
                                      is_const, position);
-}
-
-// FUNC_NAME_AND_PARAMS = IDENTIFIER, L_PAREN, [PARAMS], R_PAREN,
-// [RETURN_TYPE];
-std::optional<
-    std::tuple<std::wstring, std::vector<ParamPtr>, std::optional<Type>>>
-Parser::parse_func_name_and_params()
-{
-
-    if (this->current_token != TokenType::IDENTIFIER)
-    {
-        this->report_error(L"not a function identifier");
-        return std::nullopt;
-    }
-    auto name = std::get<std::wstring>((*this->current_token).value);
-    this->next_token();
-
-    if (!this->assert_current_and_eat(
-            TokenType::L_PAREN,
-            L"left parenthesis missing in a function definition"))
-        return std::nullopt;
-    auto params = this->parse_params();
-    if (!this->assert_current_and_eat(TokenType::R_PAREN,
-                                      L"right parenthesis missing "
-                                      "in a function "
-                                      "definition"))
-        return std::nullopt;
-
-    auto return_type = this->parse_return_type();
-    return std::tuple(std::move(name), std::move(params),
-                      std::move(return_type));
 }
 
 // Params = Parameter, {COMMA, Parameter}
@@ -384,6 +377,23 @@ std::optional<Type> Parser::parse_type()
     else if (ref_spec != RefSpecifier::NON_REF)
         this->report_error(L"type name not found after a reference specifier");
     return std::nullopt;
+}
+
+std::vector<Type> Parser::parse_types()
+{
+    std::vector<Type> types;
+    if (auto type = this->parse_type())
+    {
+        types.push_back(*type);
+        while (this->current_token == TokenType::COMMA)
+        {
+            this->next_token();
+            type = this->parse_type();
+            if (type)
+                types.push_back(*type);
+        }
+    }
+    return types;
 }
 
 // BLOCK = L_BRACKET, {NON_FUNC_STMT}, R_BRACKET;

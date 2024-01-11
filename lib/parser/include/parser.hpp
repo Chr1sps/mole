@@ -37,6 +37,7 @@ class Parser : public Reporter
     // type names
 
     std::optional<Type> parse_type();
+    std::vector<Type> parse_types();
     std::optional<Type> parse_return_type();
 
     // function parameters
@@ -73,10 +74,6 @@ class Parser : public Reporter
 
     // helper methods
 
-    std::optional<
-        std::tuple<std::wstring, std::vector<ParamPtr>, std::optional<Type>>>
-    parse_func_name_and_params();
-
     MatchArmPtr parse_match_arm();
 
     MatchArmPtr parse_literal_arm();
@@ -112,10 +109,6 @@ class Parser : public Reporter
 
     ExprPtr parse_call(const std::wstring &, const Position &);
     std::vector<ExprPtr> parse_args();
-
-    ExprPtr parse_lambda_call(ExprPtr &&expr);
-    std::optional<std::vector<ExprPtr>> parse_lambda_args();
-    std::optional<ExprPtr> parse_lambda_arg();
 
     ExprPtr parse_index(ExprPtr &&expr);
 

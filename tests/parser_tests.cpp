@@ -55,6 +55,7 @@ std::vector<std::optional<ExprPtr>> make_lambda_vector(Types &&...args)
 
 #define TYPE(type, ref_spec) Type(Type(TypeEnum::type, RefSpecifier::ref_spec))
 #define NO_TYPE std::nullopt
+#define TYPES(...) std::vector<Type>({__VA_ARGS__})
 
 #define VAREXPR(name, position)                                               \
     std::make_unique<Expression>(VariableExpr(name, position))
@@ -98,7 +99,7 @@ std::vector<std::optional<ExprPtr>> make_lambda_vector(Types &&...args)
     std::make_unique<Statement>(ReturnStmt(expr, position))
 #define CONTINUE(position) std::make_unique<Statement>(ContinueStmt(position))
 #define BREAK(position) std::make_unique<Statement>(BreakStmt(position))
-#define ASSIGN(lhs, rhs, position)                                     \
+#define ASSIGN(lhs, rhs, position)                                            \
     std::make_unique<Statement>(AssignStmt(lhs, std::nullopt, rhs, position))
 #define ASSIGN_OP(lhs, op, rhs, position)                                     \
     std::make_unique<Statement>(AssignStmt(lhs, BinOpEnum::op, rhs, position))
@@ -493,20 +494,18 @@ TEST_CASE("Externs.", "[EXT]")
 {
     COMPARE(L"extern foo();",
             PROGRAM(GLOBALS(), FUNCTIONS(),
-                    EXTERNS(EXTERN(L"foo", PARAMS(), NO_TYPE, POS(1, 1)))));
-    COMPARE(L"extern foo(x:i32) => i32;",
+                    EXTERNS(EXTERN(L"foo", TYPES(), NO_TYPE, POS(1, 1)))));
+    COMPARE(L"extern foo(i32) => i32;",
             PROGRAM(GLOBALS(), FUNCTIONS(),
-                    EXTERNS(EXTERN(
-                        L"foo",
-                        PARAMS(PARAM(L"x", TYPE(I32, NON_REF), POS(1, 12))),
-                        TYPE(I32, NON_REF), POS(1, 1)))));
+                    EXTERNS(EXTERN(L"foo", TYPES(TYPE(I32, NON_REF)),
+                                   TYPE(I32, NON_REF), POS(1, 1)))));
 }
 
 TEST_CASE("Assign statements.")
 {
     COMPARE_WRAPPED(L"x=5;",
                     STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)),
-                                    I32EXPR(5, POS(1, 12)), POS(1, 10))));
+                                 I32EXPR(5, POS(1, 12)), POS(1, 10))));
     COMPARE_WRAPPED(L"x+=5;",
                     STMTS(ASSIGN_OP(VAREXPR(L"x", POS(1, 10)), ADD,
                                     I32EXPR(5, POS(1, 13)), POS(1, 10))));
