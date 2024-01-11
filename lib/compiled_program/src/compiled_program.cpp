@@ -40,11 +40,7 @@ CompiledProgram::Visitor::Visitor(const Program &program)
 
     if (llvm::verifyModule(*this->module, &out))
     {
-        std::string ir;
-        auto ir_stream = llvm::raw_string_ostream(ir);
-        ir_stream << *this->module;
-
-        throw CompilationException(ir + "\n" + logs);
+        throw CompilationException(logs);
     }
 }
 
@@ -987,7 +983,7 @@ void CompiledProgram::Visitor::output_object_file(llvm::raw_fd_ostream &output)
     if (this->target_machine->addPassesToEmitFile(pass_manager, output,
                                                   nullptr, type))
     {
-        throw CompilationException("can't emit a file of this type");
+        throw CompilationException("The object file couldn't be emitted.");
     }
     pass_manager.run(*this->module);
     output.flush();

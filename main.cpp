@@ -35,7 +35,7 @@ int main(int argc, char **argv)
         "bc-dump", llvm::cl::desc("Dump the LLVM bytecode."),
         llvm::cl::init(false), llvm::cl::cat(mole_opts));
     llvm::cl::opt<bool> optimize(
-        "optimize", llvm::cl::desc("Optimizes the created llvm ir."),
+        "optimize", llvm::cl::desc("Optimize the created llvm ir."),
         llvm::cl::init(false), llvm::cl::cat(mole_opts));
     llvm::cl::opt<std::string> output_file(
         "o", llvm::cl::desc("Specify the output file."),
@@ -111,7 +111,6 @@ int main(int argc, char **argv)
         }
         else
             std::cout << result.dump(4) << std::endl;
-        std::cout.flush();
         return 0;
     }
     else
@@ -123,68 +122,30 @@ int main(int argc, char **argv)
             {
                 compiled.optimize();
             }
-            if (dump_ir.getValue())
+            std::error_code ec;
+            auto path = output_file.getValue();
+            if (path.empty())
             {
-                if (output_file.getValue() != "")
-                {
-                    std::error_code ec;
-                    auto output =
-                        llvm::raw_fd_ostream(output_file.getValue(), ec);
-                    if (ec)
-                    {
-
-                        std::cerr << "Error while opening the output file."
-                                  << std::endl;
-                        return std::make_error_condition(std::errc::io_error)
-                            .value();
-                    }
-                    compiled.output_ir(output);
-                }
-                else
-                    compiled.output_ir(llvm::outs());
-            }
-            else if (dump_bc.getValue())
-            {
-                std::error_code ec;
-                auto path = output_file.getValue();
-                if (path.empty())
+                if (dump_ir.getValue())
+                    path = "./out.ll";
+                else if (dump_bc.getValue())
                     path = "./out.bc";
-                auto output = llvm::raw_fd_ostream(path, ec);
-                if (ec)
-                {
-                    std::cerr << "Error while opening the output file."
-                              << std::endl;
-                    return std::make_error_condition(std::errc::io_error)
-                        .value();
-                }
-                compiled.output_bytecode(output);
-            }
-            else
-            {
-                std::error_code ec;
-                auto path = output_file.getValue();
-                if (path.empty())
+                else
                     path = "./out.o";
-                auto output = llvm::raw_fd_ostream(path, ec);
-                if (ec)
-                {
-                    std::cerr << "Error while opening the output file."
-                              << std::endl;
-                    return std::make_error_condition(std::errc::io_error)
-                        .value();
-                }
-                try
-                {
-                    compiled.output_object_file(output);
-                }
-                catch (const CompilationException &e)
-                {
-                    std::cerr << "Couldn't output the object file."
-                              << std::endl;
-                    return std::make_error_condition(std::errc::io_error)
-                        .value();
-                }
             }
+            auto output = llvm::raw_fd_ostream(path, ec);
+            if (ec)
+            {
+                std::cerr << "Error while opening the output file."
+                          << std::endl;
+                return std::make_error_condition(std::errc::io_error).value();
+            }
+            if (dump_ir.getValue())
+                compiled.output_ir(output);
+            else if (dump_bc.getValue())
+                compiled.output_bytecode(output);
+            else
+                compiled.output_object_file(output);
         }
         catch (const CompilationException &e)
         {
