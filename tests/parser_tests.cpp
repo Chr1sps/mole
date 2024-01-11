@@ -98,8 +98,10 @@ std::vector<std::optional<ExprPtr>> make_lambda_vector(Types &&...args)
     std::make_unique<Statement>(ReturnStmt(expr, position))
 #define CONTINUE(position) std::make_unique<Statement>(ContinueStmt(position))
 #define BREAK(position) std::make_unique<Statement>(BreakStmt(position))
-#define ASSIGN(lhs, op, rhs, position)                                        \
-    std::make_unique<Statement>(AssignStmt(lhs, AssignType::op, rhs, position))
+#define ASSIGN(lhs, rhs, position)                                     \
+    std::make_unique<Statement>(AssignStmt(lhs, std::nullopt, rhs, position))
+#define ASSIGN_OP(lhs, op, rhs, position)                                     \
+    std::make_unique<Statement>(AssignStmt(lhs, BinOpEnum::op, rhs, position))
 #define IF(condition, then_stmt, else_stmt, position)                         \
     std::make_unique<Statement>(                                              \
         IfStmt(condition, then_stmt, else_stmt, position))
@@ -503,26 +505,26 @@ TEST_CASE("Externs.", "[EXT]")
 TEST_CASE("Assign statements.")
 {
     COMPARE_WRAPPED(L"x=5;",
-                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), NORMAL,
-                                 I32EXPR(5, POS(1, 12)), POS(1, 10))));
+                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)),
+                                    I32EXPR(5, POS(1, 12)), POS(1, 10))));
     COMPARE_WRAPPED(L"x+=5;",
-                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), PLUS,
-                                 I32EXPR(5, POS(1, 13)), POS(1, 10))));
+                    STMTS(ASSIGN_OP(VAREXPR(L"x", POS(1, 10)), ADD,
+                                    I32EXPR(5, POS(1, 13)), POS(1, 10))));
     COMPARE_WRAPPED(L"x-=5;",
-                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), MINUS,
-                                 I32EXPR(5, POS(1, 13)), POS(1, 10))));
+                    STMTS(ASSIGN_OP(VAREXPR(L"x", POS(1, 10)), SUB,
+                                    I32EXPR(5, POS(1, 13)), POS(1, 10))));
     COMPARE_WRAPPED(L"x*=5;",
-                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), MUL,
-                                 I32EXPR(5, POS(1, 13)), POS(1, 10))));
+                    STMTS(ASSIGN_OP(VAREXPR(L"x", POS(1, 10)), MUL,
+                                    I32EXPR(5, POS(1, 13)), POS(1, 10))));
     COMPARE_WRAPPED(L"x/=5;",
-                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), DIV,
-                                 I32EXPR(5, POS(1, 13)), POS(1, 10))));
+                    STMTS(ASSIGN_OP(VAREXPR(L"x", POS(1, 10)), DIV,
+                                    I32EXPR(5, POS(1, 13)), POS(1, 10))));
     COMPARE_WRAPPED(L"x%=5;",
-                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), MOD,
-                                 I32EXPR(5, POS(1, 13)), POS(1, 10))));
+                    STMTS(ASSIGN_OP(VAREXPR(L"x", POS(1, 10)), MOD,
+                                    I32EXPR(5, POS(1, 13)), POS(1, 10))));
     COMPARE_WRAPPED(L"x^^=5;",
-                    STMTS(ASSIGN(VAREXPR(L"x", POS(1, 10)), EXP,
-                                 I32EXPR(5, POS(1, 14)), POS(1, 10))));
+                    STMTS(ASSIGN_OP(VAREXPR(L"x", POS(1, 10)), EXP,
+                                    I32EXPR(5, POS(1, 14)), POS(1, 10))));
 }
 
 TEST_CASE("Return statements.")

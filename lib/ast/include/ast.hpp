@@ -163,7 +163,7 @@ struct CallExpr : public AstNode
     std::wstring callable;
     std::vector<ExprPtr> args;
 
-    constexpr CallExpr(const std::wstring& callable, std::vector<ExprPtr> args,
+    constexpr CallExpr(const std::wstring &callable, std::vector<ExprPtr> args,
                        const Position &position) noexcept;
 };
 
@@ -272,33 +272,13 @@ struct BreakStmt : public AstNode
     constexpr BreakStmt(const Position &position) noexcept;
 };
 
-enum class AssignType
-{
-    NORMAL,
-
-    PLUS,
-    MINUS,
-    MUL,
-    DIV,
-
-    MOD,
-    EXP,
-
-    BIT_AND,
-    BIT_OR,
-    BIT_XOR,
-
-    SHL,
-    SHR,
-};
-
 struct AssignStmt : public AstNode
 {
     ExprPtr lhs, rhs;
-    AssignType type;
+    std::optional<BinOpEnum> op;
 
-    constexpr AssignStmt(ExprPtr lhs, const AssignType &type, ExprPtr rhs,
-                         const Position &position) noexcept;
+    constexpr AssignStmt(ExprPtr lhs, const std::optional<BinOpEnum> &op,
+                         ExprPtr rhs, const Position &position) noexcept;
 };
 
 struct ExprStmt : public AstNode
@@ -499,7 +479,8 @@ constexpr UnaryExpr::UnaryExpr(ExprPtr expr, const UnaryOpEnum &op,
 {
 }
 
-constexpr CallExpr::CallExpr(const std::wstring& callable, std::vector<ExprPtr> args,
+constexpr CallExpr::CallExpr(const std::wstring &callable,
+                             std::vector<ExprPtr> args,
                              const Position &position) noexcept
     : AstNode(position), callable(callable), args(std::move(args))
 {
@@ -585,10 +566,11 @@ constexpr BreakStmt::BreakStmt(const Position &position) noexcept
 {
 }
 
-constexpr AssignStmt::AssignStmt(ExprPtr lhs, const AssignType &type,
+constexpr AssignStmt::AssignStmt(ExprPtr lhs,
+                                 const std::optional<BinOpEnum> &op,
                                  ExprPtr rhs,
                                  const Position &position) noexcept
-    : AstNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), type(type)
+    : AstNode(position), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
 {
 }
 
@@ -880,7 +862,7 @@ constexpr bool operator==(const Statement &first,
                        first.position == other.position;
             },
             [](const AssignStmt &first, const AssignStmt &other) -> bool {
-                return *first.lhs == *other.lhs && first.type == other.type &&
+                return *first.lhs == *other.lhs && first.op == other.op &&
                        *first.rhs == *other.rhs &&
                        first.position == other.position;
             },

@@ -25,7 +25,7 @@ class Parser : public Reporter
     static std::map<TokenType, UnaryOpEnum> unary_map;
     static std::map<TokenType, TypeEnum> type_map;
     static std::map<TokenType, TypeEnum> type_value_map;
-    static std::map<TokenType, AssignType> assign_map;
+    static std::map<TokenType, std::optional<BinOpEnum>> assign_map;
 
     LexerPtr lexer;
     std::optional<Token> current_token;
@@ -51,9 +51,10 @@ class Parser : public Reporter
     std::optional<Type> parse_type_specifier();
     ExprPtr parse_initial_value();
 
-    std::optional<AssignType> parse_assign_op();
+    std::optional<std::optional<BinOpEnum>> parse_assign_op();
 
-    std::optional<std::tuple<AssignType, ExprPtr>> parse_assign_part();
+    std::optional<std::tuple<std::optional<BinOpEnum>, ExprPtr>>
+    parse_assign_part();
 
     StmtPtr parse_return_stmt();
     StmtPtr parse_assign_or_expr_stmt();

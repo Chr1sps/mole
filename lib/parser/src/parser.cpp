@@ -62,25 +62,20 @@ std::map<TokenType, TypeEnum> Parser::type_value_map{
 };
 #undef TYPE_VALUE
 
-#define ASSIGN_TYPE(token_type, assign_type)                                  \
-    {                                                                         \
-        TokenType::token_type, AssignType::assign_type                        \
-    }
-std::map<TokenType, AssignType> Parser::assign_map{
-    ASSIGN_TYPE(ASSIGN, NORMAL),
-    ASSIGN_TYPE(ASSIGN_PLUS, PLUS),
-    ASSIGN_TYPE(ASSIGN_MINUS, MINUS),
-    ASSIGN_TYPE(ASSIGN_STAR, MUL),
-    ASSIGN_TYPE(ASSIGN_SLASH, DIV),
-    ASSIGN_TYPE(ASSIGN_PERCENT, MOD),
-    ASSIGN_TYPE(ASSIGN_EXP, EXP),
-    ASSIGN_TYPE(ASSIGN_AMPERSAND, BIT_AND),
-    ASSIGN_TYPE(ASSIGN_BIT_OR, BIT_OR),
-    ASSIGN_TYPE(ASSIGN_BIT_XOR, BIT_XOR),
-    ASSIGN_TYPE(ASSIGN_SHIFT_LEFT, SHL),
-    ASSIGN_TYPE(ASSIGN_SHIFT_RIGHT, SHR),
+std::map<TokenType, std::optional<BinOpEnum>> Parser::assign_map{
+    {TokenType::ASSIGN, std::nullopt},
+    {TokenType::ASSIGN_PLUS, BinOpEnum::ADD},
+    {TokenType::ASSIGN_MINUS, BinOpEnum::SUB},
+    {TokenType::ASSIGN_STAR, BinOpEnum::MUL},
+    {TokenType::ASSIGN_SLASH, BinOpEnum::DIV},
+    {TokenType::ASSIGN_PERCENT, BinOpEnum::MOD},
+    {TokenType::ASSIGN_EXP, BinOpEnum::EXP},
+    {TokenType::ASSIGN_AMPERSAND, BinOpEnum::BIT_AND},
+    {TokenType::ASSIGN_BIT_OR, BinOpEnum::BIT_OR},
+    {TokenType::ASSIGN_BIT_XOR, BinOpEnum::BIT_XOR},
+    {TokenType::ASSIGN_SHIFT_LEFT, BinOpEnum::SHL},
+    {TokenType::ASSIGN_SHIFT_RIGHT, BinOpEnum::SHR},
 };
-#undef ASSIGN_TYPE
 
 void Parser::report_error(const std::wstring &msg)
 {
@@ -484,7 +479,8 @@ StmtPtr Parser::parse_assign_or_expr_stmt()
 }
 
 // ASSIGN_PART = ASSIGN_OP, BINARY_EXPR;
-std::optional<std::tuple<AssignType, ExprPtr>> Parser::parse_assign_part()
+std::optional<std::tuple<std::optional<BinOpEnum>, ExprPtr>> Parser::
+    parse_assign_part()
 {
     if (auto op = this->parse_assign_op())
     {
@@ -497,7 +493,7 @@ std::optional<std::tuple<AssignType, ExprPtr>> Parser::parse_assign_part()
 // ASSIGN_OP = ASSIGN | ASSIGN_PLUS | ASSIGN_MINUS | ASSIGN_STAR | ASSIGN_SLASH
 // | ASSIGN_PERCENT | ASSIGN_EXP | ASSIGN_BIT_NEG | ASSIGN_AMPERSAND |
 // ASSIGN_BIT_OR | ASSIGN_BIT_XOR | ASSIGN_SHIFT_LEFT | ASSIGN_SHIFT_RIGHT;
-std::optional<AssignType> Parser::parse_assign_op()
+std::optional<std::optional<BinOpEnum>> Parser::parse_assign_op()
 {
     decltype(this->assign_map)::const_iterator iter;
     if (this->current_token.has_value() &&
