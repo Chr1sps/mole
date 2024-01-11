@@ -10,11 +10,6 @@
 #include <llvm/Support/TargetSelect.h>
 #include <system_error>
 
-extern "C" uint32_t print(const wchar_t *data)
-{
-    return wprintf(L"%s", data);
-}
-
 int main(int argc, char **argv)
 {
     llvm::cl::OptionCategory mole_opts("Mole options");
