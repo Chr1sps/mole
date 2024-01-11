@@ -31,6 +31,12 @@ int main(int argc, char **argv)
     llvm::cl::opt<bool> dump_ir("ir-dump", llvm::cl::desc("Dump the LLVM IR."),
                                 llvm::cl::init(false),
                                 llvm::cl::cat(mole_opts));
+    llvm::cl::opt<bool> dump_bc(
+        "bc-dump", llvm::cl::desc("Dump the LLVM bytecode."),
+        llvm::cl::init(false), llvm::cl::cat(mole_opts));
+    llvm::cl::opt<bool> optimize(
+        "optimize", llvm::cl::desc("Optimizes the created llvm ir."),
+        llvm::cl::init(false), llvm::cl::cat(mole_opts));
     llvm::cl::opt<std::string> output_file(
         "o", llvm::cl::desc("Specify the output file."),
         llvm::cl::value_desc("filename"), llvm::cl::cat(mole_opts));
@@ -113,6 +119,10 @@ int main(int argc, char **argv)
         try
         {
             auto compiled = CompiledProgram(*program);
+            if (optimize.getValue())
+            {
+                compiled.optimize();
+            }
             if (dump_ir.getValue())
             {
                 if (output_file.getValue() != "")
@@ -133,7 +143,7 @@ int main(int argc, char **argv)
                 else
                     compiled.output_ir(llvm::outs());
             }
-            else
+            else if (dump_bc.getValue())
             {
                 std::error_code ec;
                 auto path = output_file.getValue();
@@ -148,6 +158,32 @@ int main(int argc, char **argv)
                         .value();
                 }
                 compiled.output_bytecode(output);
+            }
+            else
+            {
+                std::error_code ec;
+                auto path = output_file.getValue();
+                if (path.empty())
+                    path = "./out.o";
+                auto output = llvm::raw_fd_ostream(path, ec);
+                if (ec)
+                {
+                    std::cerr << "Error while opening the output file."
+                              << std::endl;
+                    return std::make_error_condition(std::errc::io_error)
+                        .value();
+                }
+                try
+                {
+                    compiled.output_object_file(output);
+                }
+                catch (const CompilationException &e)
+                {
+                    std::cerr << "Couldn't output the object file."
+                              << std::endl;
+                    return std::make_error_condition(std::errc::io_error)
+                        .value();
+                }
             }
         }
         catch (const CompilationException &e)

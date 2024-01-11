@@ -4,6 +4,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Target/TargetMachine.h"
 #include <filesystem>
 
 class CompiledProgram
@@ -37,6 +38,7 @@ class CompiledProgram
 
         std::unique_ptr<llvm::LLVMContext> context;
         std::unique_ptr<llvm::IRBuilder<>> builder;
+        std::unique_ptr<llvm::TargetMachine> target_machine;
         bool is_signed, is_exhaustive, is_return_covered;
         llvm::Value *matched_value;
         Value last_value;
@@ -101,6 +103,9 @@ class CompiledProgram
         void visit(const MatchArm &node) override;
 
         void visit(const Program &node) override;
+
+        void optimize();
+        void output_object_file(llvm::raw_fd_ostream &output);
     } visitor;
 
   public:
@@ -110,6 +115,8 @@ class CompiledProgram
 
     void output_ir(llvm::raw_fd_ostream &output);
     void output_bytecode(llvm::raw_fd_ostream &output);
+    void output_object_file(llvm::raw_fd_ostream &output);
+    void optimize();
     // int execute();
 };
 

@@ -1,11 +1,14 @@
 #include "compiled_program.hpp"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
 #include <iostream>
 #include <ranges>
 
@@ -23,7 +26,8 @@ CompiledProgram::Visitor::Visitor(const Program &program)
     std::unique_ptr<llvm::TargetMachine> target_machine(
         target->createTargetMachine(target_triple, "generic", "",
                                     target_options, llvm::Reloc::PIC_));
-    auto data_layout = target_machine->createDataLayout();
+    this->target_machine = std::move(target_machine);
+    auto data_layout = this->target_machine->createDataLayout();
 
     this->module = std::make_unique<llvm::Module>("mole", *this->context);
     this->module->setTargetTriple(target_triple);
@@ -955,4 +959,46 @@ void CompiledProgram::output_bytecode(llvm::raw_fd_ostream &output)
 void CompiledProgram::output_ir(llvm::raw_fd_ostream &output)
 {
     output << *this->visitor.module;
+}
+
+void CompiledProgram::Visitor::optimize()
+{
+    auto pass_manager = std::make_unique<llvm::legacy::FunctionPassManager>(
+        this->module.get());
+    pass_manager->add(llvm::createInstructionCombiningPass());
+    pass_manager->add(llvm::createReassociatePass());
+    pass_manager->add(llvm::createGVNPass());
+    pass_manager->add(llvm::createCFGSimplificationPass());
+    pass_manager->doInitialization();
+    for (auto &function : this->functions
+         //  | std::views::filter([](const auto &pair) {
+         //      return pair.first != L"main";
+         //  })
+    )
+    {
+        pass_manager->run(*(function.second.ptr));
+    }
+}
+
+void CompiledProgram::Visitor::output_object_file(llvm::raw_fd_ostream &output)
+{
+    llvm::legacy::PassManager pass_manager;
+    auto type = llvm::CodeGenFileType::CGFT_ObjectFile;
+    if (this->target_machine->addPassesToEmitFile(pass_manager, output,
+                                                  nullptr, type))
+    {
+        throw CompilationException("can't emit a file of this type");
+    }
+    pass_manager.run(*this->module);
+    output.flush();
+}
+
+void CompiledProgram::output_object_file(llvm::raw_fd_ostream &output)
+{
+    this->visitor.output_object_file(output);
+}
+
+void CompiledProgram::optimize()
+{
+    this->visitor.optimize();
 }
