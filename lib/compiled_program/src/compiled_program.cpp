@@ -403,6 +403,52 @@ void CompiledProgram::Visitor::visit(const BinaryExpr &node)
 
 void CompiledProgram::Visitor::visit(const UnaryExpr &node)
 {
+    this->visit(*node.expr);
+    auto expr = this->last_value;
+    llvm::Value *new_value, *new_ptr = nullptr;
+    llvm::Type *new_type;
+    switch (node.op)
+    {
+    case UnaryOpEnum::MINUS:
+        if (expr.type->isIntegerTy())
+        {
+            if (!this->is_signed)
+            {
+                new_value = this->builder->CreateZExt(
+                    expr.value, llvm::Type::getInt32Ty(*this->context),
+                    "u32_to_i32");
+                new_value = this->builder->CreateNeg(new_value);
+            }
+            else
+                new_value = this->builder->CreateNeg(expr.value);
+            new_type = this->builder->getInt32Ty();
+        }
+        else
+        {
+            new_value = this->builder->CreateFNeg(expr.value);
+            new_type = expr.type;
+        }
+        break;
+
+    case UnaryOpEnum::NEG:
+    case UnaryOpEnum::BIT_NEG:
+        new_value = this->builder->CreateNot(expr.value);
+        new_type = expr.type;
+        break;
+    case UnaryOpEnum::REF:
+    case UnaryOpEnum::MUT_REF:
+        new_value = expr.address;
+        new_type = expr.type->getPointerTo();
+        break;
+    case UnaryOpEnum::DEREF:
+        new_value = this->builder->CreateLoad(expr.type, expr.value);
+        // new_type =
+        // llvm::cast<llvm::PointerType>(expr.type)->getContainedType();
+        new_type = new_value->getType();
+        new_ptr = expr.value;
+        break;
+    }
+    this->last_value = Value(new_value, new_type, new_ptr);
 }
 
 void CompiledProgram::Visitor::visit_call(const CallExpr &node)
@@ -560,11 +606,10 @@ void CompiledProgram::Visitor::visit(const Expression &node)
                        this->last_value = Value(value, type);
                    },
                    [this](const BinaryExpr &node) { this->visit(node); },
-                   // [this](const UnaryExpr &node) { this->visit(node); },
+                   [this](const UnaryExpr &node) { this->visit(node); },
                    [this](const CallExpr &node) { this->visit_call(node); },
                    [this](const IndexExpr &node) { this->visit(node); },
-                   [this](const CastExpr &node) { this->visit(node); },
-                   [](const auto &) {}},
+                   [this](const CastExpr &node) { this->visit(node); }},
 
         node);
 }

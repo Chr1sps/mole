@@ -65,8 +65,7 @@ class CompiledProgram
                                  const BinOpEnum &op);
         void create_string_binop(llvm::Value *lhs, llvm::Value *rhs,
                                  const BinOpEnum &op);
-        llvm::Value *CompiledProgram::Visitor::get_dereferenced_value(
-            const Value &value);
+        llvm::Value *get_dereferenced_value(const Value &value);
         void visit(const BinaryExpr &node);
         void visit(const UnaryExpr &node);
         void visit_call(const CallExpr &node);
