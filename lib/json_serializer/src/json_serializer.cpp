@@ -371,7 +371,7 @@ void JsonSerializer::Visitor::visit(const ExternDef &node)
     output["name"] = node.name;
     for (const auto &param : node.params)
     {
-        this->visit(*param);
+        this->visit(param);
     }
     if (node.return_type)
     {

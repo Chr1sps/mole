@@ -947,18 +947,18 @@ TEST_CASE("Externs.")
 {
     SECTION("Valid externs.")
     {
-        CHECK_VALID(L"extern foo(x: u32);");
-        CHECK_VALID(L"extern foo(x: u32) => i32;");
+        CHECK_VALID(L"extern foo(u32);");
+        CHECK_VALID(L"extern foo(u32) => i32;");
     }
     SECTION("Main cannot be externed.")
     {
-        CHECK_INVALID(L"extern main(x: u32);");
+        CHECK_INVALID(L"extern main(u32);");
         CHECK_INVALID(L"extern main();");
         CHECK_INVALID(L"extern main()=>i32;");
     }
     SECTION("No redefinitions.")
     {
-        CHECK_INVALID(L"extern foo(x: u32);"
+        CHECK_INVALID(L"extern foo(u32);"
                       L"extern foo();");
     }
 }

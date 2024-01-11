@@ -77,9 +77,7 @@ llvm::FunctionType *CompiledProgram::Visitor::get_fn_type(
     const ExternDef &node)
 {
     std::vector<llvm::Type *> param_types;
-    for (const auto &param_type :
-         node.params | std::views::transform(
-                           [](const ParamPtr &param) { return param->type; }))
+    for (const auto &param_type : node.params)
     {
         param_types.push_back(this->get_var_type(param_type));
     }

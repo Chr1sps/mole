@@ -311,21 +311,6 @@ void SemanticChecker::Visitor::check_function_params(const FuncDef &node)
     }
 }
 
-void SemanticChecker::Visitor::check_function_params(const ExternDef &node)
-{
-    for (auto &param : node.params)
-    {
-        if (auto var = this->find_variable(param->name))
-            this->report_error(node.position,
-                               L"param name cannot shadow a variable that is "
-                               L"already in scope");
-        if (auto func = this->find_function(param->name))
-            this->report_error(node.position,
-                               L"param name cannot shadow a function that is "
-                               L"already in scope");
-    }
-}
-
 void SemanticChecker::Visitor::check_name_shadowing(const std::wstring &name,
                                                     const Position &pos)
 {
@@ -449,11 +434,7 @@ void SemanticChecker::Visitor::register_local_function(const FuncDef &node)
 
 void SemanticChecker::Visitor::register_local_function(const ExternDef &node)
 {
-    std::vector<Type> args;
-    std::transform(node.params.cbegin(), node.params.cend(),
-                   std::back_inserter(args),
-                   [](const ParamPtr &param) -> Type { return param->type; });
-    Function result{args, node.return_type};
+    Function result{node.params, node.return_type};
     this->function_map.back().emplace(std::make_pair(node.name, result));
 }
 
@@ -941,8 +922,6 @@ void SemanticChecker::Visitor::visit(const ExternDef &node)
     {
         this->report_error(node.position, L"`main` cannot be externed");
     }
-
-    this->check_function_params(node);
 
     this->register_local_function(node);
 }
