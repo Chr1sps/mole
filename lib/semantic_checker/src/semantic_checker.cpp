@@ -158,81 +158,80 @@ const std::unordered_map<
          }},
 };
 
-const std::unordered_map<AssignType,
-                         std::unordered_multimap<TypeEnum, TypeEnum>>
+const std::unordered_map<BinOpEnum, std::unordered_map<TypeEnum, TypeEnum>>
     assign_map = {
-        {AssignType::NORMAL,
-         {
-             {TypeEnum::BOOL, TypeEnum::BOOL},
-             {TypeEnum::U32, TypeEnum::U32},
-             {TypeEnum::I32, TypeEnum::I32},
-             {TypeEnum::F64, TypeEnum::F64},
-             {TypeEnum::CHAR, TypeEnum::CHAR},
-             {TypeEnum::STR, TypeEnum::STR},
-         }},
-        {AssignType::PLUS,
+        {BinOpEnum::ADD,
          {
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::I32},
              {TypeEnum::F64, TypeEnum::F64},
          }},
-        {AssignType::MINUS,
+        {BinOpEnum::SUB,
          {
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::I32},
              {TypeEnum::F64, TypeEnum::F64},
          }},
-        {AssignType::MUL,
+        {BinOpEnum::MUL,
          {
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::I32},
              {TypeEnum::F64, TypeEnum::F64},
          }},
-        {AssignType::DIV,
+        {BinOpEnum::DIV,
          {
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::I32},
              {TypeEnum::F64, TypeEnum::F64},
          }},
-        {AssignType::MOD,
+        {BinOpEnum::MOD,
          {
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::I32},
          }},
-        {AssignType::EXP,
+        {BinOpEnum::EXP,
          {
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::U32},
              {TypeEnum::F64, TypeEnum::U32},
          }},
-        {AssignType::BIT_AND,
+        {BinOpEnum::BIT_AND,
          {
              {TypeEnum::BOOL, TypeEnum::BOOL},
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::I32},
          }},
-        {AssignType::BIT_OR,
+        {BinOpEnum::BIT_OR,
          {
              {TypeEnum::BOOL, TypeEnum::BOOL},
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::I32},
          }},
-        {AssignType::BIT_XOR,
+        {BinOpEnum::BIT_XOR,
          {
              {TypeEnum::BOOL, TypeEnum::BOOL},
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::I32},
          }},
-        {AssignType::SHL,
+        {BinOpEnum::SHL,
          {
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::U32},
          }},
-        {AssignType::SHR,
+        {BinOpEnum::SHR,
          {
              {TypeEnum::U32, TypeEnum::U32},
              {TypeEnum::I32, TypeEnum::U32},
          }},
+};
+
+const std::unordered_map<BinOpEnum, std::wstring> assign_str_map = {
+    {BinOpEnum::ADD, L"addition"},       {BinOpEnum::SUB, L"substraction"},
+    {BinOpEnum::MUL, L"multiplication"}, {BinOpEnum::DIV, L"division"},
+    {BinOpEnum::MOD, L"modulo"},         {BinOpEnum::EXP, L"exponentiation"},
+    {BinOpEnum::BIT_AND, L"bit-and"},    {BinOpEnum::BIT_OR, L"bit-or"},
+    {BinOpEnum::BIT_XOR, L"bit-xor"},    {BinOpEnum::SHL, L"shift-left"},
+    {BinOpEnum::SHR, L"shift-right"},
 };
 
 const std::unordered_map<UnaryOpEnum, std::wstring> unary_str_map = {
@@ -766,16 +765,30 @@ void SemanticChecker::Visitor::visit(const AssignStmt &node)
             L"right hand side type cannot be used in an assignment");
         return;
     }
-    auto op_map = assign_map.at(node.type);
-    decltype(op_map)::value_type type_pair =
-        std::make_pair(left_type.type, right_type.type);
-    auto iter = std::find(op_map.cbegin(), op_map.cend(), type_pair);
-    if (iter == op_map.cend())
+    if (node.op)
     {
-        this->report_error(node.position, L"value of type `",
-                           get_type_string(right_type),
-                           L"` cannot be assigned to a value of type `",
-                           get_type_string(left_type), L"` ");
+        auto op_map = assign_map.at(*node.op);
+        decltype(op_map)::value_type pair =
+            std::make_pair(left_type.type, right_type.type);
+        auto iter = std::find(op_map.cbegin(), op_map.cend(), pair);
+        if (iter == op_map.cend())
+        {
+            this->report_error(node.position, L"value of type `",
+                               get_type_string(right_type), L"` cannot be ",
+                               assign_str_map.at(*node.op),
+                               L"-assigned to a value of type `",
+                               get_type_string(left_type), L"` ");
+        }
+    }
+    else
+    {
+        if (left_type.type != right_type.type)
+        {
+            this->report_error(node.position, L"value of type `",
+                               get_type_string(right_type),
+                               L"` cannot be assigned to a value of type `",
+                               get_type_string(left_type), L"` ");
+        }
     }
     this->is_return_covered = false;
 }
